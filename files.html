@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<!-- BUILD: files (写真・書類) v20260723L -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>写真・書類 ｜ 建設統合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  .ctl select{ width:auto; min-width:150px; max-width:340px; min-height:44px; flex:0 1 auto; }
+  .ctl input[type=text]{ width:auto; flex:1 1 180px; min-width:0; min-height:44px; }
+
+  .usage{ font-family:var(--mono); font-size:11.5px; color:var(--sub); margin:0 0 12px; }
+  .usage b{ color:var(--ink); font-weight:500; }
+  .usage.warn{ color:var(--alert); }
+
+  .grid{ display:grid; gap:10px; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr)); }
+  .card{
+    background:var(--card); border:1px solid var(--rule); border-radius:2px;
+    cursor:pointer; text-align:left; padding:0; overflow:hidden;
+    display:flex; flex-direction:column; font-family:var(--body); color:inherit;
+  }
+  .card:hover{ border-color:var(--ink); }
+  .card:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
+  .card .ph{
+    aspect-ratio:4/3; background:#DFE2DC; display:flex; align-items:center;
+    justify-content:center; overflow:hidden; position:relative;
+  }
+  .card .ph img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .card .ph .ic{ font-family:var(--disp); font-size:12px; color:var(--sub); }
+  .card .cb{ padding:8px 10px; min-width:0; }
+  .card .c1{ font-family:var(--disp); font-weight:700; font-size:13px; line-height:1.4;
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .card .c2{ font-size:11px; color:var(--sub); font-family:var(--mono); line-height:1.5; }
+  .pill{
+    position:absolute; top:5px; left:5px; font-size:10px; font-weight:700;
+    padding:2px 6px; border-radius:2px; background:rgba(22,50,79,.86); color:#fff;
+  }
+  .pill.int{ background:rgba(122,131,124,.9); }
+
+  .up{ background:var(--card); border:1px dashed var(--rule); border-radius:2px;
+       padding:16px; margin-bottom:14px; }
+  .up .fl{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .prog{ font-size:13px; color:var(--sub); margin-top:8px; line-height:1.7; }
+
+  .big{ width:100%; background:#1B1B1A; display:flex; align-items:center;
+        justify-content:center; min-height:200px; max-height:52vh; }
+  .big img{ max-width:100%; max-height:52vh; object-fit:contain; display:block; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>写真・書類</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+  <div class="ctl">
+    <select id="proj"><option value="">工事を選んでください</option></select>
+    <select id="fkind">
+      <option value="">すべての種類</option>
+      <option value="photo">写真</option>
+      <option value="drawing">図面</option>
+      <option value="document">書類</option>
+      <option value="other">その他</option>
+    </select>
+    <select id="fphase"><option value="">すべての工程</option></select>
+    <input id="q" type="text" placeholder="題名・撮影箇所・測点で絞り込み">
+  </div>
+
+  <p class="usage" id="usage"></p>
+  <div id="msg" class="msg"></div>
+
+  <div class="up" id="up" hidden>
+    <div class="fl">
+      <input id="file" type="file" multiple accept="image/*,.pdf" style="flex:1 1 240px">
+      <select id="u_purpose" style="width:auto;min-height:42px">
+        <option value="submit">提出用（原本のまま）</option>
+        <option value="internal">社内の記録（縮小する）</option>
+      </select>
+      <select id="u_phase" style="width:auto;min-height:42px"></select>
+      <button class="btn sm" id="u_go">取り込む</button>
+    </div>
+    <div class="prog" id="prog"></div>
+  </div>
+
+  <p class="count" id="count"></p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="inner"><button class="btn wide" id="add">写真・書類を追加する</button></div>
+</div>
+
+<!-- ========== 詳細 ========== -->
+<div class="panel" id="panel">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1 id="ptitle">写真</h1>
+    <button class="btn ghost sm barbtn" id="close">閉じる</button>
+  </header>
+
+  <div class="wrap">
+    <div id="pmsg" class="msg"></div>
+    <div class="big" id="big" hidden></div>
+    <div style="height:14px"></div>
+
+    <div class="sheet">
+      <div class="head">この資料について</div>
+      <div class="row">
+        <label for="f_title">題名</label>
+        <div class="fld"><input id="f_title" type="text" placeholder="南側盛土 施工状況 など"></div>
+      </div>
+      <div class="row">
+        <label for="f_kind">種類</label>
+        <div class="fld"><select id="f_kind">
+          <option value="photo">写真</option><option value="drawing">図面</option>
+          <option value="document">書類</option><option value="other">その他</option>
+        </select></div>
+      </div>
+      <div class="row">
+        <label for="f_purpose">用途</label>
+        <div class="fld"><select id="f_purpose">
+          <option value="submit">提出用（原本のまま）</option>
+          <option value="internal">社内の記録</option>
+        </select></div>
+      </div>
+      <div class="row">
+        <label for="f_taken">撮影日</label>
+        <div class="fld"><input id="f_taken" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="f_phase">工程</label>
+        <div class="fld"><select id="f_phase"></select></div>
+      </div>
+      <div class="row">
+        <label for="f_tags">タグ</label>
+        <div class="fld"><input id="f_tags" type="text" placeholder="施工状況, 出来形（読点で区切る）"></div>
+      </div>
+      <div class="row">
+        <label for="f_desc">説明</label>
+        <div class="fld"><textarea id="f_desc"></textarea></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">黒板</div>
+      <div id="bbrows"></div>
+    </div>
+
+    <div id="meta" style="margin-top:14px"></div>
+    <div class="act" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn ghost" id="dl">原本を開く</button>
+    </div>
+    <div style="height:16px"></div>
+    <button class="btn danger" id="del" hidden>この資料を削除する</button>
+  </div>
+
+  <div class="dock" id="pdock">
+    <div class="inner">
+      <button class="btn ghost" id="cancel" style="flex:0 0 auto">やめる</button>
+      <button class="btn wide" id="save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const BUCKET = 'project-files';
+  const KIND = { photo:'写真', drawing:'図面', document:'書類', other:'その他' };
+  const LIMIT_BYTES = 1024 * 1024 * 1024;      // 無料プランの目安 1GB
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isMgr = (me.role === 'admin' || me.role === 'manager');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+
+  let projects = [], phases = [], bbFields = [], files = [], editing = null;
+  let projId = null, urlCache = {};
+
+  /* ================= 読み込み ================= */
+  async function loadRefs(){
+    const [pr, bb] = await Promise.all([
+      sb.from('projects').select('id,project_no,name').eq('is_active', true)
+        .order('project_no', { ascending:false }),
+      sb.from('blackboard_fields').select('*').eq('is_active', true).order('sort_order')
+    ]);
+    if (pr.error || bb.error){
+      showMsg($('msg'), '読み込めませんでした。' + ((pr.error||bb.error).message||''), 'err');
+      return;
+    }
+    projects = pr.data || []; bbFields = bb.data || [];
+    $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
+      projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+  }
+
+  async function loadPhases(){
+    if (!projId){ phases = []; }
+    else {
+      const { data } = await sb.from('project_phases')
+        .select('id,name').eq('project_id', projId).eq('is_active', true).order('seq');
+      phases = data || [];
+    }
+    const opt = phases.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    $('fphase').innerHTML  = '<option value="">すべての工程</option>' + opt;
+    $('f_phase').innerHTML = '<option value="">（未設定）</option>' + opt;
+    $('u_phase').innerHTML = '<option value="">工程を選ばない</option>' + opt;
+  }
+
+  async function loadFiles(){
+    if (!projId){ files = []; render(); return; }
+    const { data, error } = await sb.from('project_files')
+      .select('*').eq('project_id', projId).eq('is_active', true)
+      .order('taken_on', { ascending:false }).order('created_at', { ascending:false });
+    if (error){ showMsg($('msg'), '読み込めませんでした。' + error.message, 'err'); return; }
+    files = data || [];
+    render();
+    paintUsage();
+  }
+
+  async function paintUsage(){
+    const { data } = await sb.from('project_files').select('byte_size').eq('is_active', true);
+    const used = (data || []).reduce((a,x) => a + (Number(x.byte_size)||0), 0);
+    const mb = used / 1024 / 1024;
+    const pct = Math.round(used / LIMIT_BYTES * 100);
+    $('usage').textContent =
+      `保管している量  ${mb.toFixed(1)} MB ／ 目安 1024 MB（${pct}%）`;
+    $('usage').classList.toggle('warn', pct >= 70);
+    if (pct >= 70)
+      showMsg($('msg'), '保管領域が残り少なくなっています。有料プランへの切り替えをご検討ください。', 'err');
+  }
+
+  /* ================= 表示 ================= */
+  async function signedUrl(path){
+    if (!path) return null;
+    if (urlCache[path]) return urlCache[path];
+    const { data } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+    if (data?.signedUrl) urlCache[path] = data.signedUrl;
+    return data?.signedUrl || null;
+  }
+
+  function render(){
+    const kd = $('fkind').value, ph = $('fphase').value;
+    const q  = $('q').value.trim().toLowerCase();
+
+    const rows = files.filter(f => {
+      if (kd && f.file_kind !== kd) return false;
+      if (ph && f.phase_id !== ph) return false;
+      if (!q) return true;
+      return [f.title, f.bb_location, f.bb_station, f.original_name, f.description]
+        .some(v => (v || '').toLowerCase().includes(q));
+    });
+
+    $('count').textContent = projId ? `${rows.length} 件 ／ 全 ${files.length} 件` : '';
+
+    if (!projId){
+      $('grid').innerHTML = `<div class="empty" style="grid-column:1/-1"><b>工事を選んでください</b>上の欄から工事を選ぶと、その資料が出ます。</div>`;
+      return;
+    }
+    if (!rows.length){
+      $('grid').innerHTML = `<div class="empty" style="grid-column:1/-1"><b>${files.length ? '該当する資料がありません' : 'まだ資料がありません'}</b>${files.length ? '絞り込みの条件を変えてください。' : '下の「写真・書類を追加する」から取り込んでください。'}</div>`;
+      return;
+    }
+
+    $('grid').innerHTML = rows.map(f => {
+      const pm = phases.find(p => p.id === f.phase_id);
+      return `<button class="card" data-id="${f.id}">
+        <span class="ph" data-p="${esc(f.thumb_path || f.storage_path || '')}" data-m="${esc(f.mime_type||'')}">
+          <span class="pill${f.purpose === 'internal' ? ' int' : ''}">${f.purpose === 'submit' ? '提出用' : '社内'}</span>
+          <span class="ic">${KIND[f.file_kind] || ''}</span>
+        </span>
+        <span class="cb">
+          <span class="c1">${esc(f.title || f.original_name || '（無題）')}</span>
+          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}</span>
+        </span></button>`;
+    }).join('');
+
+    $('grid').querySelectorAll('.card').forEach(c => {
+      c.addEventListener('click', () => openPanel(files.find(x => x.id === c.dataset.id)));
+      const box = c.querySelector('.ph');
+      const p = box.dataset.p, m = box.dataset.m;
+      if (p && (m || '').startsWith('image/')){
+        signedUrl(p).then(u => { if (u) box.insertAdjacentHTML('beforeend',
+          `<img src="${u}" alt="" loading="lazy">`); });
+      }
+    });
+  }
+
+  $('proj').addEventListener('change', async () => {
+    projId = $('proj').value || null;
+    const u = new URL(location.href);
+    if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+    $('dock').hidden = !projId;
+    $('up').hidden = true;
+    await loadPhases();
+    await loadFiles();
+  });
+  $('fkind').addEventListener('change', render);
+  $('fphase').addEventListener('change', render);
+  $('q').addEventListener('input', render);
+
+  /* ================= 取り込み ================= */
+  $('add').addEventListener('click', () => { $('up').hidden = !$('up').hidden; });
+
+  // 表示用の縮小画像をつくる
+  function shrink(file, maxEdge, quality){
+    return new Promise(res => {
+      if (!file.type.startsWith('image/')) return res(null);
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const s = Math.min(1, maxEdge / Math.max(img.width, img.height));
+        const w = Math.round(img.width * s), h = Math.round(img.height * s);
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        cv.toBlob(b => { URL.revokeObjectURL(url);
+          res(b ? { blob:b, w:img.width, h:img.height } : null); }, 'image/jpeg', quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); res(null); };
+      img.src = url;
+    });
+  }
+
+  function safeName(n){
+    return n.replace(/[^\w.\-]/g, '_').slice(-80);
+  }
+
+  $('u_go').addEventListener('click', async () => {
+    const list = [...$('file').files];
+    if (!projId){ showMsg($('msg'), '工事を選んでください。', 'err'); return; }
+    if (!list.length){ showMsg($('msg'), '取り込むファイルを選んでください。', 'err'); return; }
+
+    const purpose = $('u_purpose').value;
+    const phase   = $('u_phase').value || null;
+    $('u_go').disabled = true;
+    let ok = 0, ng = 0;
+
+    for (let i = 0; i < list.length; i++){
+      const f = list[i];
+      $('prog').textContent = `${i+1} / ${list.length} 件目を取り込んでいます…（${f.name}）`;
+      const stamp = Date.now() + '_' + i;
+      const base  = `${me.organization_id}/${projId}`;
+      const nm    = safeName(f.name);
+
+      try {
+        let origBlob = f, w = null, h = null;
+
+        // 社内用は縮小したものを原本として扱う
+        if (purpose === 'internal' && f.type.startsWith('image/')){
+          const r = await shrink(f, 2000, 0.82);
+          if (r){ origBlob = r.blob; w = r.w; h = r.h; }
+        }
+
+        const origPath = `${base}/orig/${stamp}_${nm}`;
+        const up1 = await sb.storage.from(BUCKET)
+          .upload(origPath, origBlob, { contentType: f.type || 'application/octet-stream' });
+        if (up1.error) throw up1.error;
+
+        // 表示用の縮小画像
+        let thumbPath = null;
+        if (f.type.startsWith('image/')){
+          const t = await shrink(f, 640, 0.7);
+          if (t){
+            thumbPath = `${base}/thumb/${stamp}_${nm}.jpg`;
+            const up2 = await sb.storage.from(BUCKET)
+              .upload(thumbPath, t.blob, { contentType:'image/jpeg' });
+            if (up2.error) thumbPath = null;
+            if (!w){ w = t.w; h = t.h; }
+          }
+        }
+
+        const { error } = await sb.from('project_files').insert({
+          organization_id: me.organization_id,
+          project_id     : projId,
+          file_kind      : f.type.startsWith('image/') ? 'photo'
+                          : (f.type === 'application/pdf' ? 'document' : 'other'),
+          purpose        : purpose,
+          storage_path   : origPath,
+          thumb_path     : thumbPath,
+          original_name  : f.name,
+          mime_type      : f.type || null,
+          byte_size      : origBlob.size,
+          width_px       : w, height_px: h,
+          phase_id       : phase,
+          taken_on       : new Date(f.lastModified || Date.now()).toISOString().slice(0,10),
+          uploaded_by    : me.id
+        });
+        if (error) throw error;
+        ok++;
+      } catch (e){
+        ng++;
+        console.error(e);
+      }
+    }
+
+    $('u_go').disabled = false;
+    $('file').value = '';
+    $('prog').textContent = '';
+    showMsg($('msg'), `${ok}件を取り込みました。${ng ? `${ng}件は失敗しました。` : ''}`, ng ? 'err' : 'ok');
+    await loadFiles();
+  });
+
+  /* ================= 詳細 ================= */
+  function bbHtml(f){
+    return bbFields.map(b => {
+      const col = { work_type:'bb_work_type', station:'bb_station',
+                    location:'bb_location', witness:'bb_witness' }[b.field_key];
+      const v = f ? (col ? (f[col] || '') : ((f.bb_extra || {})[b.field_key] || '')) : '';
+      return `<div class="row">
+        <label for="bb_${b.field_key}">${esc(b.label)}</label>
+        <div class="fld"><input id="bb_${b.field_key}" type="text"
+          data-key="${esc(b.field_key)}" data-col="${col || ''}" value="${esc(v)}"></div>
+      </div>`;
+    }).join('');
+  }
+
+  async function openPanel(f){
+    editing = f || null;
+    if (!f) return;
+    showMsg($('pmsg'), '');
+
+    const canEd = isMgr || f.uploaded_by === me.id;
+    $('ptitle').textContent = KIND[f.file_kind] || '資料';
+    $('f_title').value   = f.title || '';
+    $('f_kind').value    = f.file_kind;
+    $('f_purpose').value = f.purpose;
+    $('f_taken').value   = f.taken_on || '';
+    $('f_phase').value   = f.phase_id || '';
+    $('f_tags').value    = (f.tags || []).join('、');
+    $('f_desc').value    = f.description || '';
+    $('bbrows').innerHTML = bbHtml(f);
+
+    // 大きい画像
+    $('big').hidden = true; $('big').innerHTML = '';
+    if ((f.mime_type || '').startsWith('image/')){
+      const u = await signedUrl(f.storage_path);
+      if (u){ $('big').innerHTML = `<img src="${u}" alt="">`; $('big').hidden = false; }
+    }
+
+    const mb = (Number(f.byte_size)||0) / 1024 / 1024;
+    $('meta').innerHTML = `<div class="msg" style="margin:0;font-family:var(--mono);font-size:12px">
+      ${esc(f.original_name || '')}<br>
+      ${mb.toFixed(2)} MB${f.width_px ? `　${f.width_px}×${f.height_px}` : ''}<br>
+      ${f.purpose === 'submit' ? '提出用：原本をそのまま保存しています' : '社内の記録：縮小して保存しています'}
+    </div>`;
+
+    document.querySelectorAll('#panel input, #panel select, #panel textarea')
+      .forEach(el => el.disabled = !canEd);
+    $('pdock').style.display = canEd ? '' : 'none';
+    $('del').hidden = !isMgr;
+
+    $('panel').classList.add('open');
+    window.scrollTo(0,0);
+  }
+
+  function closePanel(){ $('panel').classList.remove('open'); editing = null; }
+  $('close').addEventListener('click', closePanel);
+  $('cancel').addEventListener('click', closePanel);
+
+  $('dl').addEventListener('click', async () => {
+    if (!editing) return;
+    const u = await signedUrl(editing.storage_path);
+    if (u) window.open(u, '_blank');
+    else showMsg($('pmsg'), '原本を開けませんでした。', 'err');
+  });
+
+  /* ================= 保存 ================= */
+  $('save').addEventListener('click', async () => {
+    if (!editing) return;
+    showMsg($('pmsg'), '');
+
+    const body = {
+      title      : $('f_title').value.trim() || null,
+      file_kind  : $('f_kind').value,
+      purpose    : $('f_purpose').value,
+      taken_on   : $('f_taken').value || null,
+      phase_id   : $('f_phase').value || null,
+      description: $('f_desc').value.trim() || null,
+      tags       : $('f_tags').value.split(/[、,]/).map(s => s.trim()).filter(Boolean),
+      bb_extra   : {}
+    };
+    $('bbrows').querySelectorAll('input').forEach(el => {
+      const v = el.value.trim();
+      if (el.dataset.col) body[el.dataset.col] = v || null;
+      else if (v) body.bb_extra[el.dataset.key] = v;
+    });
+
+    $('save').disabled = true; $('save').textContent = '保存しています…';
+    const { error } = await sb.from('project_files').update(body).eq('id', editing.id);
+    $('save').disabled = false; $('save').textContent = '保存する';
+
+    if (error){ showMsg($('pmsg'), '保存できませんでした。' + error.message, 'err'); return; }
+    closePanel(); await loadFiles();
+    showMsg($('msg'), '保存しました。', 'ok');
+  });
+
+  /* ================= 削除 ================= */
+  $('del').addEventListener('click', async () => {
+    if (!editing) return;
+    if (!confirm('この資料を削除します。原本も消えます。取り消せません。')) return;
+    const paths = [editing.storage_path, editing.thumb_path].filter(Boolean);
+    await sb.storage.from(BUCKET).remove(paths);
+    const { error } = await sb.from('project_files').delete().eq('id', editing.id);
+    if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
+    closePanel(); await loadFiles();
+    showMsg($('msg'), '削除しました。', 'ok');
+  });
+
+  /* ================= 起動 ================= */
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)){ projId = q; $('proj').value = q; $('dock').hidden = false; }
+  await loadPhases();
+  await loadFiles();
+})();
+</script>
+</body>
+</html>
