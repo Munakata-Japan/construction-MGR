@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: files (写真・書類) v20260723N -->
+<!-- BUILD: files (写真・書類) v20260723R -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -341,7 +341,7 @@
     $('grid').innerHTML = rows.map(f => {
       const pm = phases.find(p => p.id === f.phase_id);
       return `<button class="card" data-id="${f.id}">
-        <span class="ph" data-p="${esc(f.thumb_path || f.storage_path || '')}" data-m="${esc(f.mime_type||'')}">
+        <span class="ph" data-p="${esc(f.thumb_path || f.storage_path || '')}" data-m="${esc(f.mime_type||'')}" data-th="${f.thumb_path ? 1 : 0}">
           <span class="pill${f.purpose === 'internal' ? ' int' : ''}">${f.purpose === 'submit' ? '提出用' : '社内'}</span>
           <span class="ic">${KIND[f.file_kind] || ''}</span>
         </span>
@@ -355,7 +355,7 @@
       c.addEventListener('click', () => openPanel(files.find(x => x.id === c.dataset.id)));
       const box = c.querySelector('.ph');
       const p = box.dataset.p, m = box.dataset.m;
-      if (p && (m || '').startsWith('image/')){
+      if (p && (box.dataset.th === '1' || (m || '').startsWith('image/'))){
         signedUrl(p).then(u => { if (u) box.insertAdjacentHTML('beforeend',
           `<img src="${u}" alt="" loading="lazy">`); });
       }
@@ -412,26 +412,6 @@
   $('cam').addEventListener('change', accept);
   $('file').addEventListener('change', accept);
 
-  // 表示用の縮小画像をつくる
-  function shrink(file, maxEdge, quality){
-    return new Promise(res => {
-      if (!file.type.startsWith('image/')) return res(null);
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        const s = Math.min(1, maxEdge / Math.max(img.width, img.height));
-        const w = Math.round(img.width * s), h = Math.round(img.height * s);
-        const cv = document.createElement('canvas');
-        cv.width = w; cv.height = h;
-        cv.getContext('2d').drawImage(img, 0, 0, w, h);
-        cv.toBlob(b => { URL.revokeObjectURL(url);
-          res(b ? { blob:b, w:img.width, h:img.height } : null); }, 'image/jpeg', quality);
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); res(null); };
-      img.src = url;
-    });
-  }
-
   function safeName(n){
     return n.replace(/[^\w.\-]/g, '_').slice(-80);
   }
@@ -463,7 +443,7 @@
 
         // 社内用は縮小したものを原本として扱う
         if (purpose === 'internal' && f.type.startsWith('image/')){
-          const r = await shrink(f, 2000, 0.82);
+          const r = await shrinkImage(f, 2000, 0.82);
           if (r){ origBlob = r.blob; w = r.w; h = r.h; }
         }
 
@@ -472,17 +452,14 @@
           .upload(origPath, origBlob, { contentType: f.type || 'application/octet-stream' });
         if (up1.error) throw up1.error;
 
-        // 表示用の縮小画像
+        // 表示用の絵（画像は縮小、PDFは1ページ目）
         let thumbPath = null;
-        if (f.type.startsWith('image/')){
-          const t = await shrink(f, 640, 0.7);
-          if (t){
-            thumbPath = `${base}/thumb/${stamp}_${nm}.jpg`;
-            const up2 = await sb.storage.from(BUCKET)
-              .upload(thumbPath, t.blob, { contentType:'image/jpeg' });
-            if (up2.error) thumbPath = null;
-            if (!w){ w = t.w; h = t.h; }
-          }
+        const t = await makeThumb(f, 900, 0.75);
+        if (t){
+          thumbPath = `${base}/thumb/${stamp}_${nm}.jpg`;
+          const up2 = await sb.storage.from(BUCKET)
+            .upload(thumbPath, t, { contentType:'image/jpeg' });
+          if (up2.error) thumbPath = null;
         }
 
         const { error } = await sb.from('project_files').insert({

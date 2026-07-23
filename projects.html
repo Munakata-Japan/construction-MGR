@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: projects (工事) v20260723Q -->
+<!-- BUILD: projects (工事) v20260723R -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -20,26 +20,35 @@
   #ovp{ display:none; flex-direction:column; overflow:hidden; }
   #ovp.open{ display:flex; }
   #ovp > header.bar{ flex:0 0 auto; }
-  #ovhead{ flex:0 0 auto; }
-  #ovbody{ flex:1 1 auto; min-height:0; overflow:auto; padding:12px clamp(10px,2vw,22px) 18px; }
+  #ovbody{ flex:1 1 auto; min-height:0; overflow:auto; display:flex;
+           padding:14px clamp(10px,2vw,22px) 20px; }
+  /* 内容が短いときは縦中央、長いときは上から */
+  #ovdoc{ margin:auto; width:100%; max-width:1560px; }
 
+  /* 書類の表題 */
   .ovh{
-    background:var(--ink); color:#DCE4EC; padding:9px clamp(10px,2vw,22px);
+    padding:10px clamp(10px,2vw,22px) 9px;
     display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+    border-bottom:2px solid var(--ink); background:var(--paper);
   }
-  .ovh .no2{ font-family:var(--mono); font-size:12px; color:#A9BFD4; }
-  .ovh h2{ font-family:var(--disp); font-weight:700; font-size:17px; margin:0; color:#fff; line-height:1.4; }
+  .ovh .no2{ font-family:var(--mono); font-size:12px; color:var(--ink-2); }
+  .ovh h2{ font-family:var(--disp); font-weight:700; font-size:18px; margin:0;
+           color:var(--ink); line-height:1.4; }
   .ovh .sp{ flex:1 1 0; }
 
   /* 一枚の概要書 */
+  .ovmain{ display:grid; gap:12px 16px;
+           grid-template-columns:minmax(0,1fr) clamp(290px, 24vw, 440px);
+           align-items:start; }
   .sheetdoc{
     background:var(--card); border:1px solid var(--rule); border-radius:2px;
-    display:grid; grid-template-columns:112px 1fr 112px 1fr;
+    display:grid; grid-template-columns:104px minmax(0,1fr) 104px minmax(0,1fr);
   }
   .sheetdoc > .sh{
-    grid-column:1 / -1; background:var(--ink); color:#EBEDE8;
-    font-family:var(--disp); font-weight:700; font-size:12px; letter-spacing:.06em;
-    padding:5px 12px;
+    grid-column:1 / -1; background:#E3E6E0; color:var(--ink);
+    font-family:var(--disp); font-weight:700; font-size:11.5px; letter-spacing:.06em;
+    padding:5px 12px; border-bottom:1px solid var(--rule);
+    box-shadow:inset 4px 0 0 var(--safety);
   }
   .sheetdoc > .k{
     background:#F1F3EF; padding:6px 10px; font-size:11.5px; font-weight:700;
@@ -56,7 +65,8 @@
   .sheetdoc > .v.empty{ color:#9AA39C; }
   .sheetdoc > .v .un{ color:var(--sub); font-size:11px; margin-left:4px; font-family:var(--body); }
 
-  .ovbot{ display:grid; gap:10px 14px; grid-template-columns:1fr 1fr; margin-top:10px; align-items:start; }
+  .ovside{ display:grid; gap:10px; align-content:start; }
+  .ovside .ovsec .t{ margin-bottom:6px; }
   .ovsec > .t{
     font-family:var(--disp); font-weight:700; font-size:12.5px;
     padding:2px 0 4px 9px; border-left:3px solid var(--safety); margin-bottom:5px;
@@ -74,16 +84,44 @@
   .ovnone{ background:var(--card); border:1px solid var(--rule); border-radius:2px;
            padding:10px 12px; font-size:12.5px; color:#9AA39C; }
 
-  .docs{ background:var(--card); border:1px solid var(--rule); border-radius:2px; }
-  .docrow{ display:flex; align-items:center; gap:9px; padding:6px 10px;
-           border-bottom:1px solid var(--rule-2); font-size:12.5px; }
-  .docrow:last-child{ border-bottom:none; }
-  .docrow .dn{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .docrow .dk{ font-size:11px; color:var(--sub); flex:0 0 auto; }
-  .docrow a{ color:var(--ink-2); text-decoration:none; font-weight:700; flex:0 0 auto; }
-  .docrow a:hover{ text-decoration:underline; }
+  /* 図面：A3横（420×297）の比率で並べる */
+  .dwgs{ display:grid; gap:8px; }
+  .dwgs.sm{ grid-template-columns:repeat(3,1fr); gap:6px; margin-top:6px; }
+  .dwgs.sm .cap{ padding:4px 6px; }
+  .dwgs.sm .cap b{ font-size:11px; }
+  .dwgs.sm .cap span{ display:none; }
+  .dwgs.sm .ext{ font-size:13px !important; }
+  .dwg{
+    background:var(--card); border:1px solid var(--rule); border-radius:2px;
+    padding:0; cursor:pointer; text-align:left; width:100%; overflow:hidden;
+    font-family:var(--body); color:inherit; display:block;
+  }
+  .dwg:hover{ border-color:var(--ink); }
+  .dwg:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
+  .dwg .pv{
+    aspect-ratio:420 / 297;               /* A3 横 */
+    background:#F3F5F1; border-bottom:1px solid var(--rule-2);
+    display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden;
+  }
+  .dwg .pv img{ width:100%; height:100%; object-fit:contain; display:block;
+                position:absolute; inset:0; background:#fff; }
+  .dwg .pv .ext{
+    font-family:var(--mono); font-size:20px; font-weight:500; color:#9AA39C;
+    letter-spacing:.06em;
+  }
+  .dwg .cap{ padding:6px 9px; font-size:11.5px; line-height:1.4; }
+  .dwg .cap b{ display:block; font-family:var(--disp); font-size:12.5px; font-weight:700;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dwg .cap span{ color:var(--sub); font-family:var(--mono); font-size:10.5px; }
+  .dwgmore{
+    display:block; text-align:center; padding:8px; font-size:12px; color:var(--ink-2);
+    background:var(--card); border:1px dashed var(--rule); border-radius:2px;
+    text-decoration:none;
+  }
+  .dwgmore:hover{ border-color:var(--ink); }
 
-  .jump{ display:grid; gap:8px; grid-template-columns:repeat(3,1fr); margin-top:10px; }
+  .jump{ display:grid; gap:6px; }
   .jump a{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
     background:var(--card); border:1px solid var(--rule); border-radius:2px;
@@ -102,10 +140,12 @@
   .pmrow .pdt{ flex:0 0 152px; width:152px; }
   .pmrow .pnt{ flex:1 1 130px; width:auto; min-width:0; }
 
-  @media (max-width:900px){
-    .sheetdoc{ grid-template-columns:104px 1fr; }
+  @media (max-width:1080px){
+    .ovmain{ grid-template-columns:1fr; }
+  }
+  @media (max-width:820px){
+    .sheetdoc{ grid-template-columns:100px 1fr; }
     .sheetdoc > .v.r{ border-right:none; }
-    .ovbot{ grid-template-columns:1fr; }
     #panel .cols{ grid-template-columns:1fr; }
   }
 
@@ -118,15 +158,19 @@
           inset:auto !important; background:#fff; }
     #ovp > header.bar{ display:none !important; }
     #ovbody{ overflow:visible !important; padding:0 !important; }
-    .ovh{ background:#fff !important; color:#000 !important; border-bottom:2px solid #000;
+    .ovh{ background:#fff !important; border-bottom:2px solid #000;
           padding:0 0 6pt !important; margin-bottom:8pt; }
     .ovh .no2{ color:#444 !important; }
     .ovh h2{ color:#000 !important; font-size:15pt; }
-    .sheetdoc > .sh{ background:#E8E8E8 !important; color:#000 !important;
+    #ovbody{ display:block !important; }
+    #ovdoc{ max-width:none !important; }
+    .ovmain{ grid-template-columns:1fr !important; }
+    .ovside{ margin-top:8pt; }
+    .sheetdoc > .sh{ background:#E8E8E8 !important; color:#000 !important; box-shadow:none !important;
+                     border-left:3pt solid #000;
                      -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .sheetdoc > .k{ background:#F5F5F5 !important;
                     -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    .ovbot{ grid-template-columns:1fr 1fr; }
     .jump{ display:none !important; }
     .sheetdoc, .ovpm, .docs{ break-inside:avoid; }
   }
@@ -166,7 +210,6 @@
     <button class="btn ghost sm barbtn" id="ovedit" hidden>編集する</button>
     <button class="btn ghost sm barbtn" id="ovclose">閉じる</button>
   </header>
-  <div id="ovhead"></div>
   <div id="ovbody"></div>
 </div>
 <input id="docfile" type="file" accept="image/*,.pdf,.dwg,.dxf,.xls,.xlsx,.doc,.docx" multiple hidden>
@@ -463,14 +506,6 @@
     const tax  = Math.floor(amt * rate);
     const area = p.site_area ? Number(p.site_area).toLocaleString('ja-JP') + '<span class="un">㎡</span>' : '';
 
-    $('ovhead').innerHTML = `
-      <div class="ovh">
-        <span class="no2">${esc(p.project_no)}</span>
-        <h2>${esc(p.name)}</h2>
-        <span class="sp"></span>
-        <span class="tag st-${p.status}" style="background:#fff">${STATUS[p.status]||p.status}</span>
-      </div>`;
-
     const pms = Array.isArray(p.permits) ? p.permits : [];
     const pmHtml = pms.length
       ? `<table class="ovpm"><thead><tr><th>種類</th><th>番号</th><th>取得日</th><th>備考</th></tr></thead><tbody>` +
@@ -480,39 +515,56 @@
       : `<div class="ovnone">登録されていません</div>`;
 
     $('ovbody').innerHTML = `
-      <div class="sheetdoc">
-        <div class="sh">発注者・現場</div>
-        ${cell('施主・元請', esc(pmap[p.client_partner_id]||''), {r:true})}${cell('現場住所', esc(p.site_address||''))}
-        ${cell('担当者', esc(p.client_contact||''), {r:true})}${cell('地番', esc(p.site_lot||''))}
-        ${cell('連絡先', esc(p.client_tel||''), {r:true, num:true})}${cell('施工面積', area, {num:true})}
-
-        <div class="sh">契約・工期</div>
-        ${cell('契約日', p.contract_date ? fmtDate(p.contract_date) : '', {r:true, num:true})}${cell('着工日', p.start_date ? fmtDate(p.start_date) : '', {num:true})}
-        ${cell('契約金額', amt ? fmtMoney(amt) + '<span class="un">税抜</span>' : '', {r:true, num:true})}${cell('完成予定', p.end_date_planned ? fmtDate(p.end_date_planned) : '', {num:true})}
-        ${cell('消費税', amt ? fmtMoney(tax) + `<span class="un">${(rate*100).toFixed(0)}%</span>` : '', {r:true, num:true})}${cell('完成日', p.end_date_actual ? fmtDate(p.end_date_actual) : '', {num:true})}
-        ${cell('契約金額 税込', amt ? fmtMoney(amt + tax) : '', {r:true, num:true})}${cell('工程表', `第${p.schedule_version ?? 1}版　${p.schedule_revised_on ? fmtDate(p.schedule_revised_on) : ''}`, {num:true})}
-
-        <div class="sh">体制・その他</div>
-        ${cell('現場代理人', esc(p.agent_name||''), {r:true})}${cell('工事種別', esc(p.construction_type||''))}
-        ${cell('主任技術者', esc(p.engineer_name||''), {r:true})}${cell('保険・保証', esc(p.insurance_note||''))}
-        ${cell('現場担当', esc(umap[p.manager_user_id]||''), {r:true})}${cell('備考', esc(p.note||'').replace(/\n/g,'<br>'))}
+     <div id="ovdoc">
+      <div class="ovh">
+        <span class="no2">${esc(p.project_no)}</span>
+        <h2>${esc(p.name)}</h2>
+        <span class="sp"></span>
+        <span class="tag st-${p.status}">${STATUS[p.status]||p.status}</span>
       </div>
 
-      <div class="ovbot">
-        <div class="ovsec"><div class="t">許認可</div>${pmHtml}</div>
-        <div class="ovsec">
-          <div class="t">図面・書類<span class="sp"></span>
-            ${canEdit ? '<button class="btn ghost sm noprint" id="docadd" type="button">追加</button>' : ''}
+      <div style="height:12px"></div>
+
+      <div class="ovmain">
+       <div>
+        <div class="sheetdoc">
+          <div class="sh">発注者・現場</div>
+          ${cell('施主・元請', esc(pmap[p.client_partner_id]||''), {r:true})}${cell('現場住所', esc(p.site_address||''))}
+          ${cell('担当者', esc(p.client_contact||''), {r:true})}${cell('地番', esc(p.site_lot||''))}
+          ${cell('連絡先', esc(p.client_tel||''), {r:true, num:true})}${cell('施工面積', area, {num:true})}
+
+          <div class="sh">契約・工期</div>
+          ${cell('契約日', p.contract_date ? fmtDate(p.contract_date) : '', {r:true, num:true})}${cell('着工日', p.start_date ? fmtDate(p.start_date) : '', {num:true})}
+          ${cell('契約金額', amt ? fmtMoney(amt) + '<span class="un">税抜</span>' : '', {r:true, num:true})}${cell('完成予定', p.end_date_planned ? fmtDate(p.end_date_planned) : '', {num:true})}
+          ${cell('消費税', amt ? fmtMoney(tax) + `<span class="un">${(rate*100).toFixed(0)}%</span>` : '', {r:true, num:true})}${cell('完成日', p.end_date_actual ? fmtDate(p.end_date_actual) : '', {num:true})}
+          ${cell('税込', amt ? fmtMoney(amt + tax) : '', {r:true, num:true})}${cell('工程表', `第${p.schedule_version ?? 1}版　${p.schedule_revised_on ? fmtDate(p.schedule_revised_on) : ''}`, {num:true})}
+
+          <div class="sh">体制・その他</div>
+          ${cell('現場代理人', esc(p.agent_name||''), {r:true})}${cell('工事種別', esc(p.construction_type||''))}
+          ${cell('主任技術者', esc(p.engineer_name||''), {r:true})}${cell('保険・保証', esc(p.insurance_note||''))}
+          ${cell('現場担当', esc(umap[p.manager_user_id]||''), {r:true})}${cell('備考', esc(p.note||'').replace(/\n/g,'<br>'))}
+        </div>
+
+        <div class="ovsec" style="margin-top:10px"><div class="t">許認可</div>${pmHtml}</div>
+       </div>
+
+        <div class="ovside">
+          <div class="ovsec">
+            <div class="t">図面<span class="sp"></span>
+              ${canEdit ? '<button class="btn ghost sm noprint" id="docadd" type="button">追加</button>' : ''}
+            </div>
+            <div id="doclist"></div>
           </div>
-          <div id="doclist"></div>
+          <div class="ovsec noprint"><div class="t">この工事の記録</div>
+            <div class="jump">
+              <a href="schedule.html?p=${p.id}">工程表 <span class="c">${ph.count ?? 0} 工程</span></a>
+              <a href="reports.html?p=${p.id}">日報 <span class="c">${dr.count ?? 0} 件</span></a>
+              <a href="files.html?p=${p.id}">写真・書類 <span class="c">${pf.count ?? 0} 件</span></a>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div class="jump noprint">
-        <a href="schedule.html?p=${p.id}">工程表 <span class="c">${ph.count ?? 0} 工程</span></a>
-        <a href="reports.html?p=${p.id}">日報 <span class="c">${dr.count ?? 0} 件</span></a>
-        <a href="files.html?p=${p.id}">写真・書類 <span class="c">${pf.count ?? 0} 件</span></a>
-      </div>`;
+     </div>`;
 
     await paintDocs(p.id);
     if ($('docadd')) $('docadd').onclick = () => $('docfile').click();
@@ -521,30 +573,58 @@
     $('ovp').classList.add('open');
   }
 
-  /* ---- 図面・書類 ---- */
-  const KINDLBL = { drawing:'図面', document:'書類', photo:'写真', other:'その他' };
+  /* ---- 図面 ---- */
+  function extOf(name){
+    const m = /\.([A-Za-z0-9]+)$/.exec(name || '');
+    return m ? m[1].toUpperCase() : 'FILE';
+  }
 
   async function paintDocs(pid){
-    const { data, error } = await sb.from('project_files')
-      .select('id,file_kind,original_name,title,storage_path,created_at')
-      .eq('project_id', pid).eq('is_active', true)
-      .in('file_kind', ['drawing','document','other'])
-      .order('created_at', { ascending:false }).limit(30);
-
     const box = $('doclist');
     if (!box) return;
+
+    const { data, error } = await sb.from('project_files')
+      .select('id,file_kind,original_name,title,storage_path,thumb_path,mime_type,created_at')
+      .eq('project_id', pid).eq('is_active', true)
+      .in('file_kind', ['drawing','document','other'])
+      .order('created_at', { ascending:false }).limit(12);
+
     if (error){ box.innerHTML = `<div class="ovnone">${esc(error.message)}</div>`; return; }
-    if (!data || !data.length){ box.innerHTML = `<div class="ovnone">登録されていません</div>`; return; }
+    if (!data || !data.length){
+      box.innerHTML = `<div class="ovnone">図面が登録されていません${canEdit ? '。上の「追加」から取り込めます。' : '。'}</div>`;
+      return;
+    }
 
-    box.innerHTML = `<div class="docs">` + data.map(f =>
-      `<div class="docrow"><span class="dk">${KINDLBL[f.file_kind]||''}</span>` +
-      `<span class="dn">${esc(f.title || f.original_name || '')}</span>` +
-      `<a href="#" class="dopen noprint" data-p="${esc(f.storage_path)}">開く</a></div>`).join('') + `</div>`;
+    function tile(f, cls){
+      const nm = f.title || f.original_name || '';
+      return `<button class="dwg" data-p="${esc(f.storage_path)}" title="${esc(nm)}">
+        <span class="pv" data-t="${esc(f.thumb_path || '')}" data-o="${esc(f.storage_path)}" data-m="${esc(f.mime_type||'')}">
+          <span class="ext">${esc(extOf(f.original_name))}</span>
+        </span>
+        <span class="cap"><b>${esc(nm)}</b><span>${fmtDate((f.created_at||'').slice(0,10))}</span></span>
+      </button>`;
+    }
 
-    box.querySelectorAll('.dopen').forEach(a => a.onclick = async e => {
-      e.preventDefault();
-      const { data:u } = await sb.storage.from(BUCKET).createSignedUrl(a.dataset.p, 3600);
-      if (u?.signedUrl) window.open(u.signedUrl, '_blank');
+    const head = data[0];
+    const rest = data.slice(1, 4);
+    box.innerHTML =
+      `<div class="dwgs">${tile(head)}</div>` +
+      (rest.length ? `<div class="dwgs sm">${rest.map(f => tile(f)).join('')}</div>` : '') +
+      (data.length > 4
+        ? `<a class="dwgmore noprint" href="files.html?p=${pid}">ほか ${data.length - 4} 件をすべて見る</a>`
+        : '');
+
+    // 画像は縮小版を差し込む
+    box.querySelectorAll('.pv').forEach(async pv => {
+      const path = pv.dataset.t || ((pv.dataset.m || '').startsWith('image/') ? pv.dataset.o : '');
+      if (!path) return;
+      const { data:u } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+      if (u && u.signedUrl) pv.insertAdjacentHTML('beforeend', `<img src="${u.signedUrl}" alt="" loading="lazy">`);
+    });
+
+    box.querySelectorAll('.dwg').forEach(b2 => b2.onclick = async () => {
+      const { data:u } = await sb.storage.from(BUCKET).createSignedUrl(b2.dataset.p, 3600);
+      if (u && u.signedUrl) window.open(u.signedUrl, '_blank');
     });
   }
 
@@ -553,22 +633,34 @@
     e.target.value = '';
     if (!list.length || !editing) return;
 
-    showMsg($('msg'), `${list.length}件を取り込んでいます…`, 'ok');
+    showMsg($('msg'), `${list.length}件を取り込んでいます…（PDFは中身を絵にするため少し時間がかかります）`, 'ok');
     let ok = 0;
     for (let i = 0; i < list.length; i++){
       const f = list[i];
       const nm = f.name.replace(/[^\w.\-]/g, '_').slice(-80);
-      const path = `${me.organization_id}/${editing.id}/orig/${Date.now()}_${i}_${nm}`;
+      const stamp = `${Date.now()}_${i}`;
+      const base = `${me.organization_id}/${editing.id}`;
+      const path = `${base}/orig/${stamp}_${nm}`;
       try {
         const up = await sb.storage.from(BUCKET)
           .upload(path, f, { contentType: f.type || 'application/octet-stream' });
         if (up.error) throw up.error;
-        const kind = /\.(dwg|dxf|jww|p21|sfc)$/i.test(f.name) ? 'drawing'
-                   : (f.type === 'application/pdf' ? 'document'
-                   : (f.type.startsWith('image/') ? 'drawing' : 'other'));
+
+        // 一覧に出す絵をつくる（画像は縮小、PDFは1ページ目）
+        let thumb = null;
+        const t = await makeThumb(f, 1400, 0.8);
+        if (t){
+          thumb = `${base}/thumb/${stamp}_${nm}.jpg`;
+          const up2 = await sb.storage.from(BUCKET)
+            .upload(thumb, t, { contentType:'image/jpeg' });
+          if (up2.error) thumb = null;
+        }
+
+        const kind = /\.(dwg|dxf|jww|p21|sfc|pdf)$/i.test(f.name) ? 'drawing'
+                   : (f.type.startsWith('image/') ? 'drawing' : 'other');
         const { error } = await sb.from('project_files').insert({
           organization_id: me.organization_id, project_id: editing.id,
-          file_kind: kind, purpose: 'submit', storage_path: path,
+          file_kind: kind, purpose: 'submit', storage_path: path, thumb_path: thumb,
           original_name: f.name, mime_type: f.type || null, byte_size: f.size,
           uploaded_by: me.id
         });
