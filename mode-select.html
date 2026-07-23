@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: mode-select (セレクトモード) v20260723Y -->
+<!-- BUILD: mode-select (セレクトモード) v20260723Z -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -59,7 +59,10 @@
     <div class="hcell"><span class="hlbl">工事</span><span class="hval" id="h_all">–</span></div>
     <div class="hcell"><span class="hlbl">着工中</span><span class="hval" id="h_run">–</span></div>
     <div class="hcell"><span class="hlbl">完工</span><span class="hval" id="h_done">–</span></div>
-    <div class="hcell wide"><span class="hlbl">保管量</span><span class="hval sm" id="h_st">–</span><span class="stbar"><i id="h_bar" style="width:0%"></i></span></div>
+    <div class="hcell st"><span class="hlbl">保管量</span>
+      <span class="stv"><b id="h_st">–</b><i id="h_sub">–</i></span>
+      <span class="stbar"><i id="h_bar" style="width:0%"></i></span>
+    </div>
     <div class="hcell"><span class="hlbl">接続</span><span class="hval" id="h_sys">確認中</span></div>
   </div>
 
@@ -150,7 +153,7 @@
   </div>
 
   </div></div>
-  <p class="foot">v20260723Y</p>
+  <p class="foot">v20260723Z</p>
  </div>
 </div>
 
@@ -210,8 +213,9 @@
     const n = Number(st.data.files) || 0;
     const pct = Math.min(100, b / LIMIT * 100);
     const mb = b / 1024 / 1024;
-    $('h_st').textContent = `${mb.toFixed(1)} MB ／ 1024 MB（${pct.toFixed(0)}%・${n}件）`;
-    $('h_bar').style.width = Math.max(1, pct).toFixed(1) + '%';
+    $('h_st').textContent  = `${pct.toFixed(0)}%`;
+    $('h_sub').textContent = `${mb.toFixed(1)} / 1024 MB ・ ${n}件`;
+    $('h_bar').style.width = Math.max(1.5, pct).toFixed(1) + '%';
 
     const lv = pct >= 80 ? 'full' : (pct >= 50 ? 'warn' : '');
     if (lv){ $('h_st').classList.add(lv); $('h_bar').classList.add(lv); }
