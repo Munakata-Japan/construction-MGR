@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: projects (工事) v20260723W -->
+<!-- BUILD: projects (工事) v20260723X -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -217,6 +217,10 @@
     #ovbody{ display:block !important; }
     #ovdoc{ max-width:none !important; }
     .ovmain{ grid-template-columns:1fr !important; }
+    /* 印刷の用紙幅は約700px相当のため、狭い画面用の指定が働いてしまう。
+       書類として4列に固定し直す。 */
+    .sheetdoc{ grid-template-columns:88px minmax(0,1fr) 88px minmax(0,1fr) !important; }
+    .sheetdoc > .v.r{ border-right:1px solid var(--rule-2) !important; }
     .ovside{ margin-top:8pt; }
     .sheetdoc > .sh{ background:#E8E8E8 !important; color:#000 !important; box-shadow:none !important;
                      border-left:3pt solid #000;
