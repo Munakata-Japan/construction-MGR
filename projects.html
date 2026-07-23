@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: projects (工事一覧・登録) v20260723B -->
+<!-- BUILD: projects (工事一覧・登録) v20260723C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -248,7 +248,7 @@
         <span class="body">
           <span class="no">${esc(p.project_no)}</span>
           <span class="nm">${esc(p.name)}</span>
-          <span class="meta">${meta.join('<span></span>')}</span>
+          <span class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</span>
         </span>
         <span class="side"><span class="tag st-${p.status}">${STATUS[p.status] || p.status}</span></span>
       </button>`;

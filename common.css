@@ -1,6 +1,6 @@
 /* ============================================================
    建設統合管理システム  共通スタイル
-   BUILD: common.css v20260723B
+   BUILD: common.css v20260723C
    設計方針: 工事現場の表示板を下敷きにした罫線グリッド。
              屋外・手袋での操作を想定し、文字とタップ領域を大きく。
    ============================================================ */
@@ -155,10 +155,12 @@ select{ appearance:none; background-image:none; }
 .item .flag{ background:var(--rule); }
 .item .body{ padding:12px 14px; min-width:0; }
 .item .no{
+  display:block;
   font-family:var(--mono); font-size:12px; color:var(--ink-2);
   letter-spacing:.04em;
 }
 .item .nm{
+  display:block;
   font-family:var(--disp); font-weight:700; font-size:16.5px;
   line-height:1.45; margin:1px 0 4px;
   overflow-wrap:anywhere;
