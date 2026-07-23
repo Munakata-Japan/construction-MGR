@@ -1,6 +1,6 @@
 /* ============================================================
    建設統合管理システム  共通処理
-   BUILD: common.js v20260723D
+   BUILD: common.js v20260723K
    ============================================================ */
 
 const STATUS = {
@@ -57,7 +57,7 @@ async function requireAuth(){
 
   const { data:me, error } = await sb
     .from('app_users')
-    .select('id, name, role, organization_id, employee_type')
+    .select('id, name, role, organization_id, employee_type, department')
     .eq('auth_user_id', session.user.id)
     .maybeSingle();
 
@@ -99,7 +99,7 @@ async function signOut(){
 ------------------------------------------ */
 (function insertBack(){
   const here = location.pathname.split('/').pop() || 'index.html';
-  if (/^(index|mode-select)\.html$/.test(here)) return;
+  if (/^(index|mode-select|report-entry)\.html$/.test(here)) return;
 
   function put(){
     const bar = document.querySelector('.bar');

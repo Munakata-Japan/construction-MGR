@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<!-- BUILD: reports (日報) v20260723K -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>日報 ｜ 建設統合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .ctl select{ width:auto; min-width:170px; max-width:380px; min-height:44px; flex:0 1 auto; }
+  .ctl .sp{ flex:1 1 0; }
+
+  .rstat{ font-size:12px; font-weight:700; padding:4px 9px; border-radius:2px;
+          border:1px solid currentColor; white-space:nowrap; }
+  .s-draft    { color:#6B7280; } .f-draft    { background:#9CA3AF; }
+  .s-submitted{ color:var(--ink-2); } .f-submitted{ background:var(--ink-2); }
+  .s-approved { color:#9A6E00; } .f-approved { background:var(--safety); }
+  .s-received { color:var(--ok); }  .f-received { background:var(--ok); }
+  .s-rejected { color:var(--alert); } .f-rejected { background:var(--alert); }
+
+  .line{ background:var(--card); border:1px solid var(--rule); border-radius:2px;
+         padding:11px 13px; margin-bottom:8px; }
+  .line .lh{ display:flex; gap:8px; align-items:center; margin-bottom:7px; }
+  .line .lh select{ flex:1 1 auto; width:auto; min-width:0; }
+  .line .lh .md{ flex:0 0 88px; width:88px; }
+  .line textarea{ min-height:52px; margin-top:5px; }
+  .line .lbl{ font-size:12px; color:var(--sub); display:block; margin-top:5px; }
+
+  .lk{ background:var(--card); border:1px solid var(--rule); border-radius:2px;
+       padding:11px 13px; margin-bottom:8px; font-size:13px; }
+  .lk .u{ font-family:var(--mono); font-size:11.5px; color:var(--ink-2);
+          word-break:break-all; margin:5px 0; }
+  .lk .row2{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px; }
+  .newlk{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .newlk input{ flex:1 1 200px; width:auto; min-width:0; min-height:42px; }
+  .newlk select{ flex:0 1 200px; width:auto; min-width:0; min-height:42px; }
+
+  .act{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  .ro{ background:#F3F5F1; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>日報</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+  <div class="ctl">
+    <select id="proj"><option value="">すべての工事</option></select>
+    <select id="fst">
+      <option value="">すべての状態</option>
+      <option value="draft">下書き</option>
+      <option value="submitted">提出</option>
+      <option value="approved">現場承認</option>
+      <option value="received">情報部受領</option>
+      <option value="rejected">差戻し</option>
+    </select>
+    <button class="btn ghost sm" id="lkbtn" hidden>外注先へのURL</button>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div id="lkbox" hidden>
+    <div class="sheet" style="margin-bottom:16px">
+      <div class="head">外注先に渡す入力用URL</div>
+      <div class="row" style="grid-template-columns:1fr">
+        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+          <div class="newlk">
+            <select id="lk_proj"></select>
+            <input id="lk_label" type="text" placeholder="渡す相手（例：〇〇建設）">
+            <button class="btn sm" id="lk_new" type="button">発行する</button>
+          </div>
+          <div id="lklist"></div>
+          <p style="font-size:12px;color:var(--sub);margin:8px 0 0;line-height:1.7">
+            このURLを知っていれば、ログインなしで日報を書けます。渡す相手ごとに別のURLを発行してください。<br>
+            期限は30日です。書き込みだけができ、他の工事や金額は一切見えません。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="count" id="count"></p>
+  <div class="list" id="list"></div>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="inner"><button class="btn wide" id="add">日報を書く</button></div>
+</div>
+
+<!-- ========== 日報の詳細 ========== -->
+<div class="panel" id="panel">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1 id="ptitle">日報</h1>
+    <button class="btn ghost sm barbtn" id="close">閉じる</button>
+  </header>
+
+  <div class="wrap">
+    <div id="pmsg" class="msg"></div>
+
+    <div class="sheet">
+      <div class="head">現場の状況</div>
+      <div class="row">
+        <label for="f_proj">工事<span class="req">*</span></label>
+        <div class="fld"><select id="f_proj"></select></div>
+      </div>
+      <div class="row">
+        <label for="f_date">日付<span class="req">*</span></label>
+        <div class="fld"><input id="f_date" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="f_weather">天候</label>
+        <div class="fld"><select id="f_weather"></select></div>
+      </div>
+      <div class="row">
+        <label for="f_wk">出た人数</label>
+        <div class="fld"><input id="f_wk" type="number" min="0" step="1" placeholder="0"><span style="font-size:13px;color:var(--sub)">人</span></div>
+      </div>
+      <div class="row">
+        <label for="f_mach">使用した重機</label>
+        <div class="fld"><input id="f_mach" type="text" placeholder="バックホウ0.7×1、ブルドーザ×1 など"></div>
+      </div>
+      <div class="row">
+        <label for="f_mat">搬入した資材</label>
+        <div class="fld"><input id="f_mat" type="text" placeholder="砕石20t、単管50本 など"></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">やった作業</div>
+      <div class="row" style="grid-template-columns:1fr">
+        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+          <div id="lines"></div>
+          <button class="btn ghost sm" id="addline" type="button" style="margin-top:6px">＋ 作業を足す</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">原価に響くこと</div>
+      <div class="row">
+        <label for="f_up">上がる要因</label>
+        <div class="fld"><textarea id="f_up" placeholder="湧水で排水ポンプを追加、地盤が固く掘削が進まない など"></textarea></div>
+      </div>
+      <div class="row">
+        <label for="f_down">下がる要因</label>
+        <div class="fld"><textarea id="f_down" placeholder="発生土を流用できた、想定より早く進んだ など"></textarea></div>
+      </div>
+      <div class="row">
+        <label for="f_plan">明日の予定</label>
+        <div class="fld"><textarea id="f_plan"></textarea></div>
+      </div>
+      <div class="row">
+        <label for="f_note">特記事項</label>
+        <div class="fld"><textarea id="f_note"></textarea></div>
+      </div>
+    </div>
+
+    <div id="flow" style="margin-top:16px"></div>
+    <div class="act" id="acts"></div>
+    <div style="height:16px"></div>
+    <button class="btn danger" id="del" hidden>この日報を削除する</button>
+  </div>
+
+  <div class="dock" id="pdock">
+    <div class="inner">
+      <button class="btn ghost" id="cancel" style="flex:0 0 auto">やめる</button>
+      <button class="btn wide" id="save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const RSTAT = { draft:'下書き', submitted:'提出', approved:'現場承認',
+                  received:'情報部受領', rejected:'差戻し' };
+  const WEATHER = ['','晴','曇','雨','雪','晴のち曇','曇のち雨','雨のち曇'];
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+
+  const isMgr     = (me.role === 'admin' || me.role === 'manager');
+  const canReceive = (me.department === 'info' || me.role === 'admin');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+  $('dock').hidden = false;
+  $('lkbtn').hidden = !isMgr;
+
+  WEATHER.forEach(w => $('f_weather').insertAdjacentHTML('beforeend',
+    `<option value="${w}">${w || '（未設定）'}</option>`));
+
+  let projects = [], users = [], reports = [], phaseCache = {}, editing = null, lines = [];
+
+  /* ================= 読み込み ================= */
+  async function loadRefs(){
+    const [pr, u] = await Promise.all([
+      sb.from('projects').select('id,project_no,name').eq('is_active', true)
+        .order('project_no', { ascending:false }),
+      sb.from('app_users').select('id,name').eq('is_active', true).order('name')
+    ]);
+    if (pr.error || u.error){
+      showMsg($('msg'), '読み込めませんでした。' +
+        ((pr.error || u.error).message || ''), 'err');
+      return;
+    }
+    projects = pr.data || []; users = u.data || [];
+    const opt = projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+    $('proj').innerHTML   = '<option value="">すべての工事</option>' + opt;
+    $('f_proj').innerHTML = '<option value="">選んでください</option>' + opt;
+    $('lk_proj').innerHTML = opt;
+  }
+
+  async function loadPhases(projId){
+    if (!projId) return [];
+    if (phaseCache[projId]) return phaseCache[projId];
+    const { data } = await sb.from('project_phases')
+      .select('id,name').eq('project_id', projId).eq('is_active', true).order('seq');
+    phaseCache[projId] = data || [];
+    return phaseCache[projId];
+  }
+
+  async function loadReports(){
+    let q = sb.from('daily_reports').select('*').eq('is_active', true)
+      .order('report_date', { ascending:false }).limit(300);
+    if ($('proj').value) q = q.eq('project_id', $('proj').value);
+    const { data, error } = await q;
+    if (error){ showMsg($('msg'), '日報を読み込めませんでした。' + error.message, 'err'); return; }
+    reports = data || [];
+    render();
+  }
+
+  function render(){
+    const st = $('fst').value;
+    const pmap = Object.fromEntries(projects.map(p => [p.id, p]));
+    const umap = Object.fromEntries(users.map(u => [u.id, u.name]));
+    const rows = reports.filter(r => !st || r.status === st);
+
+    $('count').textContent = `${rows.length} 件 ／ 全 ${reports.length} 件`;
+
+    if (!rows.length){
+      $('list').innerHTML = `<div class="empty"><b>日報がありません</b>下の「日報を書く」から始めてください。</div>`;
+      return;
+    }
+
+    $('list').innerHTML = rows.map(r => {
+      const pj = pmap[r.project_id];
+      const who = r.reporter_type === 'partner'
+        ? `${esc(r.partner_company || '')} ${esc(r.partner_name || '')}`
+        : esc(umap[r.reporter_user_id] || '—');
+      const meta = [ who ];
+      if (r.worker_count) meta.push(`${r.worker_count}人`);
+      if (r.weather) meta.push(esc(r.weather));
+      if (r.reporter_type === 'partner') meta.push('外注先');
+
+      return `<button class="item" data-id="${r.id}">
+        <span class="flag f-${r.status}"></span>
+        <span class="body">
+          <span class="no">${fmtDate(r.report_date)}　${pj ? esc(pj.project_no) : ''}</span>
+          <span class="nm">${pj ? esc(pj.name) : '（工事不明）'}</span>
+          <span class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</span>
+        </span>
+        <span class="side"><span class="rstat s-${r.status}">${RSTAT[r.status]}</span></span>
+      </button>`;
+    }).join('');
+
+    $('list').querySelectorAll('.item').forEach(b =>
+      b.addEventListener('click', () => openPanel(reports.find(x => x.id === b.dataset.id))));
+  }
+
+  $('proj').addEventListener('change', loadReports);
+  $('fst').addEventListener('change', render);
+
+  /* ================= 明細 ================= */
+  function lineHtml(ph, v){
+    const opt = '<option value="">（選ばない）</option>' +
+      ph.map(p => `<option value="${p.id}"${v && v.phase_id === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+    return `<div class="line">
+      <div class="lh"><select class="l_ph">${opt}</select>
+        <input class="md l_md" type="number" min="0" step="0.5" placeholder="人工" value="${v && Number(v.mandays) ? v.mandays : ''}">
+        <button class="btn ghost sm l_rm" type="button">削除</button></div>
+      <span class="lbl">やったこと</span><textarea class="l_do">${esc(v ? (v.progress_note||'') : '')}</textarea>
+      <span class="lbl">終わらなかったこと</span><textarea class="l_no">${esc(v ? (v.unfinished_note||'') : '')}</textarea>
+    </div>`;
+  }
+  function bindRm(){
+    $('lines').querySelectorAll('.l_rm').forEach(b => b.onclick = () => b.closest('.line').remove());
+  }
+  async function paintLines(projId, vals){
+    const ph = await loadPhases(projId);
+    $('lines').innerHTML = (vals && vals.length ? vals : [null]).map(v => lineHtml(ph, v)).join('');
+    bindRm();
+  }
+  $('addline').addEventListener('click', async () => {
+    const ph = await loadPhases($('f_proj').value);
+    $('lines').insertAdjacentHTML('beforeend', lineHtml(ph, null));
+    bindRm();
+  });
+  $('f_proj').addEventListener('change', () => paintLines($('f_proj').value, null));
+
+  /* ================= 詳細 ================= */
+  async function openPanel(r){
+    editing = r || null;
+    showMsg($('pmsg'), '');
+
+    const mine  = r && r.reporter_type === 'staff' && r.reporter_user_id === me.id;
+    const canEd = !r || (mine && ['draft','rejected'].includes(r.status)) ||
+                  (isMgr && r && ['draft','submitted','rejected'].includes(r.status));
+
+    $('ptitle').textContent = r ? '日報' : '日報を書く';
+    $('f_proj').value   = r ? r.project_id : ($('proj').value || '');
+    $('f_date').value   = r ? r.report_date : new Date().toISOString().slice(0,10);
+    $('f_weather').value= r ? (r.weather || '') : '';
+    $('f_wk').value     = r && r.worker_count ? r.worker_count : '';
+    $('f_mach').value   = r ? (r.machines || '') : '';
+    $('f_mat').value    = r ? (r.materials || '') : '';
+    $('f_up').value     = r ? (r.cost_up_note || '') : '';
+    $('f_down').value   = r ? (r.cost_down_note || '') : '';
+    $('f_plan').value   = r ? (r.tomorrow_plan || '') : '';
+    $('f_note').value   = r ? (r.note || '') : '';
+
+    let vals = [];
+    if (r){
+      const { data } = await sb.from('daily_report_lines')
+        .select('*').eq('daily_report_id', r.id).order('seq');
+      vals = data || [];
+    }
+    await paintLines($('f_proj').value, vals);
+
+    // 状態と履歴
+    const umap = Object.fromEntries(users.map(u => [u.id, u.name]));
+    $('flow').innerHTML = !r ? '' :
+      `<div class="msg" style="margin:0">
+        <b>${RSTAT[r.status]}</b>
+        ${r.reporter_type === 'partner' ? `　記入 ${esc(r.partner_company||'')} ${esc(r.partner_name||'')}` : ''}
+        ${r.submitted_at ? `<br>提出 ${fmtDate(r.submitted_at.slice(0,10))}` : ''}
+        ${r.approved_at ? `<br>現場承認 ${fmtDate(r.approved_at.slice(0,10))}　${esc(umap[r.approved_by]||'')}` : ''}
+        ${r.received_at ? `<br>情報部受領 ${fmtDate(r.received_at.slice(0,10))}　${esc(umap[r.received_by]||'')}` : ''}
+        ${r.reject_reason ? `<br><span style="color:var(--alert)">差戻し：${esc(r.reject_reason)}</span>` : ''}
+      </div>`;
+
+    // 操作
+    const a = [];
+    if (r && r.status === 'draft' && mine) a.push(['submit','提出する','btn']);
+    if (r && r.status === 'rejected' && mine) a.push(['submit','出し直す','btn']);
+    if (r && r.status === 'submitted' && isMgr) a.push(['approve','承認する','btn']);
+    if (r && r.status === 'approved' && canReceive) a.push(['receive','受領する','btn']);
+    if (r && ['submitted','approved'].includes(r.status) && (isMgr || canReceive))
+      a.push(['reject','差し戻す','btn ghost']);
+    $('acts').innerHTML = a.map(([k,l,c]) => `<button class="${c}" data-a="${k}">${l}</button>`).join('');
+    $('acts').querySelectorAll('button').forEach(b => b.onclick = () => doAct(b.dataset.a));
+
+    document.querySelectorAll('#panel input, #panel select, #panel textarea')
+      .forEach(el => el.disabled = !canEd);
+    $('addline').disabled = !canEd;
+    $('pdock').style.display = canEd ? '' : 'none';
+    $('lines').classList.toggle('ro', !canEd);
+    $('del').hidden = !(r && isMgr);
+
+    $('panel').classList.add('open');
+    window.scrollTo(0,0);
+  }
+
+  function closePanel(){ $('panel').classList.remove('open'); editing = null; }
+  $('add').addEventListener('click', () => openPanel(null));
+  $('close').addEventListener('click', closePanel);
+  $('cancel').addEventListener('click', closePanel);
+
+  /* ================= 保存 ================= */
+  function collectLines(){
+    return [...$('lines').querySelectorAll('.line')].map((el,i) => ({
+      phase_id       : el.querySelector('.l_ph').value || null,
+      phase_name     : el.querySelector('.l_ph').selectedOptions[0]?.textContent || null,
+      mandays        : Number(el.querySelector('.l_md').value) || 0,
+      progress_note  : el.querySelector('.l_do').value.trim() || null,
+      unfinished_note: el.querySelector('.l_no').value.trim() || null,
+      seq            : (i+1)*10
+    })).filter(x => x.phase_id || x.mandays || x.progress_note || x.unfinished_note);
+  }
+
+  async function save(status){
+    showMsg($('pmsg'), '');
+    if (!$('f_proj').value){ showMsg($('pmsg'), '工事を選んでください。', 'err'); return null; }
+    if (!$('f_date').value){ showMsg($('pmsg'), '日付を入れてください。', 'err'); return null; }
+
+    const body = {
+      organization_id : me.organization_id,
+      project_id      : $('f_proj').value,
+      report_date     : $('f_date').value,
+      reporter_type   : 'staff',
+      reporter_user_id: editing ? editing.reporter_user_id : me.id,
+      weather         : $('f_weather').value || null,
+      worker_count    : $('f_wk').value === '' ? null : Number($('f_wk').value),
+      machines        : $('f_mach').value.trim() || null,
+      materials       : $('f_mat').value.trim() || null,
+      cost_up_note    : $('f_up').value.trim() || null,
+      cost_down_note  : $('f_down').value.trim() || null,
+      tomorrow_plan   : $('f_plan').value.trim() || null,
+      note            : $('f_note').value.trim() || null
+    };
+    if (status){ body.status = status; if (status === 'submitted') body.submitted_at = new Date().toISOString(); }
+
+    let id = editing?.id, error;
+    if (editing){
+      ({ error } = await sb.from('daily_reports').update(body).eq('id', editing.id));
+    } else {
+      body.status = status || 'draft';
+      const r = await sb.from('daily_reports').insert(body).select('id').single();
+      error = r.error; id = r.data?.id;
+    }
+
+    if (!error && id){
+      await sb.from('daily_report_lines').delete().eq('daily_report_id', id);
+      const rows = collectLines().map(x => ({ ...x, organization_id: me.organization_id, daily_report_id: id }));
+      if (rows.length){
+        const r2 = await sb.from('daily_report_lines').insert(rows);
+        if (r2.error) error = r2.error;
+      }
+    }
+
+    if (error){
+      showMsg($('pmsg'), error.code === '23505'
+        ? 'その工事・その日の日報は既にあります。'
+        : error.code === '42501' ? 'この操作を行う権限がありません。'
+        : '保存できませんでした。' + error.message, 'err');
+      return null;
+    }
+    return id;
+  }
+
+  $('save').addEventListener('click', async () => {
+    $('save').disabled = true; $('save').textContent = '保存しています…';
+    const id = await save(null);
+    $('save').disabled = false; $('save').textContent = '保存する';
+    if (!id) return;
+    closePanel(); await loadReports();
+    showMsg($('msg'), '日報を保存しました。', 'ok');
+  });
+
+  /* ================= 提出・承認・受領・差戻し ================= */
+  async function doAct(kind){
+    if (!editing) return;
+    let error, msg;
+
+    if (kind === 'submit'){
+      const id = await save('submitted');
+      if (!id) return;
+      msg = '提出しました。';
+    } else if (kind === 'approve'){
+      ({ error } = await sb.rpc('approve_report', { p_report_id: editing.id }));
+      msg = '承認しました。会社の情報部へ回ります。';
+    } else if (kind === 'receive'){
+      ({ error } = await sb.rpc('receive_report', { p_report_id: editing.id }));
+      msg = '受領しました。';
+    } else if (kind === 'reject'){
+      const why = prompt('差し戻す理由を入れてください。');
+      if (why === null) return;
+      ({ error } = await sb.rpc('reject_report', { p_report_id: editing.id, p_reason: why }));
+      msg = '差し戻しました。';
+    }
+
+    if (error){ showMsg($('pmsg'), error.message, 'err'); return; }
+    closePanel(); await loadReports();
+    showMsg($('msg'), msg, 'ok');
+  }
+
+  /* ================= 削除 ================= */
+  $('del').addEventListener('click', async () => {
+    if (!editing) return;
+    if (!confirm('この日報を削除します。取り消せません。')) return;
+    const { error } = await sb.from('daily_reports').delete().eq('id', editing.id);
+    if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
+    closePanel(); await loadReports();
+    showMsg($('msg'), '日報を削除しました。', 'ok');
+  });
+
+  /* ================= 外注先へのURL ================= */
+  const base = location.href.replace(/[^/]*$/, '') + 'report-entry.html?t=';
+
+  async function paintLinks(){
+    const { data, error } = await sb.from('report_links')
+      .select('*').order('created_at', { ascending:false });
+    if (error){ $('lklist').innerHTML = `<div class="msg err">${esc(error.message)}</div>`; return; }
+    const pmap = Object.fromEntries(projects.map(p => [p.id, p]));
+    $('lklist').innerHTML = (data || []).map(l => {
+      const pj = pmap[l.project_id];
+      const dead = !l.is_active || l.valid_until < new Date().toISOString().slice(0,10);
+      return `<div class="lk">
+        <b>${esc(l.label || '（宛先なし）')}</b>　${pj ? esc(pj.name) : ''}
+        <div class="u">${base}${l.token}</div>
+        <div class="row2">
+          <span style="font-size:12px;color:${dead ? 'var(--alert)' : 'var(--sub)'}">
+            ${dead ? '使えません' : '期限 ' + fmtDate(l.valid_until)}　送信 ${l.used_count}件</span>
+          <span class="sp" style="flex:1"></span>
+          <button class="btn ghost sm lk_cp" data-u="${base}${l.token}">URLを写す</button>
+          ${l.is_active ? `<button class="btn ghost sm lk_off" data-id="${l.id}">停止</button>` : ''}
+        </div></div>`;
+    }).join('') || '<div style="font-size:13px;color:var(--sub)">まだ発行していません。</div>';
+
+    $('lklist').querySelectorAll('.lk_cp').forEach(b => b.onclick = async () => {
+      try { await navigator.clipboard.writeText(b.dataset.u); b.textContent = '写しました'; }
+      catch { prompt('このURLを写してください', b.dataset.u); }
+    });
+    $('lklist').querySelectorAll('.lk_off').forEach(b => b.onclick = async () => {
+      if (!confirm('このURLを停止します。以後、外注先は書けなくなります。')) return;
+      await sb.from('report_links').update({ is_active:false }).eq('id', b.dataset.id);
+      paintLinks();
+    });
+  }
+
+  $('lkbtn').addEventListener('click', async () => {
+    const open = $('lkbox').hidden;
+    $('lkbox').hidden = !open;
+    if (open) await paintLinks();
+  });
+
+  $('lk_new').addEventListener('click', async () => {
+    const pj = $('lk_proj').value, lb = $('lk_label').value.trim();
+    if (!pj){ showMsg($('msg'), '工事を選んでください。', 'err'); return; }
+    const { error } = await sb.from('report_links').insert({
+      organization_id: me.organization_id, project_id: pj,
+      label: lb || null, created_by: me.id });
+    if (error){ showMsg($('msg'), '発行できませんでした。' + error.message, 'err'); return; }
+    $('lk_label').value = '';
+    await paintLinks();
+    showMsg($('msg'), '入力用URLを発行しました。下の一覧から写して外注先へ送ってください。', 'ok');
+  });
+
+  /* ================= 起動 ================= */
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)) $('proj').value = q;
+  await loadReports();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<!-- BUILD: report-entry (外注先用 日報入力) v20260723K -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>日報の入力 ｜ 建設統合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{ max-width:640px; }
+  .headline{ padding-left:14px; border-left:5px solid var(--safety); margin:22px 0 20px; }
+  .headline .kicker{ font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--ink-2); margin:0 0 6px; }
+  .headline h1{ font-family:var(--disp); font-weight:700; font-size:clamp(19px,4.6vw,24px); margin:0 0 6px; line-height:1.4; }
+  .headline p{ margin:0; font-size:13.5px; color:var(--sub); }
+  .line{
+    background:var(--card); border:1px solid var(--rule); border-radius:2px;
+    padding:12px 14px; margin-bottom:8px;
+  }
+  .line .lh{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .line .lh select{ flex:1 1 auto; width:auto; min-width:0; }
+  .line .lh .md{ flex:0 0 92px; width:92px; }
+  .line textarea{ min-height:56px; margin-top:6px; }
+  .line .lbl{ font-size:12px; color:var(--sub); display:block; margin-top:6px; }
+  .done{ text-align:center; padding:48px 20px; }
+  .done b{ display:block; font-family:var(--disp); font-size:20px; margin-bottom:10px; }
+  .foot{ margin:26px 0 0; font-family:var(--mono); font-size:10.5px; color:var(--sub); text-align:center; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>日報の入力</h1>
+</header>
+
+<div class="wrap" id="wrap">
+  <div id="msg" class="msg"></div>
+  <p style="color:var(--sub);font-size:14px">読み込んでいます…</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const wrap = $('wrap');
+  const token = new URL(location.href).searchParams.get('t');
+
+  function stop(text){
+    wrap.innerHTML = `<div class="headline"><p class="kicker">CONSTRUCTION MGR</p>` +
+      `<h1>日報の入力</h1></div><div class="msg err">${esc(text)}</div>`;
+  }
+
+  if (!token){ stop('入力用のURLが正しくありません。工事の担当者にご確認ください。'); return; }
+
+  const { data, error } = await sb.rpc('get_report_form', { p_token: token });
+  if (error){ stop('読み込めませんでした。' + error.message); return; }
+  if (!data || !data.ok){ stop((data && data.message) || '入力用のURLが使えません。'); return; }
+
+  const phases = data.phases || [];
+  const today = new Date();
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+  const phOpt = '<option value="">（選ばない）</option>' +
+    phases.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+
+  wrap.innerHTML = `
+    <div class="headline">
+      <p class="kicker">${esc(data.project_no || '')}</p>
+      <h1>${esc(data.project_name || '')}</h1>
+      <p>${esc(data.label || '')}${data.valid_until ? '　入力できるのは ' + fmtDate(data.valid_until) + ' まで' : ''}</p>
+    </div>
+
+    <div id="msg" class="msg"></div>
+
+    <div class="sheet">
+      <div class="head">お名前と日付</div>
+      <div class="row">
+        <label for="f_date">日付<span class="req">*</span></label>
+        <div class="fld"><input id="f_date" type="date" value="${iso(today)}"></div>
+      </div>
+      <div class="row">
+        <label for="f_co">会社名<span class="req">*</span></label>
+        <div class="fld"><input id="f_co" type="text" placeholder="〇〇建設"></div>
+      </div>
+      <div class="row">
+        <label for="f_nm">記入者<span class="req">*</span></label>
+        <div class="fld"><input id="f_nm" type="text" placeholder="山田 太郎"></div>
+      </div>
+      <div class="row">
+        <label for="f_wk">出た人数</label>
+        <div class="fld"><input id="f_wk" type="number" min="0" step="1" placeholder="0"><span style="font-size:13px;color:var(--sub)">人</span></div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <div class="sheet">
+      <div class="head">やった作業</div>
+      <div class="row" style="grid-template-columns:1fr">
+        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+          <div id="lines"></div>
+          <button class="btn ghost sm" id="addline" type="button" style="margin-top:6px">＋ 作業を足す</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <div class="sheet">
+      <div class="head">その他</div>
+      <div class="row">
+        <label for="f_note">特記事項</label>
+        <div class="fld"><textarea id="f_note" placeholder="天候、段取りの変更、気づいたことなど"></textarea></div>
+      </div>
+    </div>
+
+    <div style="height:20px"></div>
+    <button class="btn wide" id="go">この内容で送る</button>
+    <p class="foot">v20260723K</p>`;
+
+  function addLine(){
+    const d = document.createElement('div');
+    d.className = 'line';
+    d.innerHTML =
+      `<div class="lh"><select class="l_ph">${phOpt}</select>` +
+      `<input class="md l_md" type="number" min="0" step="0.5" placeholder="人工">` +
+      `<button class="btn ghost sm l_rm" type="button">削除</button></div>` +
+      `<span class="lbl">やったこと</span><textarea class="l_do"></textarea>` +
+      `<span class="lbl">終わらなかったこと</span><textarea class="l_no"></textarea>`;
+    d.querySelector('.l_rm').onclick = () => d.remove();
+    $('lines').appendChild(d);
+  }
+  addLine();
+  $('addline').addEventListener('click', addLine);
+
+  $('go').addEventListener('click', async () => {
+    const m = $('msg');
+    showMsg(m, '');
+    const co = $('f_co').value.trim(), nm = $('f_nm').value.trim(), dt = $('f_date').value;
+    if (!dt){ showMsg(m, '日付を入れてください。', 'err'); return; }
+    if (!co){ showMsg(m, '会社名を入れてください。', 'err'); $('f_co').focus(); return; }
+    if (!nm){ showMsg(m, '記入者のお名前を入れてください。', 'err'); $('f_nm').focus(); return; }
+
+    const lines = [...document.querySelectorAll('.line')].map(el => ({
+      phase_id       : el.querySelector('.l_ph').value || null,
+      mandays        : Number(el.querySelector('.l_md').value) || 0,
+      progress_note  : el.querySelector('.l_do').value.trim() || null,
+      unfinished_note: el.querySelector('.l_no').value.trim() || null
+    })).filter(x => x.phase_id || x.mandays || x.progress_note || x.unfinished_note);
+
+    if (!lines.length){ showMsg(m, 'やった作業を1つ以上入れてください。', 'err'); return; }
+
+    $('go').disabled = true; $('go').textContent = '送っています…';
+    const { data:r, error:e } = await sb.rpc('submit_partner_report', {
+      p_token: token, p_date: dt, p_company: co, p_name: nm,
+      p_workers: $('f_wk').value === '' ? null : Number($('f_wk').value),
+      p_note: $('f_note').value.trim() || null,
+      p_lines: lines
+    });
+    $('go').disabled = false; $('go').textContent = 'この内容で送る';
+
+    if (e){ showMsg(m, '送れませんでした。' + e.message, 'err'); return; }
+    if (!r || !r.ok){ showMsg(m, (r && r.message) || '送れませんでした。', 'err'); return; }
+
+    wrap.innerHTML = `<div class="done"><b>送りました</b>` +
+      `<p style="color:var(--sub);font-size:14px">${esc(dt)}　${esc(co)}　${esc(nm)} 様<br>` +
+      `ありがとうございました。</p>` +
+      `<div style="height:18px"></div>` +
+      `<button class="btn ghost" onclick="location.reload()">続けてもう1件書く</button></div>`;
+  });
+})();
+</script>
+</body>
+</html>
