@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: files (写真・書類) v20260723L -->
+<!-- BUILD: files (写真・書類) v20260723M -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -43,8 +43,19 @@
   .pill.int{ background:rgba(122,131,124,.9); }
 
   .up{ background:var(--card); border:1px dashed var(--rule); border-radius:2px;
-       padding:16px; margin-bottom:14px; }
-  .up .fl{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+       padding:14px; margin-bottom:14px; }
+  .pick2{ display:flex; gap:8px; flex-wrap:wrap; }
+  .pick2 .btn{ flex:1 1 150px; }
+  .opt2{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .opt2 select{ flex:1 1 180px; width:auto; min-width:0; min-height:44px; }
+  .picked{ margin-top:10px; }
+  .picked:empty{ display:none; }
+  .pk{ display:flex; align-items:center; gap:9px; padding:7px 0;
+       border-bottom:1px solid var(--rule-2); font-size:13px; }
+  .pk:last-child{ border-bottom:none; }
+  .pk img{ width:44px; height:44px; object-fit:cover; border-radius:2px; flex:0 0 44px; background:#DFE2DC; }
+  .pk .nm2{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pk .sz{ font-family:var(--mono); font-size:11px; color:var(--sub); flex:0 0 auto; }
   .prog{ font-size:13px; color:var(--sub); margin-top:8px; line-height:1.7; }
 
   .big{ width:100%; background:#1B1B1A; display:flex; align-items:center;
@@ -79,15 +90,23 @@
   <div id="msg" class="msg"></div>
 
   <div class="up" id="up" hidden>
-    <div class="fl">
-      <input id="file" type="file" multiple accept="image/*,.pdf" style="flex:1 1 240px">
-      <select id="u_purpose" style="width:auto;min-height:42px">
+    <div class="pick2">
+      <button class="btn" id="cambtn" type="button">カメラで撮る</button>
+      <button class="btn ghost" id="filebtn" type="button">保存済みから選ぶ</button>
+      <input id="cam"  type="file" accept="image/*" capture="environment" hidden>
+      <input id="file" type="file" accept="image/*,.pdf" multiple hidden>
+    </div>
+
+    <div id="picked" class="picked"></div>
+
+    <div class="opt2">
+      <select id="u_purpose">
         <option value="submit">提出用（原本のまま）</option>
         <option value="internal">社内の記録（縮小する）</option>
       </select>
-      <select id="u_phase" style="width:auto;min-height:42px"></select>
-      <button class="btn sm" id="u_go">取り込む</button>
+      <select id="u_phase"></select>
     </div>
+    <button class="btn wide" id="u_go" style="margin-top:8px">取り込む</button>
     <div class="prog" id="prog"></div>
   </div>
 
@@ -318,6 +337,38 @@
   /* ================= 取り込み ================= */
   $('add').addEventListener('click', () => { $('up').hidden = !$('up').hidden; });
 
+  // 選んだファイルを溜める（撮影と選択の両方から足せる）
+  let picked = [];
+
+  function paintPicked(){
+    $('picked').innerHTML = picked.map((f,i) => {
+      const mb = (f.size/1024/1024).toFixed(1);
+      return `<div class="pk"><img data-i="${i}" alt="">` +
+             `<span class="nm2">${esc(f.name)}</span>` +
+             `<span class="sz">${mb}MB</span>` +
+             `<button class="btn ghost sm pk_rm" data-i="${i}" type="button">外す</button></div>`;
+    }).join('');
+    $('picked').querySelectorAll('.pk img').forEach(im => {
+      const f = picked[Number(im.dataset.i)];
+      if (f && f.type.startsWith('image/')) im.src = URL.createObjectURL(f);
+    });
+    $('picked').querySelectorAll('.pk_rm').forEach(b => b.onclick = () => {
+      picked.splice(Number(b.dataset.i), 1); paintPicked();
+    });
+    $('u_go').textContent = picked.length ? `${picked.length}件を取り込む` : '取り込む';
+  }
+
+  $('cambtn').addEventListener('click', () => $('cam').click());
+  $('filebtn').addEventListener('click', () => $('file').click());
+
+  function accept(e){
+    picked = picked.concat([...e.target.files]);
+    e.target.value = '';
+    paintPicked();
+  }
+  $('cam').addEventListener('change', accept);
+  $('file').addEventListener('change', accept);
+
   // 表示用の縮小画像をつくる
   function shrink(file, maxEdge, quality){
     return new Promise(res => {
@@ -343,9 +394,12 @@
   }
 
   $('u_go').addEventListener('click', async () => {
-    const list = [...$('file').files];
+    const list = picked;
     if (!projId){ showMsg($('msg'), '工事を選んでください。', 'err'); return; }
-    if (!list.length){ showMsg($('msg'), '取り込むファイルを選んでください。', 'err'); return; }
+    if (!list.length){
+      showMsg($('msg'), '「カメラで撮る」か「保存済みから選ぶ」で写真を選んでください。', 'err');
+      return;
+    }
 
     const purpose = $('u_purpose').value;
     const phase   = $('u_phase').value || null;
@@ -411,7 +465,8 @@
     }
 
     $('u_go').disabled = false;
-    $('file').value = '';
+    picked = [];
+    paintPicked();
     $('prog').textContent = '';
     showMsg($('msg'), `${ok}件を取り込みました。${ng ? `${ng}件は失敗しました。` : ''}`, ng ? 'err' : 'ok');
     await loadFiles();
