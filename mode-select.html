@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: mode-select (セレクトモード) v20260723F -->
+<!-- BUILD: mode-select (セレクトモード) v20260723O -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -9,6 +9,37 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
+<style>
+  html,body{ height:100%; }
+  body{ display:flex; flex-direction:column; }
+  body > header.bar{ flex:0 0 auto; }
+
+  .stage{
+    flex:1 1 auto; display:flex;
+    padding:clamp(16px,3vh,34px) clamp(12px,3vw,28px);
+  }
+  /* margin:auto なら内容が高くても上が切れずに中央へ寄る */
+  .frame{ margin:auto; width:100%; max-width:1160px; }
+
+  /* 図面の枠に倣った二重線 */
+  .frame .outer{ border:2px solid var(--ink); border-radius:3px; padding:5px; }
+  .frame .inner{
+    border:1px solid var(--rule); border-radius:2px;
+    padding:clamp(16px,2.4vw,26px);
+  }
+
+  .frame .hud{ margin-bottom:20px; }
+  .frame .grp:first-of-type{ margin-top:0; }
+  .frame .grp{ margin:22px 0 11px; }
+  .frame .modes{ grid-template-columns:repeat(auto-fill, minmax(196px, 1fr)); }
+  .frame .foot{ margin:14px 0 0; }
+
+  @media (max-width:700px){
+    .stage{ padding:14px 10px; }
+    .frame .outer{ padding:4px; }
+    .frame .inner{ padding:14px; }
+  }
+</style>
 </head>
 <body>
 
@@ -19,7 +50,9 @@
   <button class="btn ghost sm barbtn" id="out">出る</button>
 </header>
 
-<div class="wrap">
+<div class="stage">
+ <div class="frame">
+  <div class="outer"><div class="inner">
 
   <!-- 現況 -->
   <div class="hud" id="hud">
@@ -115,7 +148,9 @@
     </span>
   </div>
 
-  <p class="foot">v20260723F</p>
+  </div></div>
+  <p class="foot">v20260723O</p>
+ </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
