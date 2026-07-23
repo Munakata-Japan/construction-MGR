@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<!-- BUILD: index (ログイン) v20260723A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ログイン ｜ 建設統合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .stage{
+    min-height:100vh; min-height:100dvh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  .board{ width:100%; max-width:400px; }
+  .title{
+    font-family:var(--disp); font-weight:700;
+    font-size:clamp(21px,5.4vw,26px); line-height:1.4;
+    margin:0 0 6px; letter-spacing:.02em;
+  }
+  .kicker{
+    font-family:var(--mono); font-size:11px; letter-spacing:.2em;
+    color:var(--ink-2); margin:0 0 10px;
+  }
+  .headline{ margin-bottom:22px; padding-left:14px; border-left:5px solid var(--safety); }
+  .headline p{ margin:0; font-size:13.5px; color:var(--sub); }
+  .board .sheet{ margin-bottom:14px; }
+  .foot{
+    margin-top:20px; font-family:var(--mono); font-size:10.5px;
+    color:var(--sub); letter-spacing:.06em; text-align:center;
+  }
+  .row .fld input{ border:1px solid var(--rule); }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="board">
+
+    <div class="headline">
+      <p class="kicker">CONSTRUCTION MGR</p>
+      <h1 class="title">建設統合管理システム</h1>
+      <p>現場・工事台帳・勤怠</p>
+    </div>
+
+    <div id="msg" class="msg"></div>
+
+    <form id="form" autocomplete="on">
+      <div class="sheet">
+        <div class="head">ログイン</div>
+
+        <div class="row">
+          <label for="email">メール<span class="req">*</span></label>
+          <div class="fld">
+            <input id="email" type="email" name="email" required
+                   autocomplete="username" inputmode="email"
+                   placeholder="example@example.com">
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="password">パスワード<span class="req">*</span></label>
+          <div class="fld">
+            <input id="password" type="password" name="password" required
+                   autocomplete="current-password" placeholder="">
+          </div>
+        </div>
+      </div>
+
+      <button id="go" class="btn wide" type="submit">ログイン</button>
+    </form>
+
+    <p class="foot">v20260723A</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const msg  = document.getElementById('msg');
+  const form = document.getElementById('form');
+  const go   = document.getElementById('go');
+
+  // 既にログイン済みなら一覧へ
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session) { location.replace('projects.html'); return; }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    showMsg(msg, '');
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password){
+      showMsg(msg, 'メールとパスワードを入力してください。', 'err');
+      return;
+    }
+
+    go.disabled = true;
+    go.textContent = '確認しています…';
+
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+
+    if (error){
+      go.disabled = false;
+      go.textContent = 'ログイン';
+      const m = /invalid login credentials/i.test(error.message)
+        ? 'メールまたはパスワードが違います。'
+        : 'ログインできませんでした。' + error.message;
+      showMsg(msg, m, 'err');
+      return;
+    }
+
+    location.replace('projects.html');
+  });
+})();
+</script>
+</body>
+</html>

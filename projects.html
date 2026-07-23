@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<!-- BUILD: projects (工事一覧・登録) v20260723A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>工事一覧 ｜ 建設統合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .addwrap{ display:flex; gap:6px; width:100%; align-items:center; }
+  .addwrap select{ flex:1 1 auto; min-width:0; }
+  .newpt{ display:none; gap:6px; width:100%; margin-top:6px; }
+  .newpt.open{ display:flex; }
+  .newpt input{ flex:1 1 auto; min-width:0; }
+  .panel .headline{
+    padding-left:12px; border-left:5px solid var(--safety); margin:0 0 18px;
+  }
+  .panel .headline h2{
+    font-family:var(--disp); font-weight:700; font-size:20px; margin:0; line-height:1.4;
+  }
+  .panel .headline p{ margin:2px 0 0; font-size:13px; color:var(--sub); }
+</style>
+</head>
+<body>
+
+<!-- ========== 一覧 ========== -->
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>工事一覧</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm" id="out" style="color:#EBEDE8;border-color:#42627F">出る</button>
+</header>
+
+<div class="wrap">
+  <div id="msg" class="msg"></div>
+
+  <div class="toolbar">
+    <input class="grow" type="text" id="q" placeholder="工事番号・工事名で絞り込み" inputmode="search">
+    <select id="fst" style="flex:0 0 auto">
+      <option value="">すべての状態</option>
+    </select>
+  </div>
+
+  <p class="count" id="count"></p>
+  <div class="list" id="list"></div>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="inner">
+    <button class="btn wide" id="add">工事を登録する</button>
+  </div>
+</div>
+
+<!-- ========== 登録・編集 ========== -->
+<div class="panel" id="panel">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1 id="ptitle">工事の登録</h1>
+    <button class="btn ghost sm" id="close" style="color:#EBEDE8;border-color:#42627F">閉じる</button>
+  </header>
+
+  <div class="wrap">
+    <div id="pmsg" class="msg"></div>
+
+    <div class="sheet">
+      <div class="head">工事の内容</div>
+
+      <div class="row">
+        <label for="f_no">工事番号<span class="req">*</span></label>
+        <div class="fld"><input id="f_no" type="text" placeholder="例）2026-001"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_name">工事名<span class="req">*</span></label>
+        <div class="fld"><input id="f_name" type="text" placeholder="例）〇〇邸 新築工事"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_client">施主・元請</label>
+        <div class="fld" style="flex-direction:column;align-items:stretch">
+          <div class="addwrap">
+            <select id="f_client"></select>
+            <button class="btn ghost sm" id="ptadd" type="button" title="取引先を追加">＋</button>
+          </div>
+          <div class="newpt" id="newpt">
+            <input id="f_ptname" type="text" placeholder="取引先の名称">
+            <button class="btn sm" id="ptsave" type="button">登録</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="f_type">工事種別</label>
+        <div class="fld"><input id="f_type" type="text" placeholder="例）新築・改修・解体"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_addr">現場住所</label>
+        <div class="fld"><input id="f_addr" type="text" placeholder=""></div>
+      </div>
+
+      <div class="row">
+        <label for="f_amount">契約金額</label>
+        <div class="fld"><input id="f_amount" type="number" step="1" min="0" placeholder="0"></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+
+    <div class="sheet">
+      <div class="head">工期と体制</div>
+
+      <div class="row">
+        <label for="f_start">着工日</label>
+        <div class="fld"><input id="f_start" type="date"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_plan">完成予定</label>
+        <div class="fld"><input id="f_plan" type="date"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_actual">完成日</label>
+        <div class="fld"><input id="f_actual" type="date"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_mgr">現場担当</label>
+        <div class="fld"><select id="f_mgr"></select></div>
+      </div>
+
+      <div class="row">
+        <label for="f_status">状態</label>
+        <div class="fld"><select id="f_status"></select></div>
+      </div>
+
+      <div class="row">
+        <label for="f_note">備考</label>
+        <div class="fld"><textarea id="f_note"></textarea></div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <button class="btn danger" id="del" hidden>この工事を削除する</button>
+  </div>
+
+  <div class="dock" id="pdock">
+    <div class="inner">
+      <button class="btn ghost" id="cancel" style="flex:0 0 auto">やめる</button>
+      <button class="btn wide" id="save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const msg = $('msg'), pmsg = $('pmsg');
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+
+  const canEdit   = (me.role === 'admin' || me.role === 'manager');
+  const canDelete = (me.role === 'admin');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  if (canEdit) $('dock').hidden = false;
+
+  /* ---------- 状態の選択肢 ---------- */
+  for (const [k, v] of Object.entries(STATUS)){
+    $('fst').insertAdjacentHTML('beforeend', `<option value="${k}">${v}</option>`);
+    $('f_status').insertAdjacentHTML('beforeend', `<option value="${k}">${v}</option>`);
+  }
+
+  /* ---------- 参照データ ---------- */
+  let partners = [], users = [], projects = [], editing = null;
+
+  async function loadRefs(){
+    const [p, u] = await Promise.all([
+      sb.from('partners').select('id,name').eq('is_active', true).order('name'),
+      sb.from('app_users').select('id,name,role').eq('is_active', true).order('name')
+    ]);
+    partners = p.data || [];
+    users    = u.data || [];
+
+    $('f_client').innerHTML = '<option value="">（未設定）</option>' +
+      partners.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+
+    $('f_mgr').innerHTML = '<option value="">（未設定）</option>' +
+      users.filter(x => x.role !== 'member')
+           .map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  }
+
+  /* ---------- 一覧 ---------- */
+  async function loadProjects(){
+    const { data, error } = await sb.from('projects')
+      .select('*')
+      .eq('is_active', true)
+      .order('project_no', { ascending:false });
+
+    if (error){ showMsg(msg, '工事を読み込めませんでした。' + error.message, 'err'); return; }
+    projects = data || [];
+    render();
+  }
+
+  function render(){
+    const q  = $('q').value.trim().toLowerCase();
+    const st = $('fst').value;
+
+    const pmap = Object.fromEntries(partners.map(x => [x.id, x.name]));
+    const umap = Object.fromEntries(users.map(x => [x.id, x.name]));
+
+    const rows = projects.filter(p => {
+      if (st && p.status !== st) return false;
+      if (!q) return true;
+      return (p.project_no || '').toLowerCase().includes(q)
+          || (p.name || '').toLowerCase().includes(q);
+    });
+
+    $('count').textContent = `${rows.length} 件 ／ 全 ${projects.length} 件`;
+
+    if (!rows.length){
+      $('list').innerHTML = projects.length
+        ? `<div class="empty"><b>該当する工事がありません</b>絞り込みの条件を変えてください。</div>`
+        : `<div class="empty"><b>まだ工事がありません</b>${canEdit ? '下の「工事を登録する」から始めてください。' : '現場監督が登録すると、ここに表示されます。'}</div>`;
+      return;
+    }
+
+    $('list').innerHTML = rows.map(p => {
+      const meta = [];
+      if (pmap[p.client_partner_id]) meta.push(esc(pmap[p.client_partner_id]));
+      if (umap[p.manager_user_id])   meta.push('担当 ' + esc(umap[p.manager_user_id]));
+      if (p.start_date || p.end_date_planned)
+        meta.push(`${fmtDate(p.start_date) || '—'} 〜 ${fmtDate(p.end_date_planned) || '—'}`);
+      if (Number(p.contract_amount) > 0)
+        meta.push(`<span class="amt">${fmtMoney(p.contract_amount)}</span>`);
+
+      return `<button class="item" data-id="${p.id}">
+        <span class="flag fl-${p.status}"></span>
+        <span class="body">
+          <span class="no">${esc(p.project_no)}</span>
+          <span class="nm">${esc(p.name)}</span>
+          <span class="meta">${meta.join('<span></span>')}</span>
+        </span>
+        <span class="side"><span class="tag st-${p.status}">${STATUS[p.status] || p.status}</span></span>
+      </button>`;
+    }).join('');
+
+    $('list').querySelectorAll('.item').forEach(b => {
+      b.addEventListener('click', () => openPanel(projects.find(x => x.id === b.dataset.id)));
+    });
+  }
+
+  $('q').addEventListener('input', render);
+  $('fst').addEventListener('change', render);
+
+  /* ---------- 登録・編集 ---------- */
+  function openPanel(p){
+    editing = p || null;
+    showMsg(pmsg, '');
+    $('newpt').classList.remove('open');
+
+    $('ptitle').textContent = p ? '工事の内容' : '工事の登録';
+    $('f_no').value     = p ? (p.project_no || '') : '';
+    $('f_name').value   = p ? (p.name || '') : '';
+    $('f_client').value = p ? (p.client_partner_id || '') : '';
+    $('f_type').value   = p ? (p.construction_type || '') : '';
+    $('f_addr').value   = p ? (p.site_address || '') : '';
+    $('f_amount').value = p && Number(p.contract_amount) ? p.contract_amount : '';
+    $('f_start').value  = p ? (p.start_date || '') : '';
+    $('f_plan').value   = p ? (p.end_date_planned || '') : '';
+    $('f_actual').value = p ? (p.end_date_actual || '') : '';
+    $('f_mgr').value    = p ? (p.manager_user_id || '') : '';
+    $('f_status').value = p ? p.status : 'estimate';
+    $('f_note').value   = p ? (p.note || '') : '';
+
+    // 権限に応じて操作を閉じる
+    document.querySelectorAll('#panel input, #panel select, #panel textarea')
+      .forEach(el => el.disabled = !canEdit);
+    $('pdock').style.display = canEdit ? '' : 'none';
+    $('ptadd').disabled = !canEdit;
+    $('del').hidden = !(p && canDelete);
+
+    $('panel').classList.add('open');
+    window.scrollTo(0, 0);
+  }
+
+  function closePanel(){
+    $('panel').classList.remove('open');
+    editing = null;
+  }
+
+  $('add').addEventListener('click', () => openPanel(null));
+  $('close').addEventListener('click', closePanel);
+  $('cancel').addEventListener('click', closePanel);
+  $('out').addEventListener('click', signOut);
+
+  /* ---------- 取引先のその場追加 ---------- */
+  $('ptadd').addEventListener('click', () => {
+    $('newpt').classList.toggle('open');
+    if ($('newpt').classList.contains('open')) $('f_ptname').focus();
+  });
+
+  $('ptsave').addEventListener('click', async () => {
+    const nm = $('f_ptname').value.trim();
+    if (!nm){ showMsg(pmsg, '取引先の名称を入力してください。', 'err'); return; }
+
+    const { data, error } = await sb.from('partners')
+      .insert({ organization_id: me.organization_id, name: nm, partner_type: 'client' })
+      .select('id,name').single();
+
+    if (error){ showMsg(pmsg, '取引先を登録できませんでした。' + error.message, 'err'); return; }
+
+    await loadRefs();
+    $('f_client').value = data.id;
+    $('f_ptname').value = '';
+    $('newpt').classList.remove('open');
+    showMsg(pmsg, `取引先「${data.name}」を登録しました。`, 'ok');
+  });
+
+  /* ---------- 保存 ---------- */
+  $('save').addEventListener('click', async () => {
+    showMsg(pmsg, '');
+
+    const no   = $('f_no').value.trim();
+    const name = $('f_name').value.trim();
+    if (!no)  { showMsg(pmsg, '工事番号を入力してください。', 'err'); $('f_no').focus(); return; }
+    if (!name){ showMsg(pmsg, '工事名を入力してください。', 'err'); $('f_name').focus(); return; }
+
+    const body = {
+      organization_id  : me.organization_id,
+      project_no       : no,
+      name             : name,
+      client_partner_id: $('f_client').value || null,
+      construction_type: $('f_type').value.trim() || null,
+      site_address     : $('f_addr').value.trim() || null,
+      contract_amount  : $('f_amount').value === '' ? 0 : Number($('f_amount').value),
+      start_date       : $('f_start').value || null,
+      end_date_planned : $('f_plan').value || null,
+      end_date_actual  : $('f_actual').value || null,
+      manager_user_id  : $('f_mgr').value || null,
+      status           : $('f_status').value,
+      note             : $('f_note').value.trim() || null
+    };
+
+    $('save').disabled = true;
+    $('save').textContent = '保存しています…';
+
+    let error;
+    if (editing){
+      ({ error } = await sb.from('projects').update(body).eq('id', editing.id));
+    } else {
+      ({ error } = await sb.from('projects').insert(body));
+    }
+
+    $('save').disabled = false;
+    $('save').textContent = '保存する';
+
+    if (error){
+      let m = '保存できませんでした。';
+      if (error.code === '23505')      m = 'その工事番号は既に使われています。別の番号にしてください。';
+      else if (error.code === '42501') m = 'この操作を行う権限がありません。';
+      else m += error.message;
+      showMsg(pmsg, m, 'err');
+      return;
+    }
+
+    closePanel();
+    await loadProjects();
+    showMsg(msg, editing ? '工事の内容を保存しました。' : '工事を登録しました。', 'ok');
+  });
+
+  /* ---------- 削除 ---------- */
+  $('del').addEventListener('click', async () => {
+    if (!editing) return;
+    if (!confirm(`「${editing.name}」を削除します。\nこの操作は取り消せません。`)) return;
+
+    const { error } = await sb.from('projects').delete().eq('id', editing.id);
+    if (error){ showMsg(pmsg, '削除できませんでした。' + error.message, 'err'); return; }
+
+    closePanel();
+    await loadProjects();
+    showMsg(msg, '工事を削除しました。', 'ok');
+  });
+
+  /* ---------- 起動 ---------- */
+  await loadRefs();
+  await loadProjects();
+})();
+</script>
+</body>
+</html>

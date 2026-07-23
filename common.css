@@ -1,0 +1,233 @@
+/* ============================================================
+   建設統合管理システム  共通スタイル
+   BUILD: common.css v20260723A
+   設計方針: 工事現場の表示板を下敷きにした罫線グリッド。
+             屋外・手袋での操作を想定し、文字とタップ領域を大きく。
+   ============================================================ */
+
+:root{
+  --ink:      #16324F;   /* 濃紺  見出し帯・主要文字 */
+  --ink-2:    #2E5C86;   /* 中紺  補助・リンク */
+  --paper:    #EBEDE8;   /* 背景  わずかに緑みのある紙色 */
+  --card:     #FFFFFF;
+  --rule:     #C2C7C0;   /* 罫線 */
+  --rule-2:   #DDE0DA;   /* 細罫 */
+  --safety:   #D99A00;   /* 標識の黄  強調は原則ここだけ */
+  --alert:    #A83A2C;
+  --ok:       #2F6B4F;
+  --sub:      #4F5952;
+
+  --disp: "BIZ UDPGothic","Noto Sans JP","Hiragino Sans","Yu Gothic UI",sans-serif;
+  --body: "Noto Sans JP","Hiragino Sans","Yu Gothic UI",sans-serif;
+  --mono: "JetBrains Mono","Roboto Mono",ui-monospace,monospace;
+
+  --tap: 48px;           /* 押せる範囲の最小 */
+}
+
+*{ box-sizing:border-box; }
+
+html{ -webkit-text-size-adjust:100%; }
+
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:16px;          /* iOSで入力時に拡大されない下限 */
+  line-height:1.8;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- 見出し帯（工事看板の頭） ---------- */
+.bar{
+  background:var(--ink);
+  color:#EBEDE8;
+  padding:0 16px;
+  min-height:56px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  position:sticky; top:0; z-index:50;
+}
+.bar .mark{
+  width:12px; height:26px; background:var(--safety); flex:0 0 12px; border-radius:1px;
+}
+.bar h1{
+  font-family:var(--disp); font-weight:700; font-size:17px;
+  letter-spacing:.06em; margin:0; flex:1; min-width:0;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.bar .who{
+  font-size:12.5px; color:#A9BFD4; text-align:right; line-height:1.4;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:40vw;
+}
+.bar .who b{ display:block; color:#EBEDE8; font-weight:500; font-size:13.5px; }
+
+.wrap{ max-width:960px; margin:0 auto; padding:20px 16px 96px; }
+
+/* ---------- ボタン ---------- */
+.btn{
+  font-family:var(--body); font-size:15.5px; font-weight:700;
+  min-height:var(--tap); padding:0 20px;
+  border:1px solid var(--ink); border-radius:2px;
+  background:var(--ink); color:#fff;
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+  gap:8px; line-height:1;
+}
+.btn:hover{ background:#1E4066; }
+.btn:active{ transform:translateY(1px); }
+.btn:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
+.btn[disabled]{ opacity:.5; cursor:default; transform:none; }
+
+.btn.ghost{ background:transparent; color:var(--ink); }
+.btn.ghost:hover{ background:#DFE2DC; }
+.btn.danger{ background:var(--alert); border-color:var(--alert); }
+.btn.danger:hover{ background:#8F3125; }
+.btn.wide{ width:100%; }
+.btn.sm{ min-height:38px; padding:0 12px; font-size:13.5px; }
+
+/* ---------- 罫線グリッドの入力欄（表示板の見立て） ---------- */
+.sheet{
+  background:var(--card);
+  border:1px solid var(--rule);
+  border-radius:2px;
+  overflow:hidden;
+}
+.sheet .head{
+  background:var(--ink); color:#EBEDE8;
+  font-family:var(--disp); font-weight:700; font-size:14.5px;
+  letter-spacing:.08em; padding:11px 16px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.row{
+  display:grid; grid-template-columns:116px 1fr;
+  border-bottom:1px solid var(--rule-2); align-items:stretch;
+}
+.row:last-child{ border-bottom:none; }
+.row > label{
+  background:#F1F3EF; padding:12px 14px;
+  font-size:13.5px; font-weight:700; color:var(--sub);
+  display:flex; align-items:center; line-height:1.5;
+  border-right:1px solid var(--rule-2);
+}
+.row > label .req{ color:var(--alert); margin-left:4px; }
+.row .fld{ padding:6px 10px; display:flex; align-items:center; gap:8px; min-width:0; }
+
+input[type=text], input[type=email], input[type=password],
+input[type=number], input[type=date], select, textarea{
+  font-family:var(--body); font-size:16px; color:var(--ink);
+  width:100%; min-height:40px; padding:6px 10px;
+  border:1px solid var(--rule); border-radius:2px; background:#fff;
+}
+input[type=number]{ font-family:var(--mono); text-align:right; }
+textarea{ min-height:76px; line-height:1.7; resize:vertical; }
+input:focus, select:focus, textarea:focus{
+  outline:3px solid var(--safety); outline-offset:0; border-color:var(--ink);
+}
+select{ appearance:none; background-image:none; }
+
+/* ---------- 一覧 ---------- */
+.toolbar{
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  margin-bottom:14px;
+}
+.toolbar .grow{ flex:1 1 200px; min-width:0; }
+.toolbar select, .toolbar input{ min-height:44px; }
+
+.count{
+  font-family:var(--mono); font-size:12.5px; color:var(--sub);
+  margin:0 0 10px;
+}
+
+.list{ display:grid; gap:8px; }
+
+.item{
+  background:var(--card); border:1px solid var(--rule); border-radius:2px;
+  display:grid; grid-template-columns:6px 1fr auto; align-items:stretch;
+  cursor:pointer; text-align:left; width:100%; padding:0;
+  font-family:var(--body); color:inherit;
+}
+.item:hover{ border-color:var(--ink); }
+.item:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
+.item .flag{ background:var(--rule); }
+.item .body{ padding:12px 14px; min-width:0; }
+.item .no{
+  font-family:var(--mono); font-size:12px; color:var(--ink-2);
+  letter-spacing:.04em;
+}
+.item .nm{
+  font-family:var(--disp); font-weight:700; font-size:16.5px;
+  line-height:1.45; margin:1px 0 4px;
+  overflow-wrap:anywhere;
+}
+.item .meta{
+  font-size:12.5px; color:var(--sub); line-height:1.65;
+  display:flex; flex-wrap:wrap; gap:2px 14px;
+}
+.item .meta .amt{ font-family:var(--mono); }
+.item .side{
+  padding:12px 14px; display:flex; align-items:center; flex:0 0 auto;
+}
+
+.tag{
+  font-size:12px; font-weight:700; padding:4px 9px; border-radius:2px;
+  border:1px solid currentColor; white-space:nowrap; line-height:1.4;
+}
+.st-estimate  { color:#6B7280; } .fl-estimate  { background:#9CA3AF; }
+.st-ordered   { color:var(--ink-2); } .fl-ordered { background:var(--ink-2); }
+.st-started   { color:#9A6E00; } .fl-started   { background:var(--safety); }
+.st-completed { color:var(--ok); }  .fl-completed { background:var(--ok); }
+.st-invoiced  { color:#1F6F7A; } .fl-invoiced  { background:#1F6F7A; }
+.st-paid      { color:#1D4F38; } .fl-paid      { background:#1D4F38; }
+.st-cancelled { color:var(--alert); } .fl-cancelled { background:var(--alert); }
+
+/* ---------- 空・読込 ---------- */
+.empty{
+  background:var(--card); border:1px dashed var(--rule);
+  padding:36px 20px; text-align:center; color:var(--sub); font-size:14.5px;
+}
+.empty b{ display:block; color:var(--ink); font-family:var(--disp); font-size:16px; margin-bottom:6px; }
+
+/* ---------- 通知 ---------- */
+.msg{
+  padding:12px 15px; border-radius:2px; font-size:14px; line-height:1.7;
+  border:1px solid var(--rule); background:var(--card); margin-bottom:14px;
+}
+.msg.err{ border-left:3px solid var(--alert); color:#7A2A20; background:#FBF1EF; }
+.msg.ok { border-left:3px solid var(--ok);   color:#1D4F38; background:#EFF5F1; }
+.msg:empty{ display:none; }
+
+/* ---------- 画面下部の固定操作 ---------- */
+.dock{
+  position:fixed; left:0; right:0; bottom:0; z-index:40;
+  background:rgba(235,237,232,.94);
+  border-top:1px solid var(--rule);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  backdrop-filter:blur(6px);
+}
+.dock .inner{ max-width:960px; margin:0 auto; display:flex; gap:8px; }
+
+/* ---------- 全画面のフォーム ---------- */
+.panel{
+  position:fixed; inset:0; z-index:60; background:var(--paper);
+  overflow-y:auto; display:none;
+}
+.panel.open{ display:block; }
+.panel .wrap{ padding-bottom:120px; }
+
+/* ---------- モバイル ---------- */
+@media (max-width:560px){
+  .row{ grid-template-columns:1fr; }
+  .row > label{
+    border-right:none; border-bottom:1px solid var(--rule-2);
+    padding:8px 14px; font-size:12.5px;
+  }
+  .item{ grid-template-columns:6px 1fr; }
+  .item .side{ grid-column:2; padding:0 14px 12px; }
+  .bar .who{ max-width:34vw; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{ animation:none !important; transition:none !important; }
+  .btn:active{ transform:none; }
+}
