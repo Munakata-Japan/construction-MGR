@@ -1,6 +1,6 @@
 /* ============================================================
    建設統合管理システム  共通スタイル
-   BUILD: common.css v20260723M
+   BUILD: common.css v20260724C
    設計方針: 工事現場の表示板を下敷きにした罫線グリッド。
              屋外・手袋での操作を想定し、文字とタップ領域を大きく。
    ============================================================ */
@@ -100,7 +100,7 @@ body{
   border-radius:2px; margin-bottom:22px; overflow:hidden;
 }
 .hcell{
-  background:var(--card); flex:1 1 120px; min-width:0;
+  background:var(--card); flex:1 1 108px; min-width:0;
   padding:11px 14px; display:flex; align-items:baseline; gap:9px;
 }
 .hlbl{ font-size:12px; color:var(--sub); white-space:nowrap; }
@@ -110,6 +110,21 @@ body{
 }
 .hval.ok{ font-size:14px; color:var(--ok); }
 .hval.ng{ font-size:14px; color:var(--alert); }
+.hval.warn{ color:#9A6E00; }
+.hval.full{ color:var(--alert); }
+
+/* 保管量：文字数が多いため幅を広く取り、1行に収める */
+.hcell.st{ flex:2 1 264px; flex-wrap:wrap; align-items:baseline; column-gap:7px; }
+.hcell.st .hlbl, .hcell.st .hval, .hcell.st .hsub{ white-space:nowrap; }
+.hcell.st .hval{ font-size:17px; }
+.hsub{ font-family:var(--mono); font-size:11px; color:var(--sub); }
+.stbar{
+  flex:1 1 100%; height:3px; background:var(--rule-2);
+  margin-top:7px; border-radius:2px; overflow:hidden;
+}
+.stbar > span{ display:block; height:100%; width:0; background:var(--ink-2); }
+.stbar > span.warn{ background:var(--safety); }
+.stbar > span.full{ background:var(--alert); }
 
 .grp{
   display:flex; align-items:baseline; gap:12px;

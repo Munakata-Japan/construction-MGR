@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<!-- BUILD: calendar (カレンダー) v20260724C -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>カレンダー ｜ 建設統合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  [hidden]{ display:none !important; }
+  html,body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  body > header.bar{ flex:0 0 auto; }
+
+  .ctl{
+    flex:0 0 auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:8px 14px; background:var(--card); border-bottom:1px solid var(--rule);
+  }
+  .ctl select{ width:auto; min-width:150px; max-width:320px; min-height:38px; flex:0 1 auto; }
+  .ctl .sp{ flex:1 1 0; }
+
+  .mv{ display:flex; align-items:center; gap:2px; }
+  .mv button{
+    font-family:var(--body); font-size:14px; font-weight:700; min-height:38px;
+    padding:0 13px; border:1px solid var(--rule); background:var(--card);
+    color:var(--ink); cursor:pointer; border-radius:2px;
+  }
+  .mv button:hover{ background:#DFE2DC; }
+  .mv .ym{
+    font-family:var(--disp); font-weight:700; font-size:17px; letter-spacing:.02em;
+    min-width:132px; text-align:center; padding:0 6px;
+  }
+
+  .legend{ display:flex; gap:12px; font-size:11.5px; color:var(--sub); flex-wrap:wrap; }
+  .legend i{ display:inline-block; width:12px; height:10px; border-radius:1px; margin-right:4px; vertical-align:-1px; }
+
+  .flash{ flex:0 0 auto; }
+  .flash .msg{ margin:0; border-radius:0; border-left-width:3px; }
+
+  /* ---------- 月表示 ---------- */
+  .view{ flex:1 1 auto; min-height:0; padding:10px clamp(8px,1.4vw,16px) 14px; }
+  .cal{
+    height:100%; display:grid; grid-template-rows:26px repeat(var(--wk,5), minmax(0,1fr));
+    background:var(--rule); gap:1px; border:1px solid var(--rule); border-radius:2px;
+  }
+  .crow{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:1px; background:var(--rule); }
+  .chd{
+    background:#E3E6E0; font-family:var(--disp); font-weight:700; font-size:11.5px;
+    display:flex; align-items:center; justify-content:center; color:var(--sub);
+  }
+  .chd.sat{ color:#1F5A8A; } .chd.sun{ color:#A83A2C; }
+
+  .cell{ background:var(--card); min-width:0; display:flex; flex-direction:column; overflow:hidden; }
+  .cell.out{ background:#F5F7F3; }
+  .cell.today{ box-shadow:inset 0 0 0 2px var(--safety); }
+  .cday{
+    font-family:var(--mono); font-size:11.5px; color:var(--sub);
+    padding:3px 6px 2px; display:flex; align-items:baseline; gap:5px; flex:0 0 auto;
+  }
+  .cday b{ color:var(--ink); font-weight:500; font-size:13px; }
+  .cell.out .cday b{ color:#A8B0A9; }
+  .cday .sat{ color:#1F5A8A; } .cday .sun{ color:#A83A2C; }
+  .cday .hol{ font-size:10px; color:#A83A2C; }
+
+  .evs{ flex:1 1 auto; min-height:0; overflow:hidden; padding:0 3px 3px; display:grid; gap:2px; align-content:start; }
+  .ev{
+    font-size:10.5px; line-height:1.35; padding:2px 5px; border-radius:2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;
+    border:1px solid transparent; text-align:left; font-family:var(--body); color:#fff;
+    display:block; width:100%;
+  }
+  .ev:focus-visible{ outline:2px solid var(--safety); outline-offset:1px; }
+  .ev.k-ph{ background:#8A938C; }
+  .ev.k-ph.s-in_progress{ background:var(--safety); color:#3B2A00; }
+  .ev.k-ph.s-done{ background:var(--ok); }
+  .ev.k-ph.s-suspended{ background:var(--alert); }
+  .ev.k-ph.crit{ border-color:#111; }
+  .ev.k-ord{ background:#FBF1EF; color:#7A2A20; border-color:var(--alert); }
+  .ev.k-st{ background:#E6F0F8; color:#16324F; border-color:var(--ink-2); }
+  .ev.k-end{ background:#EFF5F1; color:#1D4F38; border-color:var(--ok); }
+  .evmore{ font-size:10px; color:var(--sub); padding:1px 5px; }
+
+  /* ---------- 予定の詳細 ---------- */
+  .dpanel{
+    position:fixed; inset:auto 0 0 0; z-index:60; background:var(--card);
+    border-top:2px solid var(--ink); max-height:52vh; overflow-y:auto;
+    padding:14px clamp(12px,2vw,22px) 20px; display:none;
+  }
+  .dpanel.open{ display:block; }
+  .dph{ display:flex; align-items:baseline; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+  .dph h2{ font-family:var(--disp); font-weight:700; font-size:16px; margin:0; }
+  .dph .sp{ flex:1 1 0; }
+  .drow{
+    display:grid; grid-template-columns:7px 1fr auto; gap:10px; align-items:center;
+    border:1px solid var(--rule); border-radius:2px; margin-bottom:6px;
+    background:var(--card); text-decoration:none; color:inherit; padding:0;
+  }
+  .drow:hover{ border-color:var(--ink); }
+  .drow .fl{ align-self:stretch; }
+  .drow .bd{ padding:9px 2px 9px 0; min-width:0; }
+  .drow .t1{ font-family:var(--disp); font-weight:700; font-size:14px; line-height:1.4; }
+  .drow .t2{ font-size:12px; color:var(--sub); font-family:var(--mono); }
+  .drow .rt{ padding:9px 12px; font-size:12px; color:var(--sub); white-space:nowrap; }
+
+  @media (max-width:760px){
+    .legend{ display:none; }
+    .ctl select{ min-width:120px; }
+    .mv .ym{ min-width:104px; font-size:15px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>カレンダー</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="ctl">
+  <div class="mv">
+    <button id="prev" title="前の月">‹</button>
+    <span class="ym" id="ym">—</span>
+    <button id="next" title="次の月">›</button>
+    <button id="today">今月</button>
+  </div>
+  <select id="fuser"><option value="">担当者すべて</option></select>
+  <select id="fproj"><option value="">工事すべて</option></select>
+  <span class="sp"></span>
+  <div class="legend">
+    <span><i style="background:#8A938C"></i>未着手</span>
+    <span><i style="background:#D99A00"></i>着手中</span>
+    <span><i style="background:#2F6B4F"></i>完了</span>
+    <span><i style="background:#FBF1EF;border:1px solid #A83A2C"></i>発注期限</span>
+    <span><i style="background:#E6F0F8;border:1px solid #2E5C86"></i>着工</span>
+    <span><i style="background:#EFF5F1;border:1px solid #2F6B4F"></i>完成予定</span>
+  </div>
+</div>
+
+<div class="flash"><div id="msg" class="msg"></div></div>
+
+<div class="view"><div class="cal" id="cal"></div></div>
+
+<div class="dpanel" id="dp">
+  <div class="dph">
+    <h2 id="dpttl">—</h2>
+    <span class="sp"></span>
+    <button class="btn ghost sm" id="dpclose">閉じる</button>
+  </div>
+  <div id="dplist"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const DAY = 86400000;
+  const WD = ['月','火','水','木','金','土','日'];
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+
+  let projects = [], users = [], phases = [], deps = [];
+  let cur = new Date(); cur.setDate(1); cur.setHours(0,0,0,0);
+
+  /* ================= 日付の道具 ================= */
+  const d2n = s => s ? Math.round(new Date(s + 'T00:00:00').getTime() / DAY) : null;
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  function monday(dt){ const d = new Date(dt); const w = (d.getDay()+6)%7; d.setDate(d.getDate()-w); d.setHours(0,0,0,0); return d; }
+
+  /* ================= 読み込み ================= */
+  async function loadRefs(){
+    const [pr, u] = await Promise.all([
+      sb.from('projects').select('id,project_no,name,start_date,end_date_planned,manager_user_id,is_sample')
+        .eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('app_users').select('id,name,role').eq('is_active', true).order('name')
+    ]);
+    if (pr.error || u.error){
+      showMsg($('msg'), '読み込めませんでした。' + ((pr.error||u.error).message||''), 'err');
+      return;
+    }
+    projects = pr.data || []; users = u.data || [];
+
+    $('fuser').innerHTML = '<option value="">担当者すべて</option>' +
+      `<option value="${me.id}">自分（${esc(me.name)}）</option>` +
+      users.filter(x => x.id !== me.id)
+           .map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+
+    $('fproj').innerHTML = '<option value="">工事すべて</option>' +
+      projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+
+    // 作業員は自分の担当を初期表示にする
+    if (me.role === 'member') $('fuser').value = me.id;
+  }
+
+  async function loadPhases(){
+    const a = new Date(cur); a.setMonth(a.getMonth() - 1);
+    const b = new Date(cur); b.setMonth(b.getMonth() + 2);
+
+    const { data, error } = await sb.from('project_phases')
+      .select('id,project_id,name,start_date,end_date,status,planned_mandays,order_deadline,order_alert_days,order_content,ordered_at,cost_category_id')
+      .eq('is_active', true)
+      .or(`and(start_date.lte.${iso(b)},end_date.gte.${iso(a)}),order_deadline.gte.${iso(a)}`);
+
+    if (error){ showMsg($('msg'), '工程を読み込めませんでした。' + error.message, 'err'); return; }
+    phases = data || [];
+    draw();
+  }
+
+  /* ================= 予定を組み立てる ================= */
+  function eventsFor(){
+    const pu = $('fuser').value, pp = $('fproj').value;
+    const pmap = Object.fromEntries(projects.map(p => [p.id, p]));
+    const ev = [];   // { from, to, kind, label, sub, status, projectId }
+
+    // 工程の期間
+    phases.forEach(ph => {
+      const pj = pmap[ph.project_id];
+      if (!pj) return;
+      if (pp && ph.project_id !== pp) return;
+      if (pu && pj.manager_user_id !== pu) return;
+      if (!ph.start_date || !ph.end_date) return;
+      ev.push({
+        from:d2n(ph.start_date), to:d2n(ph.end_date), kind:'ph',
+        label:ph.name, sub:`${pj.project_no} ${pj.name}`,
+        status:ph.status, projectId:ph.project_id,
+        md:Number(ph.planned_mandays)||0
+      });
+
+      // 発注の期限
+      if (ph.order_deadline && !ph.ordered_at){
+        const n = d2n(ph.order_deadline);
+        ev.push({
+          from:n, to:n, kind:'ord',
+          label:`発注期限 ${ph.name}`,
+          sub:`${pj.project_no} ${ph.order_content || ''}`.trim(),
+          projectId:ph.project_id
+        });
+      }
+    });
+
+    // 工事の着工日と完成予定
+    projects.forEach(pj => {
+      if (pp && pj.id !== pp) return;
+      if (pu && pj.manager_user_id !== pu) return;
+      if (pj.start_date){
+        const n = d2n(pj.start_date);
+        ev.push({ from:n, to:n, kind:'st', label:`着工 ${pj.name}`, sub:pj.project_no, projectId:pj.id });
+      }
+      if (pj.end_date_planned){
+        const n = d2n(pj.end_date_planned);
+        ev.push({ from:n, to:n, kind:'end', label:`完成予定 ${pj.name}`, sub:pj.project_no, projectId:pj.id });
+      }
+    });
+
+    return ev;
+  }
+
+  /* ================= 描画 ================= */
+  function draw(){
+    const y = cur.getFullYear(), m = cur.getMonth();
+    $('ym').textContent = `${y}年 ${m+1}月`;
+
+    const first = new Date(y, m, 1);
+    const last  = new Date(y, m+1, 0);
+    const from  = monday(first);
+    const weeks = Math.ceil((( (last - from) / DAY ) + 1) / 7);
+    const todayN = Math.round(new Date().setHours(0,0,0,0) / DAY);
+
+    const ev = eventsFor();
+
+    let h = `<div class="crow">` +
+      WD.map((w,i) => `<div class="chd${i===5?' sat':(i===6?' sun':'')}">${w}</div>`).join('') +
+      `</div>`;
+
+    for (let w = 0; w < weeks; w++){
+      h += `<div class="crow">`;
+      for (let d = 0; d < 7; d++){
+        const dt = new Date(from.getTime() + (w*7 + d) * DAY);
+        const n  = Math.round(dt.getTime() / DAY);
+        const out = (dt.getMonth() !== m);
+        const cls = [ 'cell', out ? 'out' : '', n === todayN ? 'today' : '' ].filter(Boolean).join(' ');
+
+        const list = ev.filter(x => n >= x.from && n <= x.to)
+                       .sort((a,b) => (a.kind === b.kind) ? 0 : (a.kind === 'ord' ? -1 : 1));
+        const show = list.slice(0, 4);
+
+        h += `<div class="${cls}" data-n="${n}">` +
+          `<div class="cday"><b class="${d===5?'sat':(d===6?'sun':'')}">${dt.getDate()}</b>` +
+          (dt.getDate() === 1 ? `<span>${dt.getMonth()+1}月</span>` : '') + `</div>` +
+          `<div class="evs">` +
+          show.map((x,i) => {
+            const first2 = (n === x.from);
+            const kls = `ev k-${x.kind}` + (x.kind === 'ph' ? ` s-${x.status}` : '');
+            const txt = (x.kind === 'ph' && !first2) ? `　${esc(x.label)}` : esc(x.label);
+            return `<button class="${kls}" data-n="${n}" title="${esc(x.label)}／${esc(x.sub)}">${txt}</button>`;
+          }).join('') +
+          (list.length > show.length ? `<span class="evmore">ほか ${list.length - show.length} 件</span>` : '') +
+          `</div></div>`;
+      }
+      h += `</div>`;
+    }
+
+    $('cal').style.setProperty('--wk', weeks);
+    $('cal').innerHTML = h;
+
+    $('cal').querySelectorAll('.cell').forEach(c =>
+      c.addEventListener('click', () => openDay(Number(c.dataset.n), ev)));
+  }
+
+  /* ================= その日の詳細 ================= */
+  function openDay(n, ev){
+    const list = ev.filter(x => n >= x.from && n <= x.to);
+    const dt = new Date(n * DAY);
+    const wd = WD[(dt.getDay()+6)%7];
+
+    $('dpttl').textContent = `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日（${wd}）　${list.length}件`;
+
+    const KIND = { ph:'工程', ord:'発注期限', st:'着工', end:'完成予定' };
+    $('dplist').innerHTML = list.length ? list.map(x => {
+      const col = x.kind === 'ph'
+        ? ({ not_started:'#8A938C', in_progress:'#D99A00', done:'#2F6B4F', suspended:'#A83A2C' }[x.status] || '#8A938C')
+        : ({ ord:'#A83A2C', st:'#2E5C86', end:'#2F6B4F' }[x.kind]);
+      const span = (x.from !== x.to)
+        ? `${fmtDate(new Date(x.from*DAY).toISOString().slice(0,10))} 〜 ${fmtDate(new Date(x.to*DAY).toISOString().slice(0,10))}`
+        : '';
+      return `<a class="drow" href="schedule.html?p=${x.projectId}">
+        <span class="fl" style="background:${col}"></span>
+        <span class="bd"><span class="t1">${esc(x.label)}</span>
+          <span class="t2">${esc(x.sub)}${x.md ? ' ・ ' + x.md + '人工' : ''}</span></span>
+        <span class="rt">${KIND[x.kind]}${span ? '<br>' + span : ''}</span>
+      </a>`;
+    }).join('') : `<div class="empty">この日の予定はありません。</div>`;
+
+    $('dp').classList.add('open');
+  }
+  $('dpclose').addEventListener('click', () => $('dp').classList.remove('open'));
+
+  /* ================= 操作 ================= */
+  $('prev').addEventListener('click', async () => {
+    cur.setMonth(cur.getMonth() - 1); await loadPhases();
+  });
+  $('next').addEventListener('click', async () => {
+    cur.setMonth(cur.getMonth() + 1); await loadPhases();
+  });
+  $('today').addEventListener('click', async () => {
+    cur = new Date(); cur.setDate(1); cur.setHours(0,0,0,0); await loadPhases();
+  });
+  $('fuser').addEventListener('change', draw);
+  $('fproj').addEventListener('change', draw);
+
+  window.addEventListener('resize', () => { clearTimeout(window._rt); window._rt = setTimeout(draw, 150); });
+
+  /* ================= 起動 ================= */
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)) $('fproj').value = q;
+  await loadPhases();
+})();
+</script>
+</body>
+</html>
