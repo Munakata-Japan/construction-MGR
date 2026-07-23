@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: projects (工事) v20260723U -->
+<!-- BUILD: projects (工事) v20260723V -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -170,6 +170,12 @@
   .docform > .dv.r{ border-right:1px solid var(--rule-2); }
   .docform > .dv.wide{ grid-column:2 / -1; }
   .docform > .dv .u2{ font-size:11.5px; color:var(--sub); white-space:nowrap; }
+  .docform > .dv .yen{ font-family:var(--mono); font-size:14px; color:var(--sub); flex:0 0 auto; }
+  .docform input.money{ font-family:var(--mono); text-align:right; letter-spacing:.02em; }
+  /* 数値欄の上下矢印を消す */
+  .docform input[type=number]{ -moz-appearance:textfield; }
+  .docform input[type=number]::-webkit-outer-spin-button,
+  .docform input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
   .docform input[type=text], .docform input[type=number],
   .docform input[type=date], .docform select{
     min-height:32px; padding:3px 8px; font-size:13.5px; width:100%; min-width:0;
@@ -310,7 +316,7 @@
       <span class="dv"><input id="f_start" type="date"></span>
 
       <span class="k">契約金額</span>
-      <span class="dv r"><input id="f_amount" type="number" step="1" min="0" placeholder="0"><span class="u2">税抜</span></span>
+      <span class="dv r"><span class="yen">¥</span><input id="f_amount" type="text" inputmode="numeric" placeholder="0" class="money"><span class="u2">税抜</span></span>
       <span class="k">完成予定</span>
       <span class="dv"><input id="f_plan" type="date"></span>
 
@@ -698,7 +704,7 @@
     $('f_lot').value    = p ? (p.site_lot||'') : '';
     $('f_area').value   = p && p.site_area ? p.site_area : '';
     $('f_cdate').value  = p ? (p.contract_date||'') : '';
-    $('f_amount').value = p && Number(p.contract_amount) ? p.contract_amount : '';
+    setMoney($('f_amount'), p ? p.contract_amount : '');
     $('f_start').value  = p ? (p.start_date||'') : '';
     $('f_plan').value   = p ? (p.end_date_planned||'') : '';
     $('f_actual').value = p ? (p.end_date_actual||'') : '';
@@ -725,6 +731,22 @@
     snapshot = formState();
   }
   function closePanel(){ $('panel').classList.remove('open'); }
+
+  /* ---- 金額の桁区切り ---- */
+  function moneyDigits(el){ return el.value.replace(/[^\d]/g, ''); }
+
+  function setMoney(el, v){
+    const n = Number(v);
+    el.value = (v !== null && v !== undefined && v !== '' && n) ? n.toLocaleString('ja-JP') : '';
+  }
+
+  $('f_amount').addEventListener('input', function(){
+    const back = this.value.length - (this.selectionStart || 0);
+    const d = this.value.replace(/[^\d]/g, '').slice(0, 12);
+    this.value = d ? Number(d).toLocaleString('ja-JP') : '';
+    const pos = Math.max(0, this.value.length - back);
+    try { this.setSelectionRange(pos, pos); } catch(e){}
+  });
 
   /* ---- 保存していない変更の見張り ---- */
   let snapshot = '';
@@ -803,7 +825,7 @@
       site_lot         : $('f_lot').value.trim() || null,
       site_area        : $('f_area').value === '' ? null : Number($('f_area').value),
       contract_date    : $('f_cdate').value || null,
-      contract_amount  : $('f_amount').value === '' ? 0 : Number($('f_amount').value),
+      contract_amount  : moneyDigits($('f_amount')) === '' ? 0 : Number(moneyDigits($('f_amount'))),
       start_date       : $('f_start').value || null,
       end_date_planned : $('f_plan').value || null,
       end_date_actual  : $('f_actual').value || null,
