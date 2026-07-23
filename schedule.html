@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260723G -->
+<!-- BUILD: schedule (工程表) v20260723H -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -32,6 +32,8 @@ body > header.bar{ flex:0 0 auto; }
 .tabs button:last-child{ border-right:none; }
 .tabs button.on{ background:var(--ink); color:#fff; }
 .tabs button:focus-visible{ outline:3px solid var(--safety); outline-offset:-3px; }
+#zoom button{ min-width:44px; padding:0 10px; font-family:var(--mono); font-size:14px; }
+#zoom button#z_fit{ font-family:var(--body); font-size:12.5px; }
 
 .legend{ display:flex; gap:12px; font-size:11.5px; color:var(--sub); flex-wrap:wrap; }
 .legend i{ display:inline-block; width:12px; height:10px; border-radius:1px; margin-right:4px; vertical-align:-1px; }
@@ -155,6 +157,11 @@ body > header.bar{ flex:0 0 auto; }
   <div class="tabs">
     <button id="t_gantt" class="on">ガント</button>
     <button id="t_net">ネットワーク</button>
+  </div>
+  <div class="tabs" id="zoom">
+    <button id="z_out" title="週の幅を狭める">−</button>
+    <button id="z_fit" class="on" title="画面に合わせる">全体</button>
+    <button id="z_in" title="週の幅を広げる">＋</button>
   </div>
   <button class="warnbtn" id="alertbtn" hidden></button>
   <button class="btn ghost sm" id="guidebtn" hidden>見方</button>
@@ -346,6 +353,7 @@ body > header.bar{ flex:0 0 auto; }
 
   let cats = [], wts = [], partners = [], users = [], projects = [];
   let projId = null, phases = [], deps = [], editing = null, view = 'gantt';
+  let zoomW = null;          // 週の幅（px）。null なら画面に合わせる
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
@@ -551,17 +559,20 @@ body > header.bar{ flex:0 0 auto; }
     const dense = rowH < 34;
     const barH = Math.max(12, Math.min(20, rowH - 6));
     const nameW = Math.max(130, Math.min(210, Math.floor(boxW * 0.18)));
-    const colW = Math.max(26, Math.floor((boxW - nameW) / W));
+    const fitW  = Math.max(26, Math.floor((boxW - nameW) / W));
+    const colW  = zoomW ? Math.max(20, Math.min(400, zoomW)) : fitW;
+    $('z_fit').classList.toggle('on', !zoomW);
 
     let h = `<div class="gtable${dense ? ' dense' : ''}" style="` +
-            `grid-template-columns:${nameW}px repeat(${W}, minmax(${colW}px, 1fr));` +
+            `grid-template-columns:${nameW}px repeat(${W}, ${zoomW ? colW + 'px' : 'minmax(' + colW + 'px, 1fr)'});` +
             `grid-template-rows:${HEAD}px repeat(${N}, ${rowH}px);--bh:${barH}px">`;
 
     // 見出し
-    h += `<div class="gh gname">工程</div>`;
+    h += `<div class="gh gname" style="grid-column:1;grid-row:1">工程</div>`;
     for (let i = 0; i < W; i++){
       const d = new Date(w0.getTime() + i*7*DAY);
-      h += `<div class="gh">${d.getDate() <= 7 ? (d.getMonth()+1)+'月' : '&nbsp;'}<b>${md(d)}</b></div>`;
+      h += `<div class="gh" style="grid-column:${i+2};grid-row:1">` +
+           `${d.getDate() <= 7 ? (d.getMonth()+1)+'月' : '&nbsp;'}<b>${md(d)}</b></div>`;
     }
     // 縦の区切り
     for (let i = 0; i < W; i++)
@@ -574,7 +585,7 @@ body > header.bar{ flex:0 0 auto; }
     phases.forEach((p, r) => {
       const cat = cats.find(c => c.id === p.cost_category_id);
       const sub = `${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}`;
-      h += `<div class="gname" style="grid-row:${r+2}" title="${esc(p.name)}／${sub}">` +
+      h += `<div class="gname" style="grid-column:1;grid-row:${r+2}" title="${esc(p.name)}／${sub}">` +
            `<span class="gn1">${esc(p.name)}</span><span class="gn2">${sub}</span></div>`;
 
       if (p.start_date && p.end_date){
@@ -685,6 +696,7 @@ body > header.bar{ flex:0 0 auto; }
     $('t_net').classList.toggle('on', v === 'net');
     $('gantt').hidden  = (v !== 'gantt');
     $('network').hidden = (v !== 'net');
+    $('zoom').hidden = (v !== 'gantt');
     $('guidebtn').hidden = !(phases.length && v === 'net');
     if (v !== 'net'){ $('guidebox').hidden = true; }
     if (v === 'gantt' && phases.length){
@@ -694,6 +706,26 @@ body > header.bar{ flex:0 0 auto; }
   }
   $('t_gantt').addEventListener('click', () => setView('gantt'));
   $('t_net').addEventListener('click', () => setView('net'));
+
+  // 週の幅
+  function redrawGantt(){
+    if (view === 'gantt' && phases.length){
+      const { slack } = computeSlack();
+      drawGantt(slack);
+    }
+  }
+  function curColW(){
+    if (zoomW) return zoomW;
+    const el = $('gantt').querySelector('.gh:nth-child(2)');
+    return el ? Math.round(el.getBoundingClientRect().width) : 90;
+  }
+  $('z_in').addEventListener('click', () => {
+    zoomW = Math.min(400, Math.round(curColW() * 1.25)); redrawGantt();
+  });
+  $('z_out').addEventListener('click', () => {
+    zoomW = Math.max(20, Math.round(curColW() / 1.25)); redrawGantt();
+  });
+  $('z_fit').addEventListener('click', () => { zoomW = null; redrawGantt(); });
 
   // 発注の知らせ
   $('alertbtn').addEventListener('click', () => {
