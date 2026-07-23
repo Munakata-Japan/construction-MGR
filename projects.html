@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: projects (工事) v20260723P -->
+<!-- BUILD: projects (工事) v20260723Q -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -16,44 +16,53 @@
   .newpt.open{ display:flex; }
   .newpt input{ flex:1 1 auto; min-width:0; width:auto; }
 
-  /* ---------- 工事概要書：スクロールなしで一望 ---------- */
+  /* ========== 工事概要書 ========== */
   #ovp{ display:none; flex-direction:column; overflow:hidden; }
   #ovp.open{ display:flex; }
   #ovp > header.bar{ flex:0 0 auto; }
-  #ovp .ovh{ flex:0 0 auto; }
-  #ovp .ovbody{
-    flex:1 1 auto; min-height:0; overflow:auto;
-    padding:12px clamp(10px,2vw,20px) 16px;
-  }
+  #ovhead{ flex:0 0 auto; }
+  #ovbody{ flex:1 1 auto; min-height:0; overflow:auto; padding:12px clamp(10px,2vw,22px) 18px; }
 
   .ovh{
-    background:var(--ink); color:#DCE4EC; padding:9px clamp(10px,2vw,20px);
+    background:var(--ink); color:#DCE4EC; padding:9px clamp(10px,2vw,22px);
     display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
   }
   .ovh .no2{ font-family:var(--mono); font-size:12px; color:#A9BFD4; }
   .ovh h2{ font-family:var(--disp); font-weight:700; font-size:17px; margin:0; color:#fff; line-height:1.4; }
   .ovh .sp{ flex:1 1 0; }
 
-  .ovcols{ display:grid; gap:10px 14px; grid-template-columns:repeat(3,1fr); align-items:start; }
-  .ovbot{ display:grid; gap:10px 14px; grid-template-columns:2fr 1fr; margin-top:10px; align-items:start; }
+  /* 一枚の概要書 */
+  .sheetdoc{
+    background:var(--card); border:1px solid var(--rule); border-radius:2px;
+    display:grid; grid-template-columns:112px 1fr 112px 1fr;
+  }
+  .sheetdoc > .sh{
+    grid-column:1 / -1; background:var(--ink); color:#EBEDE8;
+    font-family:var(--disp); font-weight:700; font-size:12px; letter-spacing:.06em;
+    padding:5px 12px;
+  }
+  .sheetdoc > .k{
+    background:#F1F3EF; padding:6px 10px; font-size:11.5px; font-weight:700;
+    color:var(--sub); border-right:1px solid var(--rule-2);
+    border-bottom:1px solid var(--rule-2); display:flex; align-items:center; line-height:1.35;
+  }
+  .sheetdoc > .v{
+    padding:6px 11px; font-size:13px; line-height:1.5; min-width:0;
+    border-bottom:1px solid var(--rule-2); overflow-wrap:anywhere;
+    display:flex; align-items:center;
+  }
+  .sheetdoc > .v.r{ border-right:1px solid var(--rule-2); }
+  .sheetdoc > .v.num{ font-family:var(--mono); }
+  .sheetdoc > .v.empty{ color:#9AA39C; }
+  .sheetdoc > .v .un{ color:var(--sub); font-size:11px; margin-left:4px; font-family:var(--body); }
 
-  .ovsec + .ovsec{ margin-top:10px; }
+  .ovbot{ display:grid; gap:10px 14px; grid-template-columns:1fr 1fr; margin-top:10px; align-items:start; }
   .ovsec > .t{
     font-family:var(--disp); font-weight:700; font-size:12.5px;
     padding:2px 0 4px 9px; border-left:3px solid var(--safety); margin-bottom:5px;
+    display:flex; align-items:center; gap:8px;
   }
-  .ovtbl{ background:var(--card); border:1px solid var(--rule); border-radius:2px; }
-  .ovr{ display:grid; grid-template-columns:104px 1fr; border-bottom:1px solid var(--rule-2); }
-  .ovr:last-child{ border-bottom:none; }
-  .ovr > .k{
-    background:#F1F3EF; padding:6px 9px; font-size:11.5px; font-weight:700;
-    color:var(--sub); border-right:1px solid var(--rule-2); display:flex; align-items:center;
-    line-height:1.35;
-  }
-  .ovr > .v{ padding:6px 10px; font-size:13px; min-width:0; overflow-wrap:anywhere; line-height:1.5; }
-  .ovr > .v.num{ font-family:var(--mono); }
-  .ovr > .v .un{ color:var(--sub); font-size:11px; margin-left:3px; font-family:var(--body); }
-  .ovr > .v.empty{ color:#9AA39C; }
+  .ovsec > .t .sp{ flex:1 1 0; }
 
   .ovpm{ width:100%; border-collapse:collapse; font-size:12.5px; background:var(--card);
          border:1px solid var(--rule); border-radius:2px; }
@@ -62,32 +71,65 @@
   .ovpm td{ padding:5px 9px; border-bottom:1px solid var(--rule-2); vertical-align:top; line-height:1.45; }
   .ovpm tr:last-child td{ border-bottom:none; }
   .ovpm .mono{ font-family:var(--mono); font-size:11.5px; }
+  .ovnone{ background:var(--card); border:1px solid var(--rule); border-radius:2px;
+           padding:10px 12px; font-size:12.5px; color:#9AA39C; }
 
-  .jump{ display:grid; gap:6px; }
+  .docs{ background:var(--card); border:1px solid var(--rule); border-radius:2px; }
+  .docrow{ display:flex; align-items:center; gap:9px; padding:6px 10px;
+           border-bottom:1px solid var(--rule-2); font-size:12.5px; }
+  .docrow:last-child{ border-bottom:none; }
+  .docrow .dn{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .docrow .dk{ font-size:11px; color:var(--sub); flex:0 0 auto; }
+  .docrow a{ color:var(--ink-2); text-decoration:none; font-weight:700; flex:0 0 auto; }
+  .docrow a:hover{ text-decoration:underline; }
+
+  .jump{ display:grid; gap:8px; grid-template-columns:repeat(3,1fr); margin-top:10px; }
   .jump a{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
     background:var(--card); border:1px solid var(--rule); border-radius:2px;
-    padding:8px 11px; text-decoration:none; color:inherit; min-height:40px;
+    padding:9px 12px; text-decoration:none; color:inherit; min-height:42px;
     font-family:var(--disp); font-weight:700; font-size:13px;
   }
   .jump a:hover{ border-color:var(--ink); }
   .jump a .c{ font-family:var(--mono); font-weight:400; font-size:11.5px; color:var(--sub); }
 
-  @media (max-width:1180px){
-    .ovcols{ grid-template-columns:repeat(2,1fr); }
-    .ovbot{ grid-template-columns:1fr; }
-  }
-  @media (max-width:720px){
-    .ovcols{ grid-template-columns:1fr; }
-  }
-
-  /* ---------- 許認可の編集 ---------- */
+  /* ========== 編集：2列 ========== */
+  #panel .cols{ display:grid; gap:12px 16px; grid-template-columns:1fr 1fr; align-items:start; }
+  #panel .full{ grid-column:1 / -1; }
   .pmrow{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
-  .pmrow select{ flex:1 1 200px; width:auto; min-width:0; }
-  .pmrow .pno{ flex:1 1 150px; width:auto; min-width:0; }
+  .pmrow select{ flex:1 1 190px; width:auto; min-width:0; }
+  .pmrow .pno{ flex:1 1 140px; width:auto; min-width:0; }
   .pmrow .pdt{ flex:0 0 152px; width:152px; }
-  .pmrow .pnt{ flex:1 1 140px; width:auto; min-width:0; }
+  .pmrow .pnt{ flex:1 1 130px; width:auto; min-width:0; }
 
+  @media (max-width:900px){
+    .sheetdoc{ grid-template-columns:104px 1fr; }
+    .sheetdoc > .v.r{ border-right:none; }
+    .ovbot{ grid-template-columns:1fr; }
+    #panel .cols{ grid-template-columns:1fr; }
+  }
+
+  /* ========== 印刷（PDF出力） ========== */
+  @media print{
+    @page{ size:A4 portrait; margin:12mm; }
+    body{ background:#fff; }
+    body > header.bar, .wrap, .dock, #panel, .noprint{ display:none !important; }
+    #ovp{ position:static !important; display:block !important; overflow:visible !important;
+          inset:auto !important; background:#fff; }
+    #ovp > header.bar{ display:none !important; }
+    #ovbody{ overflow:visible !important; padding:0 !important; }
+    .ovh{ background:#fff !important; color:#000 !important; border-bottom:2px solid #000;
+          padding:0 0 6pt !important; margin-bottom:8pt; }
+    .ovh .no2{ color:#444 !important; }
+    .ovh h2{ color:#000 !important; font-size:15pt; }
+    .sheetdoc > .sh{ background:#E8E8E8 !important; color:#000 !important;
+                     -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .sheetdoc > .k{ background:#F5F5F5 !important;
+                    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .ovbot{ grid-template-columns:1fr 1fr; }
+    .jump{ display:none !important; }
+    .sheetdoc, .ovpm, .docs{ break-inside:avoid; }
+  }
 </style>
 </head>
 <body>
@@ -117,15 +159,17 @@
 
 <!-- ========== 工事概要書 ========== -->
 <div class="panel" id="ovp">
-  <header class="bar">
+  <header class="bar noprint">
     <span class="mark" aria-hidden="true"></span>
     <h1>工事概要</h1>
+    <button class="btn ghost sm barbtn" id="ovprint">PDFで出す</button>
     <button class="btn ghost sm barbtn" id="ovedit" hidden>編集する</button>
     <button class="btn ghost sm barbtn" id="ovclose">閉じる</button>
   </header>
   <div id="ovhead"></div>
-  <div class="ovbody" id="ovbody"></div>
+  <div id="ovbody"></div>
 </div>
+<input id="docfile" type="file" accept="image/*,.pdf,.dwg,.dxf,.xls,.xlsx,.doc,.docx" multiple hidden>
 
 <!-- ========== 編集 ========== -->
 <div class="panel" id="panel">
@@ -135,135 +179,141 @@
     <button class="btn ghost sm barbtn" id="close">閉じる</button>
   </header>
 
-  <div class="wrap">
+  <div class="wrap" style="max-width:1200px">
     <div id="pmsg" class="msg"></div>
 
-    <div class="sheet">
-      <div class="head">工事</div>
-      <div class="row">
-        <label for="f_no">工事番号<span class="req">*</span></label>
-        <div class="fld"><input id="f_no" type="text" placeholder="2026-001"></div>
-      </div>
-      <div class="row">
-        <label for="f_name">工事名<span class="req">*</span></label>
-        <div class="fld"><input id="f_name" type="text" placeholder="（仮称）〇〇開発工事"></div>
-      </div>
-      <div class="row">
-        <label for="f_type">工事種別</label>
-        <div class="fld"><input id="f_type" type="text" placeholder="新規・既存・改修"></div>
-      </div>
-      <div class="row">
-        <label for="f_status">状態</label>
-        <div class="fld"><select id="f_status"></select></div>
-      </div>
-    </div>
-
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">発注者</div>
-      <div class="row">
-        <label for="f_client">施主・元請</label>
-        <div class="fld" style="flex-direction:column;align-items:stretch">
-          <div class="addwrap">
-            <select id="f_client"></select>
-            <button class="btn ghost sm" id="ptadd" type="button" title="取引先を追加">＋</button>
+    <div class="cols">
+      <div>
+        <div class="sheet">
+          <div class="head">工事</div>
+          <div class="row">
+            <label for="f_no">工事番号<span class="req">*</span></label>
+            <div class="fld"><input id="f_no" type="text" placeholder="2026-001"></div>
           </div>
-          <div class="newpt" id="newpt">
-            <input id="f_ptname" type="text" placeholder="取引先の名称">
-            <button class="btn sm" id="ptsave" type="button">登録</button>
+          <div class="row">
+            <label for="f_name">工事名<span class="req">*</span></label>
+            <div class="fld"><input id="f_name" type="text" placeholder="（仮称）〇〇開発工事"></div>
+          </div>
+          <div class="row">
+            <label for="f_type">工事種別</label>
+            <div class="fld"><input id="f_type" type="text" placeholder="新規・既存・改修"></div>
+          </div>
+          <div class="row">
+            <label for="f_status">状態</label>
+            <div class="fld"><select id="f_status"></select></div>
+          </div>
+        </div>
+
+        <div style="height:12px"></div>
+        <div class="sheet">
+          <div class="head">発注者</div>
+          <div class="row">
+            <label for="f_client">施主・元請</label>
+            <div class="fld" style="flex-direction:column;align-items:stretch">
+              <div class="addwrap">
+                <select id="f_client"></select>
+                <button class="btn ghost sm" id="ptadd" type="button" title="取引先を追加">＋</button>
+              </div>
+              <div class="newpt" id="newpt">
+                <input id="f_ptname" type="text" placeholder="取引先の名称">
+                <button class="btn sm" id="ptsave" type="button">登録</button>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <label for="f_cc">担当者</label>
+            <div class="fld"><input id="f_cc" type="text"></div>
+          </div>
+          <div class="row">
+            <label for="f_ctel">連絡先</label>
+            <div class="fld"><input id="f_ctel" type="text" inputmode="tel"></div>
+          </div>
+        </div>
+
+        <div style="height:12px"></div>
+        <div class="sheet">
+          <div class="head">場所と規模</div>
+          <div class="row">
+            <label for="f_addr">現場住所</label>
+            <div class="fld"><input id="f_addr" type="text"></div>
+          </div>
+          <div class="row">
+            <label for="f_lot">地番</label>
+            <div class="fld"><input id="f_lot" type="text" placeholder="〇〇 1234-5 他3筆"></div>
+          </div>
+          <div class="row">
+            <label for="f_area">施工面積</label>
+            <div class="fld"><input id="f_area" type="number" step="0.01" min="0" placeholder="0"><span style="font-size:13px;color:var(--sub)">㎡</span></div>
           </div>
         </div>
       </div>
-      <div class="row">
-        <label for="f_cc">担当者</label>
-        <div class="fld"><input id="f_cc" type="text"></div>
-      </div>
-      <div class="row">
-        <label for="f_ctel">連絡先</label>
-        <div class="fld"><input id="f_ctel" type="text" inputmode="tel"></div>
-      </div>
-    </div>
 
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">場所と規模</div>
-      <div class="row">
-        <label for="f_addr">現場住所</label>
-        <div class="fld"><input id="f_addr" type="text"></div>
-      </div>
-      <div class="row">
-        <label for="f_lot">地番</label>
-        <div class="fld"><input id="f_lot" type="text" placeholder="〇〇 1234-5 他3筆"></div>
-      </div>
-      <div class="row">
-        <label for="f_area">施工面積</label>
-        <div class="fld"><input id="f_area" type="number" step="0.01" min="0" placeholder="0"><span style="font-size:13px;color:var(--sub)">㎡</span></div>
-      </div>
-    </div>
+      <div>
+        <div class="sheet">
+          <div class="head">契約と工期</div>
+          <div class="row">
+            <label for="f_cdate">契約日</label>
+            <div class="fld"><input id="f_cdate" type="date"></div>
+          </div>
+          <div class="row">
+            <label for="f_amount">契約金額</label>
+            <div class="fld"><input id="f_amount" type="number" step="1" min="0" placeholder="0"><span style="font-size:13px;color:var(--sub)">税抜</span></div>
+          </div>
+          <div class="row">
+            <label for="f_start">着工日</label>
+            <div class="fld"><input id="f_start" type="date"></div>
+          </div>
+          <div class="row">
+            <label for="f_plan">完成予定</label>
+            <div class="fld"><input id="f_plan" type="date"></div>
+          </div>
+          <div class="row">
+            <label for="f_actual">完成日</label>
+            <div class="fld"><input id="f_actual" type="date"></div>
+          </div>
+        </div>
 
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">契約と工期</div>
-      <div class="row">
-        <label for="f_cdate">契約日</label>
-        <div class="fld"><input id="f_cdate" type="date"></div>
-      </div>
-      <div class="row">
-        <label for="f_amount">契約金額</label>
-        <div class="fld"><input id="f_amount" type="number" step="1" min="0" placeholder="0"><span style="font-size:13px;color:var(--sub)">税抜</span></div>
-      </div>
-      <div class="row">
-        <label for="f_start">着工日</label>
-        <div class="fld"><input id="f_start" type="date"></div>
-      </div>
-      <div class="row">
-        <label for="f_plan">完成予定</label>
-        <div class="fld"><input id="f_plan" type="date"></div>
-      </div>
-      <div class="row">
-        <label for="f_actual">完成日</label>
-        <div class="fld"><input id="f_actual" type="date"></div>
-      </div>
-    </div>
+        <div style="height:12px"></div>
+        <div class="sheet">
+          <div class="head">体制</div>
+          <div class="row">
+            <label for="f_agent">現場代理人</label>
+            <div class="fld"><input id="f_agent" type="text"></div>
+          </div>
+          <div class="row">
+            <label for="f_eng">主任技術者</label>
+            <div class="fld"><input id="f_eng" type="text"></div>
+          </div>
+          <div class="row">
+            <label for="f_mgr">現場担当</label>
+            <div class="fld"><select id="f_mgr"></select></div>
+          </div>
+        </div>
 
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">体制</div>
-      <div class="row">
-        <label for="f_agent">現場代理人</label>
-        <div class="fld"><input id="f_agent" type="text"></div>
-      </div>
-      <div class="row">
-        <label for="f_eng">主任技術者</label>
-        <div class="fld"><input id="f_eng" type="text"></div>
-      </div>
-      <div class="row">
-        <label for="f_mgr">現場担当</label>
-        <div class="fld"><select id="f_mgr"></select></div>
-      </div>
-    </div>
-
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">許認可</div>
-      <div class="row" style="grid-template-columns:1fr">
-        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
-          <div id="pms"></div>
-          <button class="btn ghost sm" id="pmadd" type="button" style="margin-top:4px">＋ 許認可を足す</button>
+        <div style="height:12px"></div>
+        <div class="sheet">
+          <div class="head">その他</div>
+          <div class="row">
+            <label for="f_ins">保険・保証</label>
+            <div class="fld"><input id="f_ins" type="text" placeholder="労災保険、建設工事保険 など"></div>
+          </div>
+          <div class="row">
+            <label for="f_note">備考</label>
+            <div class="fld"><textarea id="f_note"></textarea></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">その他</div>
-      <div class="row">
-        <label for="f_ins">保険・保証</label>
-        <div class="fld"><input id="f_ins" type="text" placeholder="労災保険、建設工事保険 など"></div>
-      </div>
-      <div class="row">
-        <label for="f_note">備考</label>
-        <div class="fld"><textarea id="f_note"></textarea></div>
+      <div class="full">
+        <div class="sheet">
+          <div class="head">許認可</div>
+          <div class="row" style="grid-template-columns:1fr">
+            <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+              <div id="pms"></div>
+              <button class="btn ghost sm" id="pmadd" type="button" style="margin-top:4px">＋ 許認可を足す</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -285,6 +335,7 @@
 <script>
 (async function(){
   const $ = id => document.getElementById(id);
+  const BUCKET = 'project-files';
 
   const auth = await requireAuth();
   if (!auth) return;
@@ -313,8 +364,8 @@
     if (p.error || u.error || k.error){
       const e = p.error || u.error || k.error;
       showMsg($('msg'),
-        /column .* does not exist|schema cache/i.test(e.message || '')
-          ? 'データベースに必要な列がまだありません。Supabase の SQL Editor で project_summary.sql を実行してください。'
+        /column .* does not exist|schema cache|relation .* does not exist/i.test(e.message || '')
+          ? 'データベースに必要な項目がまだありません。Supabase の SQL Editor で project_summary.sql を実行してください。'
           : '読み込めませんでした。' + e.message, 'err');
       return;
     }
@@ -384,10 +435,12 @@
   $('fst').addEventListener('change', render);
 
   /* ================= 工事概要書 ================= */
-  function row(k, v, cls){
+  // 左の見出しと右の値。r=true なら右側に区切り線を引く
+  function cell(k, v, opt){
+    const o = opt || {};
     const has = v !== null && v !== undefined && v !== '';
-    return `<div class="ovr"><span class="k">${k}</span>` +
-           `<span class="v ${cls||''}${has ? '' : ' empty'}">${has ? v : '—'}</span></div>`;
+    return `<span class="k">${k}</span>` +
+      `<span class="v${o.r ? ' r' : ''}${o.num ? ' num' : ''}${has ? '' : ' empty'}">${has ? v : '—'}</span>`;
   }
 
   async function openOverview(p){
@@ -408,14 +461,7 @@
     const amt  = Number(p.contract_amount) || 0;
     const rate = Number(p.tax_rate ?? 0.1);
     const tax  = Math.floor(amt * rate);
-
-    const pms = Array.isArray(p.permits) ? p.permits : [];
-    const pmHtml = pms.length
-      ? `<table class="ovpm"><thead><tr><th>種類</th><th>番号</th><th>取得日</th><th>備考</th></tr></thead><tbody>` +
-        pms.map(x => `<tr><td>${esc(x.kind||'')}</td><td class="mono">${esc(x.no||'')}</td>` +
-          `<td class="mono">${x.date ? fmtDate(x.date) : ''}</td><td>${esc(x.note||'')}</td></tr>`).join('') +
-        `</tbody></table>`
-      : `<div class="ovtbl"><div class="ovr"><span class="k">許認可</span><span class="v empty">登録されていません</span></div></div>`;
+    const area = p.site_area ? Number(p.site_area).toLocaleString('ja-JP') + '<span class="un">㎡</span>' : '';
 
     $('ovhead').innerHTML = `
       <div class="ovh">
@@ -425,71 +471,116 @@
         <span class="tag st-${p.status}" style="background:#fff">${STATUS[p.status]||p.status}</span>
       </div>`;
 
+    const pms = Array.isArray(p.permits) ? p.permits : [];
+    const pmHtml = pms.length
+      ? `<table class="ovpm"><thead><tr><th>種類</th><th>番号</th><th>取得日</th><th>備考</th></tr></thead><tbody>` +
+        pms.map(x => `<tr><td>${esc(x.kind||'')}</td><td class="mono">${esc(x.no||'')}</td>` +
+          `<td class="mono">${x.date ? fmtDate(x.date) : ''}</td><td>${esc(x.note||'')}</td></tr>`).join('') +
+        `</tbody></table>`
+      : `<div class="ovnone">登録されていません</div>`;
+
     $('ovbody').innerHTML = `
-      <div class="ovcols">
+      <div class="sheetdoc">
+        <div class="sh">発注者・現場</div>
+        ${cell('施主・元請', esc(pmap[p.client_partner_id]||''), {r:true})}${cell('現場住所', esc(p.site_address||''))}
+        ${cell('担当者', esc(p.client_contact||''), {r:true})}${cell('地番', esc(p.site_lot||''))}
+        ${cell('連絡先', esc(p.client_tel||''), {r:true, num:true})}${cell('施工面積', area, {num:true})}
 
-        <div>
-          <div class="ovsec"><div class="t">発注者</div><div class="ovtbl">
-            ${row('施主・元請', esc(pmap[p.client_partner_id]||''))}
-            ${row('担当者', esc(p.client_contact||''))}
-            ${row('連絡先', esc(p.client_tel||''), 'num')}
-          </div></div>
+        <div class="sh">契約・工期</div>
+        ${cell('契約日', p.contract_date ? fmtDate(p.contract_date) : '', {r:true, num:true})}${cell('着工日', p.start_date ? fmtDate(p.start_date) : '', {num:true})}
+        ${cell('契約金額', amt ? fmtMoney(amt) + '<span class="un">税抜</span>' : '', {r:true, num:true})}${cell('完成予定', p.end_date_planned ? fmtDate(p.end_date_planned) : '', {num:true})}
+        ${cell('消費税', amt ? fmtMoney(tax) + `<span class="un">${(rate*100).toFixed(0)}%</span>` : '', {r:true, num:true})}${cell('完成日', p.end_date_actual ? fmtDate(p.end_date_actual) : '', {num:true})}
+        ${cell('契約金額 税込', amt ? fmtMoney(amt + tax) : '', {r:true, num:true})}${cell('工程表', `第${p.schedule_version ?? 1}版　${p.schedule_revised_on ? fmtDate(p.schedule_revised_on) : ''}`, {num:true})}
 
-          <div class="ovsec"><div class="t">場所と規模</div><div class="ovtbl">
-            ${row('現場住所', esc(p.site_address||''))}
-            ${row('地番', esc(p.site_lot||''))}
-            ${row('施工面積', p.site_area ? Number(p.site_area).toLocaleString('ja-JP') + '<span class="un">㎡</span>' : '', 'num')}
-            ${row('工事種別', esc(p.construction_type||''))}
-          </div></div>
-        </div>
-
-        <div>
-          <div class="ovsec"><div class="t">契約</div><div class="ovtbl">
-            ${row('契約日', p.contract_date ? fmtDate(p.contract_date) : '', 'num')}
-            ${row('契約金額', amt ? fmtMoney(amt) + '<span class="un">税抜</span>' : '', 'num')}
-            ${row('消費税', amt ? fmtMoney(tax) + `<span class="un">${(rate*100).toFixed(0)}%</span>` : '', 'num')}
-            ${row('税込', amt ? fmtMoney(amt + tax) : '', 'num')}
-          </div></div>
-
-          <div class="ovsec"><div class="t">工期</div><div class="ovtbl">
-            ${row('着工日', p.start_date ? fmtDate(p.start_date) : '', 'num')}
-            ${row('完成予定', p.end_date_planned ? fmtDate(p.end_date_planned) : '', 'num')}
-            ${row('完成日', p.end_date_actual ? fmtDate(p.end_date_actual) : '', 'num')}
-            ${row('工程表', `第${p.schedule_version ?? 1}版　${p.schedule_revised_on ? fmtDate(p.schedule_revised_on) : ''}`, 'num')}
-          </div></div>
-        </div>
-
-        <div>
-          <div class="ovsec"><div class="t">体制</div><div class="ovtbl">
-            ${row('現場代理人', esc(p.agent_name||''))}
-            ${row('主任技術者', esc(p.engineer_name||''))}
-            ${row('現場担当', esc(umap[p.manager_user_id]||''))}
-          </div></div>
-
-          <div class="ovsec"><div class="t">その他</div><div class="ovtbl">
-            ${row('保険・保証', esc(p.insurance_note||''))}
-            ${row('備考', esc(p.note||'').replace(/\n/g,'<br>'))}
-          </div></div>
-        </div>
-
+        <div class="sh">体制・その他</div>
+        ${cell('現場代理人', esc(p.agent_name||''), {r:true})}${cell('工事種別', esc(p.construction_type||''))}
+        ${cell('主任技術者', esc(p.engineer_name||''), {r:true})}${cell('保険・保証', esc(p.insurance_note||''))}
+        ${cell('現場担当', esc(umap[p.manager_user_id]||''), {r:true})}${cell('備考', esc(p.note||'').replace(/\n/g,'<br>'))}
       </div>
 
       <div class="ovbot">
         <div class="ovsec"><div class="t">許認可</div>${pmHtml}</div>
-        <div class="ovsec"><div class="t">この工事の記録</div>
-          <div class="jump">
-            <a href="schedule.html?p=${p.id}">工程表 <span class="c">${ph.count ?? 0} 工程</span></a>
-            <a href="reports.html?p=${p.id}">日報 <span class="c">${dr.count ?? 0} 件</span></a>
-            <a href="files.html?p=${p.id}">写真・書類 <span class="c">${pf.count ?? 0} 件</span></a>
+        <div class="ovsec">
+          <div class="t">図面・書類<span class="sp"></span>
+            ${canEdit ? '<button class="btn ghost sm noprint" id="docadd" type="button">追加</button>' : ''}
           </div>
+          <div id="doclist"></div>
         </div>
+      </div>
+
+      <div class="jump noprint">
+        <a href="schedule.html?p=${p.id}">工程表 <span class="c">${ph.count ?? 0} 工程</span></a>
+        <a href="reports.html?p=${p.id}">日報 <span class="c">${dr.count ?? 0} 件</span></a>
+        <a href="files.html?p=${p.id}">写真・書類 <span class="c">${pf.count ?? 0} 件</span></a>
       </div>`;
+
+    await paintDocs(p.id);
+    if ($('docadd')) $('docadd').onclick = () => $('docfile').click();
 
     $('ovedit').hidden = !canEdit;
     $('ovp').classList.add('open');
-    window.scrollTo(0,0);
   }
 
+  /* ---- 図面・書類 ---- */
+  const KINDLBL = { drawing:'図面', document:'書類', photo:'写真', other:'その他' };
+
+  async function paintDocs(pid){
+    const { data, error } = await sb.from('project_files')
+      .select('id,file_kind,original_name,title,storage_path,created_at')
+      .eq('project_id', pid).eq('is_active', true)
+      .in('file_kind', ['drawing','document','other'])
+      .order('created_at', { ascending:false }).limit(30);
+
+    const box = $('doclist');
+    if (!box) return;
+    if (error){ box.innerHTML = `<div class="ovnone">${esc(error.message)}</div>`; return; }
+    if (!data || !data.length){ box.innerHTML = `<div class="ovnone">登録されていません</div>`; return; }
+
+    box.innerHTML = `<div class="docs">` + data.map(f =>
+      `<div class="docrow"><span class="dk">${KINDLBL[f.file_kind]||''}</span>` +
+      `<span class="dn">${esc(f.title || f.original_name || '')}</span>` +
+      `<a href="#" class="dopen noprint" data-p="${esc(f.storage_path)}">開く</a></div>`).join('') + `</div>`;
+
+    box.querySelectorAll('.dopen').forEach(a => a.onclick = async e => {
+      e.preventDefault();
+      const { data:u } = await sb.storage.from(BUCKET).createSignedUrl(a.dataset.p, 3600);
+      if (u?.signedUrl) window.open(u.signedUrl, '_blank');
+    });
+  }
+
+  $('docfile').addEventListener('change', async e => {
+    const list = [...e.target.files];
+    e.target.value = '';
+    if (!list.length || !editing) return;
+
+    showMsg($('msg'), `${list.length}件を取り込んでいます…`, 'ok');
+    let ok = 0;
+    for (let i = 0; i < list.length; i++){
+      const f = list[i];
+      const nm = f.name.replace(/[^\w.\-]/g, '_').slice(-80);
+      const path = `${me.organization_id}/${editing.id}/orig/${Date.now()}_${i}_${nm}`;
+      try {
+        const up = await sb.storage.from(BUCKET)
+          .upload(path, f, { contentType: f.type || 'application/octet-stream' });
+        if (up.error) throw up.error;
+        const kind = /\.(dwg|dxf|jww|p21|sfc)$/i.test(f.name) ? 'drawing'
+                   : (f.type === 'application/pdf' ? 'document'
+                   : (f.type.startsWith('image/') ? 'drawing' : 'other'));
+        const { error } = await sb.from('project_files').insert({
+          organization_id: me.organization_id, project_id: editing.id,
+          file_kind: kind, purpose: 'submit', storage_path: path,
+          original_name: f.name, mime_type: f.type || null, byte_size: f.size,
+          uploaded_by: me.id
+        });
+        if (error) throw error;
+        ok++;
+      } catch (err){ console.error(err); }
+    }
+    showMsg($('msg'), `${ok}件を登録しました。`, ok === list.length ? 'ok' : 'err');
+    await paintDocs(editing.id);
+  });
+
+  $('ovprint').addEventListener('click', () => window.print());
   $('ovclose').addEventListener('click', () => { $('ovp').classList.remove('open'); editing = null; });
   $('ovedit').addEventListener('click', () => { $('ovp').classList.remove('open'); openPanel(editing); });
 
