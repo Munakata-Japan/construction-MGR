@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: projects (工事) v20260723V -->
+<!-- BUILD: projects (工事) v20260723W -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -224,7 +224,23 @@
     .sheetdoc > .k{ background:#F5F5F5 !important;
                     -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .jump{ display:none !important; }
-    .sheetdoc, .ovpm, .docs{ break-inside:avoid; }
+    .sheetdoc, .ovpm{ break-inside:avoid; }
+
+    /* 図面は1枚だけ、A3の比率のまま無理のない大きさで */
+    .dwgs.sm{ display:none !important; }
+    .dwgmore{ display:none !important; }
+    .dwgs .dwg{ max-width:132mm; border:1px solid #999 !important; break-inside:avoid; }
+    .dwg .pv{ background:#fff !important; }
+    .dwg .cap{ padding:3pt 5pt !important; }
+    .dwg .cap b{ font-size:9pt; }
+    .dwg .cap span{ font-size:7.5pt; }
+    .ovsec > .t{ font-size:9.5pt; padding:1pt 0 2pt 6pt; border-left-width:2pt; }
+    .sheetdoc > .sh{ font-size:9pt; padding:2.5pt 8pt !important; }
+    .sheetdoc > .k{ font-size:8.5pt; padding:2.5pt 6pt !important; }
+    .sheetdoc > .v{ font-size:9pt; padding:2.5pt 7pt !important; }
+    .ovpm th, .ovpm td{ font-size:8.5pt; padding:2.5pt 6pt !important; }
+    .ovnone{ font-size:8.5pt; padding:4pt 6pt !important; }
+    #ovdoc{ font-size:9pt; }
   }
 </style>
 </head>
@@ -608,7 +624,11 @@
       const path = pv.dataset.t || ((pv.dataset.m || '').startsWith('image/') ? pv.dataset.o : '');
       if (!path) return;
       const { data:u } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
-      if (u && u.signedUrl) pv.insertAdjacentHTML('beforeend', `<img src="${u.signedUrl}" alt="" loading="lazy">`);
+      if (u && u.signedUrl){
+        pv.insertAdjacentHTML('beforeend', `<img src="${u.signedUrl}" alt="" loading="lazy">`);
+        const ex = pv.querySelector('.ext');
+        if (ex) ex.remove();          // 絵が出たら拡張子の文字は不要
+      }
     });
 
     box.querySelectorAll('.dwg').forEach(b2 => b2.onclick = async () => {
