@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260723I -->
+<!-- BUILD: schedule (工程表) v20260723J -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -412,6 +412,25 @@ body > header.bar{ flex:0 0 auto; }
       sb.from('app_users').select('id,name,role').eq('is_active',true).order('name'),
       sb.from('projects').select('id,project_no,name,start_date,end_date_planned,is_sample,schedule_version,schedule_revised_on,schedule_revised_by').eq('is_active',true).order('project_no',{ascending:false})
     ]);
+    // 読み込みに失敗したら黙って空にせず、理由を画面に出す
+    const bad = [
+      ['費目',       c.error],
+      ['作業工程',   w.error],
+      ['取引先',     p.error],
+      ['利用者',     u.error],
+      ['工事',       pr.error]
+    ].filter(x => x[1]);
+
+    if (bad.length){
+      const miss = bad.some(x => /column .* does not exist|schema cache/i.test(x[1].message || ''));
+      showMsg($('msg'),
+        `${bad.map(x => x[0]).join('・')}を読み込めませんでした。\n` +
+        (miss
+          ? 'データベースに必要な列がまだありません。Supabase の SQL Editor で phase1a_revision.sql を実行してください。'
+          : bad[0][1].message), 'err');
+      $('msg').style.whiteSpace = 'pre-line';
+    }
+
     cats = c.data || []; wts = w.data || []; partners = p.data || [];
     users = u.data || []; projects = pr.data || [];
 
