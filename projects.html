@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: projects (工事) v20260723S -->
+<!-- BUILD: projects (工事) v20260723U -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -131,27 +131,52 @@
   .jump a:hover{ border-color:var(--ink); }
   .jump a .c{ font-family:var(--mono); font-weight:400; font-size:11.5px; color:var(--sub); }
 
-  /* ========== 編集：3列・スクロールなし ========== */
+  /* ========== 編集：概要書と同じ一枚の書類 ========== */
   #panel{ display:none; flex-direction:column; overflow:hidden; }
   #panel.open{ display:flex; }
   #panel > header.bar{ flex:0 0 auto; }
-  #panel > .wrap{ flex:1 1 auto; min-height:0; overflow:auto;
-                  max-width:1560px !important; width:100%; margin:0 auto;
-                  padding:12px clamp(10px,2vw,22px) 14px; }
+  #panel > .wrap{ flex:1 1 auto; min-height:0; overflow:auto; display:flex;
+                  max-width:none !important; width:100%;
+                  padding:14px clamp(10px,2vw,22px) 16px; }
   #panel > .dock{ position:static; flex:0 0 auto; backdrop-filter:none; background:var(--paper); }
-  #panel > .dock .inner{ max-width:none; }
+  #panel > .dock .inner{
+    max-width:1560px; margin:0 auto; align-items:center; gap:14px;
+    padding:0 clamp(10px,2vw,22px);
+  }
+  #panel > .dock .hintl{ flex:1 1 auto; font-size:12px; color:var(--sub); }
+  #panel > .dock .btn{ flex:0 0 auto; min-width:168px; }
+  #pdoc{ margin:auto; width:100%; max-width:1560px; }
 
-  #panel .cols{ display:grid; gap:10px 14px; grid-template-columns:repeat(3,1fr); align-items:start; }
-  #panel .full{ grid-column:1 / -1; }
+  .docform{
+    background:var(--card); border:1px solid var(--rule); border-radius:2px;
+    display:grid; grid-template-columns:104px minmax(0,1fr) 104px minmax(0,1fr);
+  }
+  .docform > .sh{
+    grid-column:1 / -1; background:#E3E6E0; color:var(--ink);
+    font-family:var(--disp); font-weight:700; font-size:11.5px; letter-spacing:.06em;
+    padding:5px 12px; border-bottom:1px solid var(--rule);
+    box-shadow:inset 4px 0 0 var(--safety);
+  }
+  .docform > .k{
+    background:#F1F3EF; padding:5px 9px; font-size:11.5px; font-weight:700;
+    color:var(--sub); border-right:1px solid var(--rule-2);
+    border-bottom:1px solid var(--rule-2); display:flex; align-items:center; line-height:1.3;
+  }
+  .docform > .k .req{ color:var(--alert); margin-left:3px; }
+  .docform > .dv{
+    padding:3px 7px; border-bottom:1px solid var(--rule-2); min-width:0;
+    display:flex; align-items:center; gap:6px;
+  }
+  .docform > .dv.r{ border-right:1px solid var(--rule-2); }
+  .docform > .dv.wide{ grid-column:2 / -1; }
+  .docform > .dv .u2{ font-size:11.5px; color:var(--sub); white-space:nowrap; }
+  .docform input[type=text], .docform input[type=number],
+  .docform input[type=date], .docform select{
+    min-height:32px; padding:3px 8px; font-size:13.5px; width:100%; min-width:0;
+  }
+  .docform textarea{ min-height:58px; padding:5px 8px; font-size:13.5px; line-height:1.55; }
+  .docform .pmwrap{ grid-column:1 / -1; padding:8px 10px; border-bottom:none; }
 
-  /* 入力欄を詰めて画面に収める */
-  #panel .sheet .head{ padding:6px 12px; font-size:13px; }
-  #panel .row > label{ padding:6px 10px; font-size:12.5px; }
-  #panel .fld{ padding:4px 8px; }
-  #panel input[type=text], #panel input[type=number], #panel input[type=date],
-  #panel select{ min-height:34px; padding:4px 8px; }
-  #panel textarea{ min-height:52px; padding:5px 8px; line-height:1.6; }
-  #panel .row{ grid-template-columns:104px 1fr; }
   .pmrow{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
   .pmrow select{ flex:1 1 190px; width:auto; min-width:0; }
   .pmrow .pno{ flex:1 1 140px; width:auto; min-width:0; }
@@ -243,155 +268,89 @@
     <button class="btn ghost sm barbtn" id="close">閉じる</button>
   </header>
 
-  <div class="wrap" style="max-width:1200px">
+  <div class="wrap">
+   <div id="pdoc">
     <div id="pmsg" class="msg"></div>
 
-    <div class="cols">
-      <div>
-        <div class="sheet">
-          <div class="head">工事</div>
-          <div class="row">
-            <label for="f_no">工事番号<span class="req">*</span></label>
-            <div class="fld"><input id="f_no" type="text" placeholder="2026-001"></div>
-          </div>
-          <div class="row">
-            <label for="f_name">工事名<span class="req">*</span></label>
-            <div class="fld"><input id="f_name" type="text" placeholder="（仮称）〇〇開発工事"></div>
-          </div>
-          <div class="row">
-            <label for="f_type">工事種別</label>
-            <div class="fld"><input id="f_type" type="text" placeholder="新規・既存・改修"></div>
-          </div>
-          <div class="row">
-            <label for="f_status">状態</label>
-            <div class="fld"><select id="f_status"></select></div>
-          </div>
-        </div>
+    <div class="docform">
+      <div class="sh">工事</div>
+      <span class="k">工事番号<span class="req">*</span></span>
+      <span class="dv r"><input id="f_no" type="text" placeholder="2026-001"></span>
+      <span class="k">工事種別</span>
+      <span class="dv"><input id="f_type" type="text" placeholder="新規・既存・改修"></span>
 
-        <div style="height:12px"></div>
-        <div class="sheet">
-          <div class="head">発注者</div>
-          <div class="row">
-            <label for="f_client">施主・元請</label>
-            <div class="fld" style="flex-direction:column;align-items:stretch">
-              <div class="addwrap">
-                <select id="f_client"></select>
-                <button class="btn ghost sm" id="ptadd" type="button" title="取引先を追加">＋</button>
-              </div>
-              <div class="newpt" id="newpt">
-                <input id="f_ptname" type="text" placeholder="取引先の名称">
-                <button class="btn sm" id="ptsave" type="button">登録</button>
-              </div>
-            </div>
-          </div>
-          <div class="row">
-            <label for="f_cc">担当者</label>
-            <div class="fld"><input id="f_cc" type="text"></div>
-          </div>
-          <div class="row">
-            <label for="f_ctel">連絡先</label>
-            <div class="fld"><input id="f_ctel" type="text" inputmode="tel"></div>
-          </div>
-        </div>
+      <span class="k">工事名<span class="req">*</span></span>
+      <span class="dv r"><input id="f_name" type="text" placeholder="（仮称）〇〇開発工事"></span>
+      <span class="k">状態</span>
+      <span class="dv"><select id="f_status"></select></span>
 
-      </div>
+      <div class="sh">発注者・現場</div>
+      <span class="k">施主・元請</span>
+      <span class="dv r">
+        <select id="f_client"></select>
+        <button class="btn ghost sm" id="ptadd" type="button" title="取引先を追加" style="flex:0 0 auto">＋</button>
+      </span>
+      <span class="k">現場住所</span>
+      <span class="dv"><input id="f_addr" type="text"></span>
 
-      <div>
-        <div class="sheet">
-          <div class="head">場所と規模</div>
-          <div class="row">
-            <label for="f_addr">現場住所</label>
-            <div class="fld"><input id="f_addr" type="text"></div>
-          </div>
-          <div class="row">
-            <label for="f_lot">地番</label>
-            <div class="fld"><input id="f_lot" type="text" placeholder="〇〇 1234-5 他3筆"></div>
-          </div>
-          <div class="row">
-            <label for="f_area">施工面積</label>
-            <div class="fld"><input id="f_area" type="number" step="0.01" min="0" placeholder="0"><span style="font-size:12.5px;color:var(--sub)">㎡</span></div>
-          </div>
-        </div>
+      <span class="k">担当者</span>
+      <span class="dv r"><input id="f_cc" type="text"></span>
+      <span class="k">地番</span>
+      <span class="dv"><input id="f_lot" type="text" placeholder="〇〇 1234-5 他3筆"></span>
 
-        <div style="height:10px"></div>
-        <div class="sheet">
-          <div class="head">契約と工期</div>
-          <div class="row">
-            <label for="f_cdate">契約日</label>
-            <div class="fld"><input id="f_cdate" type="date"></div>
-          </div>
-          <div class="row">
-            <label for="f_amount">契約金額</label>
-            <div class="fld"><input id="f_amount" type="number" step="1" min="0" placeholder="0"><span style="font-size:13px;color:var(--sub)">税抜</span></div>
-          </div>
-          <div class="row">
-            <label for="f_start">着工日</label>
-            <div class="fld"><input id="f_start" type="date"></div>
-          </div>
-          <div class="row">
-            <label for="f_plan">完成予定</label>
-            <div class="fld"><input id="f_plan" type="date"></div>
-          </div>
-          <div class="row">
-            <label for="f_actual">完成日</label>
-            <div class="fld"><input id="f_actual" type="date"></div>
-          </div>
-        </div>
+      <span class="k">連絡先</span>
+      <span class="dv r"><input id="f_ctel" type="text" inputmode="tel"></span>
+      <span class="k">施工面積</span>
+      <span class="dv"><input id="f_area" type="number" step="0.01" min="0" placeholder="0"><span class="u2">㎡</span></span>
 
-      </div>
+      <div class="sh">契約・工期・保険</div>
+      <span class="k">契約日</span>
+      <span class="dv r"><input id="f_cdate" type="date"></span>
+      <span class="k">着工日</span>
+      <span class="dv"><input id="f_start" type="date"></span>
 
-      <div>
-        <div class="sheet">
-          <div class="head">体制</div>
-          <div class="row">
-            <label for="f_agent">現場代理人</label>
-            <div class="fld"><input id="f_agent" type="text"></div>
-          </div>
-          <div class="row">
-            <label for="f_eng">主任技術者</label>
-            <div class="fld"><input id="f_eng" type="text"></div>
-          </div>
-          <div class="row">
-            <label for="f_mgr">現場担当</label>
-            <div class="fld"><select id="f_mgr"></select></div>
-          </div>
-        </div>
+      <span class="k">契約金額</span>
+      <span class="dv r"><input id="f_amount" type="number" step="1" min="0" placeholder="0"><span class="u2">税抜</span></span>
+      <span class="k">完成予定</span>
+      <span class="dv"><input id="f_plan" type="date"></span>
 
-        <div style="height:10px"></div>
-        <div class="sheet">
-          <div class="head">その他</div>
-          <div class="row">
-            <label for="f_ins">保険・保証</label>
-            <div class="fld"><input id="f_ins" type="text" placeholder="労災保険、建設工事保険 など"></div>
-          </div>
-          <div class="row">
-            <label for="f_note">備考</label>
-            <div class="fld"><textarea id="f_note"></textarea></div>
-          </div>
-        </div>
-      </div>
+      <span class="k">保険・保証</span>
+      <span class="dv r"><input id="f_ins" type="text" placeholder="労災保険、建設工事保険 など"></span>
+      <span class="k">完成日</span>
+      <span class="dv"><input id="f_actual" type="date"></span>
 
-      <div class="full">
-        <div class="sheet">
-          <div class="head">許認可</div>
-          <div class="row" style="grid-template-columns:1fr">
-            <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
-              <div id="pms"></div>
-              <button class="btn ghost sm" id="pmadd" type="button" style="margin-top:4px">＋ 許認可を足す</button>
-            </div>
-          </div>
-        </div>
+      <div class="sh">体制・備考</div>
+      <span class="k">現場代理人</span>
+      <span class="dv r"><input id="f_agent" type="text"></span>
+      <span class="k">現場担当</span>
+      <span class="dv"><select id="f_mgr"></select></span>
+
+      <span class="k">主任技術者</span>
+      <span class="dv r"><input id="f_eng" type="text"></span>
+      <span class="k">備考</span>
+      <span class="dv"><textarea id="f_note"></textarea></span>
+
+      <div class="sh">許認可</div>
+      <div class="pmwrap">
+        <div id="pms"></div>
+        <button class="btn ghost sm" id="pmadd" type="button" style="margin-top:4px">＋ 許認可を足す</button>
       </div>
     </div>
 
-    <div style="height:16px"></div>
+    <div class="newpt" id="newpt" style="margin-top:8px">
+      <input id="f_ptname" type="text" placeholder="取引先の名称">
+      <button class="btn sm" id="ptsave" type="button">登録</button>
+    </div>
+
+    <div style="height:12px"></div>
     <button class="btn danger" id="del" hidden>この工事を削除する</button>
+   </div>
   </div>
 
   <div class="dock" id="pdock">
     <div class="inner">
-      <button class="btn ghost" id="cancel" style="flex:0 0 auto">やめる</button>
-      <button class="btn wide" id="save">保存する</button>
+      <span class="hintl" id="phint">＊ の項目は必ず入れてください</span>
+      <button class="btn" id="save">保存する</button>
     </div>
   </div>
 </div>
@@ -763,12 +722,40 @@
     $('panel').classList.add('open');
     const w = $('panel').querySelector('.wrap');
     if (w) w.scrollTop = 0;
+    snapshot = formState();
   }
   function closePanel(){ $('panel').classList.remove('open'); }
 
+  /* ---- 保存していない変更の見張り ---- */
+  let snapshot = '';
+
+  function formState(){
+    const v = [];
+    $('panel').querySelectorAll('input, select, textarea').forEach(el => v.push(el.value));
+    // 許認可の行も含める
+    $('pms').querySelectorAll('.pmrow').forEach(r => {
+      r.querySelectorAll('select, input').forEach(el => v.push(el.value));
+    });
+    return v.join('\u0001');
+  }
+
+  function dirty(){ return formState() !== snapshot; }
+
+  function tryClose(){
+    if (dirty() && !confirm('保存していない内容があります。\n閉じると入力した内容は消えます。\n\n閉じますか。')) return;
+    closePanel();
+    if (editing) openOverview(editing);
+  }
+
   $('add').addEventListener('click', () => { editing = null; openPanel(null); });
-  $('close').addEventListener('click', () => { closePanel(); if (editing) openOverview(editing); });
-  $('cancel').addEventListener('click', () => { closePanel(); if (editing) openOverview(editing); });
+  $('close').addEventListener('click', tryClose);
+
+  // 画面を離れようとしたときも知らせる
+  window.addEventListener('beforeunload', e => {
+    if ($('panel').classList.contains('open') && dirty()){
+      e.preventDefault(); e.returnValue = '';
+    }
+  });
 
   /* ================= 取引先のその場追加 ================= */
   $('ptadd').addEventListener('click', () => {
@@ -845,6 +832,7 @@
       return;
     }
 
+    snapshot = formState();
     closePanel();
     await loadProjects();
     const fresh = projects.find(x => x.id === id);
@@ -858,6 +846,7 @@
     if (!confirm(`「${editing.name}」を削除します。\n工程・日報・写真もまとめて消えます。取り消せません。`)) return;
     const { error } = await sb.from('projects').delete().eq('id', editing.id);
     if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
+    snapshot = formState();
     closePanel(); editing = null;
     await loadProjects();
     showMsg($('msg'), '工事を削除しました。', 'ok');
