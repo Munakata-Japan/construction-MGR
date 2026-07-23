@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260723H -->
+<!-- BUILD: schedule (工程表) v20260723I -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -57,6 +57,29 @@ body > header.bar{ flex:0 0 auto; }
 .flash{ flex:0 0 auto; }
 .flash .msg{ margin:0; border-radius:0; border-left-width:3px; }
 
+/* ---------- 表題欄 ---------- */
+.tblock{
+  flex:0 0 auto; display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+  padding:6px 14px; background:var(--ink); color:#DCE4EC;
+  font-size:12.5px; line-height:1.5;
+}
+.tblock b{ color:#fff; font-weight:700; font-family:var(--mono); font-size:14px; }
+.tblock .ttl{ font-family:var(--disp); font-weight:700; color:#fff; font-size:13px; letter-spacing:.08em; }
+.tblock .sp{ flex:1 1 0; }
+.tblock button{
+  font-family:var(--body); font-size:12px; font-weight:700; min-height:30px;
+  padding:0 12px; border:1px solid #42627F; background:transparent; color:#EBEDE8;
+  border-radius:2px; cursor:pointer; white-space:nowrap;
+}
+.tblock button:hover{ background:#22456B; }
+.tblock button.go{ background:var(--safety); border-color:var(--safety); color:#3B2A00; }
+
+.revrow{ display:flex; gap:14px; padding:3px 0; border-bottom:1px solid var(--rule-2); font-size:12.5px; }
+.revrow:last-child{ border-bottom:none; }
+.revrow b{ font-family:var(--mono); }
+.bumpform{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.bumpform input{ flex:1 1 280px; width:auto; min-width:0; min-height:38px; }
+
 /* ---------- 表示領域 ---------- */
 .view{ flex:1 1 auto; min-height:0; position:relative; }
 .view > div{ position:absolute; inset:0; }
@@ -72,14 +95,25 @@ body > header.bar{ flex:0 0 auto; }
 }
 .gh b{ color:var(--ink); font-weight:500; font-size:11px; }
 .gh.gname{ z-index:6; font-family:var(--disp); font-weight:700; font-size:12px;
-           color:var(--ink); align-items:flex-start; padding-left:12px; }
-.gstripe{ border-right:1px solid #EDEFEB; pointer-events:none; z-index:0; }
+           color:var(--ink); align-items:flex-start; justify-content:center; padding-left:10px; }
+.gh.gno{ z-index:6; font-family:var(--disp); font-weight:700; font-size:11px; color:var(--ink); }
+.gstripe{ border-right:1px solid #E4E7E2; pointer-events:none; z-index:0; }
 .grule{ border-bottom:1px solid var(--rule-2); pointer-events:none; z-index:0; }
-.gname{
+.grule.alt{ background:#F5F7F3; }
+
+.gno{
   position:sticky; left:0; z-index:3; background:var(--card);
-  border-right:1px solid var(--rule); padding:2px 10px; min-width:0;
+  border-right:1px solid var(--rule-2); border-bottom:1px solid var(--rule-2);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-2);
+}
+.gname{
+  position:sticky; z-index:3; background:var(--card);
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule-2);
+  padding:2px 10px; min-width:0;
   display:flex; flex-direction:column; justify-content:center;
 }
+.gno.alt, .gname.alt{ background:#F5F7F3; }
 .gname .gn1{
   font-family:var(--disp); font-weight:700; font-size:12.5px; line-height:1.3;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -174,6 +208,20 @@ body > header.bar{ flex:0 0 auto; }
     <span><i style="background:#fff;border:2px solid #111"></i>余裕なし</span>
   </div>
 </div>
+
+<div class="tblock" id="tblock" hidden>
+  <span class="ttl">工程表</span>
+  <span>第 <b id="tb_ver">1</b> 版</span>
+  <span>作成 <b id="tb_date">—</b></span>
+  <span>作成者 <b id="tb_by">—</b></span>
+  <span>工程 <b id="tb_cnt">0</b> 項目</span>
+  <span class="sp"></span>
+  <button id="tb_hist">改訂の履歴</button>
+  <button id="tb_bump" class="go" hidden>版を上げる</button>
+</div>
+
+<div class="drop guide" id="histbox" hidden></div>
+<div class="drop guide" id="bumpbox" hidden></div>
 
 <div class="drop" id="alertbox" hidden></div>
 
@@ -362,7 +410,7 @@ body > header.bar{ flex:0 0 auto; }
       sb.from('work_types').select('id,cost_category_id,name,sort_order,hint').eq('is_active',true).order('sort_order'),
       sb.from('partners').select('id,name').eq('is_active',true).order('name'),
       sb.from('app_users').select('id,name,role').eq('is_active',true).order('name'),
-      sb.from('projects').select('id,project_no,name,start_date,end_date_planned,is_sample').eq('is_active',true).order('project_no',{ascending:false})
+      sb.from('projects').select('id,project_no,name,start_date,end_date_planned,is_sample,schedule_version,schedule_revised_on,schedule_revised_by').eq('is_active',true).order('project_no',{ascending:false})
     ]);
     cats = c.data || []; wts = w.data || []; partners = p.data || [];
     users = u.data || []; projects = pr.data || [];
@@ -479,6 +527,7 @@ body > header.bar{ flex:0 0 auto; }
     $('guidebtn').hidden = !(has && view === 'net');
     $('dock').hidden = !(canEdit && projId);
 
+    drawTitle();
     drawAlert();
 
     if (!projId){
@@ -504,6 +553,33 @@ body > header.bar{ flex:0 0 auto; }
 
     drawGantt(slack);
     drawNet(slack);
+  }
+
+  function drawTitle(){
+    const pr = projects.find(x => x.id === projId);
+    if (!pr){ $('tblock').hidden = true; return; }
+    $('tblock').hidden = false;
+
+    const umap = Object.fromEntries(users.map(u => [u.id, u.name]));
+    $('tb_ver').textContent  = pr.schedule_version ?? 1;
+    $('tb_date').textContent = pr.schedule_revised_on ? fmtDate(pr.schedule_revised_on) : '—';
+    $('tb_by').textContent   = umap[pr.schedule_revised_by] || '—';
+    $('tb_cnt').textContent  = phases.length;
+    $('tb_bump').hidden = !canEdit;
+  }
+
+  async function drawHist(){
+    const { data, error } = await sb.from('schedule_revisions')
+      .select('version,revised_on,revised_by,note,phase_count')
+      .eq('project_id', projId).order('version', { ascending:false });
+    if (error){ $('histbox').textContent = '履歴を読み込めませんでした。' + error.message; return; }
+    const umap = Object.fromEntries(users.map(u => [u.id, u.name]));
+    $('histbox').innerHTML = (data || []).map(r =>
+      `<div class="revrow"><b>第${r.version}版</b><span>${fmtDate(r.revised_on)}</span>` +
+      `<span>${esc(umap[r.revised_by] || '—')}</span>` +
+      `<span>工程${r.phase_count}項目</span>` +
+      `<span>${esc(r.note || '')}</span></div>`
+    ).join('') || '<div>まだ履歴がありません。</div>';
   }
 
   function drawAlert(){
@@ -558,39 +634,44 @@ body > header.bar{ flex:0 0 auto; }
     const rowH = Math.max(22, Math.floor((boxH - HEAD) / N));
     const dense = rowH < 34;
     const barH = Math.max(12, Math.min(20, rowH - 6));
-    const nameW = Math.max(130, Math.min(210, Math.floor(boxW * 0.18)));
-    const fitW  = Math.max(26, Math.floor((boxW - nameW) / W));
+    const nameW = Math.max(120, Math.min(200, Math.floor(boxW * 0.17)));
+    const fitW  = Math.max(26, Math.floor((boxW - nameW - 40) / W));
     const colW  = zoomW ? Math.max(20, Math.min(400, zoomW)) : fitW;
     $('z_fit').classList.toggle('on', !zoomW);
 
+    const NOW = 40;                       // 番号欄の幅
     let h = `<div class="gtable${dense ? ' dense' : ''}" style="` +
-            `grid-template-columns:${nameW}px repeat(${W}, ${zoomW ? colW + 'px' : 'minmax(' + colW + 'px, 1fr)'});` +
+            `grid-template-columns:${NOW}px ${nameW}px repeat(${W}, ${zoomW ? colW + 'px' : 'minmax(' + colW + 'px, 1fr)'});` +
             `grid-template-rows:${HEAD}px repeat(${N}, ${rowH}px);--bh:${barH}px">`;
 
     // 見出し
-    h += `<div class="gh gname" style="grid-column:1;grid-row:1">工程</div>`;
+    h += `<div class="gh gno" style="grid-column:1;grid-row:1">No</div>`;
+    h += `<div class="gh gname" style="grid-column:2;grid-row:1;left:${NOW}px">工程</div>`;
     for (let i = 0; i < W; i++){
       const d = new Date(w0.getTime() + i*7*DAY);
-      h += `<div class="gh" style="grid-column:${i+2};grid-row:1">` +
+      h += `<div class="gh" style="grid-column:${i+3};grid-row:1">` +
            `${d.getDate() <= 7 ? (d.getMonth()+1)+'月' : '&nbsp;'}<b>${md(d)}</b></div>`;
     }
     // 縦の区切り
     for (let i = 0; i < W; i++)
-      h += `<div class="gstripe" style="grid-column:${i+2};grid-row:2 / -1"></div>`;
-    // 横の区切り
+      h += `<div class="gstripe" style="grid-column:${i+3};grid-row:2 / -1"></div>`;
+    // 横の区切りと段の色分け
     for (let r = 0; r < N; r++)
-      h += `<div class="grule" style="grid-column:1 / -1;grid-row:${r+2}"></div>`;
+      h += `<div class="grule${r % 2 ? ' alt' : ''}" style="grid-column:1 / -1;grid-row:${r+2}"></div>`;
 
-    // 工程名と帯
+    // 番号・工程名・帯
     phases.forEach((p, r) => {
       const cat = cats.find(c => c.id === p.cost_category_id);
       const sub = `${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}`;
-      h += `<div class="gname" style="grid-column:1;grid-row:${r+2}" title="${esc(p.name)}／${sub}">` +
+      const alt = r % 2 ? ' alt' : '';
+
+      h += `<div class="gno${alt}" style="grid-column:1;grid-row:${r+2}">${r+1}</div>`;
+      h += `<div class="gname${alt}" style="grid-column:2;grid-row:${r+2};left:${NOW}px" title="${esc(p.name)}／${sub}">` +
            `<span class="gn1">${esc(p.name)}</span><span class="gn2">${sub}</span></div>`;
 
       if (p.start_date && p.end_date){
-        const c1 = wIdx(d2n(p.start_date)) + 2;
-        const c2 = wIdx(d2n(p.end_date)) + 3;
+        const c1 = wIdx(d2n(p.start_date)) + 3;
+        const c2 = wIdx(d2n(p.end_date)) + 4;
         const crit = (slack[p.id] !== undefined && slack[p.id] <= 0) ? ' crit' : '';
         h += `<button class="bar2 b-${p.status}${crit}" data-id="${p.id}" ` +
              `title="${esc(p.name)}　${fmtDate(p.start_date)}〜${fmtDate(p.end_date)}" ` +
@@ -598,7 +679,7 @@ body > header.bar{ flex:0 0 auto; }
              `${esc(p.name)}<span class="md">${Number(p.planned_mandays)||0}人工</span></button>`;
       } else {
         h += `<button class="bar2 b-${p.status}" data-id="${p.id}" ` +
-             `style="grid-row:${r+2};grid-column:2 / 3;background:transparent;color:var(--sub);border:1px dashed var(--rule)">日程未設定</button>`;
+             `style="grid-row:${r+2};grid-column:3 / 4;background:transparent;color:var(--sub);border:1px dashed var(--rule)">日程未設定</button>`;
       }
     });
 
@@ -740,6 +821,48 @@ body > header.bar{ flex:0 0 auto; }
   // ネットワークの見方
   $('guidebtn').addEventListener('click', () => {
     $('guidebox').hidden = !$('guidebox').hidden;
+    redrawGantt();
+  });
+
+  // 改訂の履歴
+  $('tb_hist').addEventListener('click', async () => {
+    const open = $('histbox').hidden;
+    $('bumpbox').hidden = true;
+    $('histbox').hidden = !open;
+    if (open) await drawHist();
+    redrawGantt();
+  });
+
+  // 版を上げる
+  $('tb_bump').addEventListener('click', () => {
+    const open = $('bumpbox').hidden;
+    $('histbox').hidden = true;
+    $('bumpbox').hidden = !open;
+    if (open){
+      const pr = projects.find(x => x.id === projId) || {};
+      $('bumpbox').innerHTML =
+        `<div style="margin-bottom:7px">第 ${(pr.schedule_version ?? 1) + 1} 版として記録します。何を変えたかを残してください。</div>` +
+        `<div class="bumpform">` +
+        `<input id="bump_note" type="text" placeholder="例）降雨により造成を1週間延伸">` +
+        `<button class="btn sm" id="bump_go" type="button">記録する</button>` +
+        `<button class="btn ghost sm" id="bump_no" type="button">やめる</button></div>`;
+      $('bump_no').onclick = () => { $('bumpbox').hidden = true; redrawGantt(); };
+      $('bump_go').onclick = async () => {
+        const note = $('bump_note').value.trim();
+        $('bump_go').disabled = true;
+        const { data, error } = await sb.rpc('bump_schedule_version',
+          { p_project_id: projId, p_note: note || null });
+        $('bump_go').disabled = false;
+        if (error){ showMsg($('msg'), '版を上げられませんでした。' + error.message, 'err'); return; }
+        $('bumpbox').hidden = true;
+        await loadRefs();
+        $('proj').value = projId;
+        await loadPhases();
+        showMsg($('msg'), `第 ${data} 版として記録しました。`, 'ok');
+      };
+      $('bump_note').focus();
+    }
+    redrawGantt();
   });
 
   // 画面の大きさが変わったら引き直す
