@@ -1,6 +1,6 @@
 /* ============================================================
    建設統合管理システム  共通スタイル
-   BUILD: common.css v20260723A
+   BUILD: common.css v20260723B
    設計方針: 工事現場の表示板を下敷きにした罫線グリッド。
              屋外・手袋での操作を想定し、文字とタップ領域を大きく。
    ============================================================ */
@@ -131,7 +131,10 @@ select{ appearance:none; background-image:none; }
   display:flex; gap:8px; flex-wrap:wrap; align-items:center;
   margin-bottom:14px;
 }
-.toolbar .grow{ flex:1 1 200px; min-width:0; }
+/* select は共通指定で width:100% のため、flex 基準が 100% になり折り返す。
+   横並びにするため、この場だけ幅の指定を戻す。 */
+.toolbar .grow{ flex:1 1 220px; width:auto; min-width:0; }
+.toolbar select{ flex:0 0 auto; width:auto; min-width:170px; }
 .toolbar select, .toolbar input{ min-height:44px; }
 
 .count{

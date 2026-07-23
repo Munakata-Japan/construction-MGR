@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: projects (工事一覧・登録) v20260723A -->
+<!-- BUILD: projects (工事一覧・登録) v20260723B -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -39,7 +39,7 @@
 
   <div class="toolbar">
     <input class="grow" type="text" id="q" placeholder="工事番号・工事名で絞り込み" inputmode="search">
-    <select id="fst" style="flex:0 0 auto">
+    <select id="fst">
       <option value="">すべての状態</option>
     </select>
   </div>
@@ -75,7 +75,7 @@
 
       <div class="row">
         <label for="f_name">工事名<span class="req">*</span></label>
-        <div class="fld"><input id="f_name" type="text" placeholder="例）〇〇邸 新築工事"></div>
+        <div class="fld"><input id="f_name" type="text" placeholder="（仮称）〇〇開発工事"></div>
       </div>
 
       <div class="row">
@@ -94,7 +94,7 @@
 
       <div class="row">
         <label for="f_type">工事種別</label>
-        <div class="fld"><input id="f_type" type="text" placeholder="例）新築・改修・解体"></div>
+        <div class="fld"><input id="f_type" type="text" placeholder="新規・既存・改修"></div>
       </div>
 
       <div class="row">
