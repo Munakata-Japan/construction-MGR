@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260723E -->
+<!-- BUILD: schedule (工程表) v20260723F -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -83,6 +83,18 @@
 .addwrap{ display:flex; gap:6px; width:100%; align-items:center; }
 .addwrap select{ flex:1 1 auto; width:auto; min-width:0; }
 .hint{ font-size:12px; color:var(--sub); margin:6px 0 0; line-height:1.6; }
+.hintbox{
+  margin-top:8px; padding:11px 14px; border-left:3px solid var(--safety);
+  background:#FBF6E8; font-size:13.5px; line-height:1.8; color:#4A3B14;
+}
+.guide{
+  border:1px solid var(--rule); border-left:3px solid var(--ink-2);
+  background:var(--card); padding:13px 16px; margin-bottom:12px;
+  font-size:13.5px; line-height:1.85; color:var(--sub);
+}
+.guide b{ color:var(--ink); }
+.guide ul{ margin:7px 0 0; padding-left:1.2em; }
+.guide li{ margin-bottom:3px; }
 </style>
 </head>
 <body>
@@ -97,6 +109,7 @@
 <div class="wrap">
   <div class="pick">
     <select id="proj"><option value="">工事を選んでください</option></select>
+    <button class="btn ghost" id="sample" hidden>見本を開く</button>
   </div>
 
   <div id="msg" class="msg"></div>
@@ -108,7 +121,19 @@
   </div>
 
   <div id="gantt"></div>
-  <div id="network" hidden></div>
+  <div id="network" hidden>
+    <div class="guide">
+      <b>ネットワーク工程表の見方</b>
+      <ul>
+        <li>箱ひとつが工程です。矢印は「この工程が終わってから次へ」という繋がりを表します。</li>
+        <li>矢印の上の「＋日数」は、間に置く待ち時間です。養生などに使います。</li>
+        <li>黒い太線でつながった箱が、余裕のない経路です。ここが遅れると全体が遅れます。</li>
+        <li>横に並ぶ位置は前後関係から自動で決まります。並べ替えの必要はありません。</li>
+      </ul>
+      引き方が分からないときは、上の「見本を開く」で造成工事の例を見てください。
+    </div>
+    <div id="netbody"></div>
+  </div>
 
   <div class="legend" id="legend" hidden>
     <span><i style="background:#8A938C"></i>未着手</span>
@@ -142,8 +167,10 @@
         <div class="fld" style="flex-direction:column;align-items:stretch">
           <div class="addwrap">
             <select id="f_wt"></select>
+            <button class="btn ghost sm" id="wthint" type="button" title="ヒントを見る">？</button>
             <button class="btn ghost sm" id="wtadd" type="button" title="作業工程を追加">＋</button>
           </div>
+          <div class="hintbox" id="hintbox" hidden></div>
           <div class="newwt" id="newwt">
             <select id="f_wtcat"></select>
             <input id="f_wtname" type="text" placeholder="作業工程の名称">
@@ -281,10 +308,10 @@
   async function loadRefs(){
     const [c, w, p, u, pr] = await Promise.all([
       sb.from('cost_categories').select('id,code,name,cost_group,sort_order').eq('is_active',true).order('sort_order'),
-      sb.from('work_types').select('id,cost_category_id,name,sort_order').eq('is_active',true).order('sort_order'),
+      sb.from('work_types').select('id,cost_category_id,name,sort_order,hint').eq('is_active',true).order('sort_order'),
       sb.from('partners').select('id,name').eq('is_active',true).order('name'),
       sb.from('app_users').select('id,name,role').eq('is_active',true).order('name'),
-      sb.from('projects').select('id,project_no,name,start_date,end_date_planned').eq('is_active',true).order('project_no',{ascending:false})
+      sb.from('projects').select('id,project_no,name,start_date,end_date_planned,is_sample').eq('is_active',true).order('project_no',{ascending:false})
     ]);
     cats = c.data || []; wts = w.data || []; partners = p.data || [];
     users = u.data || []; projects = pr.data || [];
@@ -300,6 +327,12 @@
       partners.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
     $('f_ou').innerHTML = '<option value="">（未設定）</option>' +
       users.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+
+    const smp = projects.find(x => x.is_sample);
+    if (smp){
+      $('sample').hidden = false;
+      $('sample').onclick = () => { $('proj').value = smp.id; $('proj').dispatchEvent(new Event('change')); };
+    }
 
     paintWorkTypes();
   }
@@ -399,12 +432,12 @@
 
     if (!projId){
       $('gantt').innerHTML = `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、その工程表が出ます。</div>`;
-      $('network').innerHTML = '';
+      $('netbody').innerHTML = '';
       return;
     }
     if (!has){
       $('gantt').innerHTML = `<div class="empty"><b>まだ工程がありません</b>${canEdit ? '下の「工程を追加する」から始めてください。' : '現場監督が登録すると、ここに表示されます。'}</div>`;
-      $('network').innerHTML = '';
+      $('netbody').innerHTML = '';
       return;
     }
 
@@ -493,7 +526,7 @@
   }
 
   function drawNet(slack){
-    if (!phases.length){ $('network').innerHTML = ''; return; }
+    if (!phases.length){ $('netbody').innerHTML = ''; return; }
 
     // 段（左から何番目か）を決める
     const idset = new Set(phases.map(p => p.id));
@@ -569,8 +602,8 @@
     });
 
     s += `</svg>`;
-    $('network').innerHTML = `<div class="nwrap">${s}</div>`;
-    $('network').querySelectorAll('.nbox').forEach(g => {
+    $('netbody').innerHTML = `<div class="nwrap">${s}</div>`;
+    $('netbody').querySelectorAll('.nbox').forEach(g => {
       const open = () => openPanel(phases.find(x => x.id === g.dataset.id));
       g.addEventListener('click', open);
       g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
@@ -620,6 +653,7 @@
     editing = p || null;
     showMsg($('pmsg'), '');
     $('newwt').classList.remove('open');
+    $('hintbox').hidden = true;
 
     $('ptitle').textContent = p ? '工程' : '工程の追加';
     $('f_wt').value     = p ? (p.work_type_id || '') : '';
@@ -646,6 +680,7 @@
       .forEach(el => el.disabled = !canEdit);
     $('pdock').style.display = canEdit ? '' : 'none';
     $('wtadd').disabled = !canEdit;
+    $('wthint').disabled = false;   // 閲覧だけの人もヒントは見られる
     $('depadd').disabled = !canEdit;
     $('del').hidden = !(p && canEdit);
 
@@ -659,8 +694,23 @@
   $('close').addEventListener('click', closePanel);
   $('cancel').addEventListener('click', closePanel);
 
+  // ヒント
+  function paintHint(){
+    const w = wts.find(x => x.id === $('f_wt').value);
+    const box = $('hintbox');
+    if (!w){ box.textContent = '作業工程を選ぶと、その作業のヒントが出ます。'; return; }
+    box.textContent = w.hint || `「${w.name}」にはまだヒントが登録されていません。`;
+  }
+
+  $('wthint').addEventListener('click', () => {
+    const box = $('hintbox');
+    box.hidden = !box.hidden;
+    if (!box.hidden) paintHint();
+  });
+
   // 作業工程を選ぶと工程名と大分類が入る
   $('f_wt').addEventListener('change', () => {
+    if (!$('hintbox').hidden) paintHint();
     const w = wts.find(x => x.id === $('f_wt').value);
     if (!w) return;
     if (!$('f_name').value.trim()) $('f_name').value = w.name;
@@ -684,7 +734,7 @@
 
     const { data, error } = await sb.from('work_types')
       .insert({ organization_id: me.organization_id, cost_category_id: cat, name: nm, sort_order: 900 })
-      .select('id,cost_category_id,name,sort_order').single();
+      .select('id,cost_category_id,name,sort_order,hint').single();
 
     if (error){
       showMsg($('pmsg'), error.code === '23505'

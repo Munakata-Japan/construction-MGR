@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: mode-select (セレクトモード) v20260723E -->
+<!-- BUILD: mode-select (セレクトモード) v20260723F -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -115,7 +115,7 @@
     </span>
   </div>
 
-  <p class="foot">v20260723E</p>
+  <p class="foot">v20260723F</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -147,7 +147,7 @@
 
   // 現況
   const { data, error } = await sb.from('projects')
-    .select('status').eq('is_active', true);
+    .select('status').eq('is_active', true).eq('is_sample', false);
 
   if (error){
     $('h_sys').textContent = '不通';
