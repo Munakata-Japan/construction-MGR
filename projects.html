@@ -16,49 +16,70 @@
   .newpt.open{ display:flex; }
   .newpt input{ flex:1 1 auto; min-width:0; width:auto; }
 
-  /* ---------- 工事概要書 ---------- */
+  /* ---------- 工事概要書：スクロールなしで一望 ---------- */
+  #ovp{ display:none; flex-direction:column; overflow:hidden; }
+  #ovp.open{ display:flex; }
+  #ovp > header.bar{ flex:0 0 auto; }
+  #ovp .ovh{ flex:0 0 auto; }
+  #ovp .ovbody{
+    flex:1 1 auto; min-height:0; overflow:auto;
+    padding:12px clamp(10px,2vw,20px) 16px;
+  }
+
   .ovh{
-    background:var(--ink); color:#DCE4EC; padding:12px 16px;
+    background:var(--ink); color:#DCE4EC; padding:9px clamp(10px,2vw,20px);
     display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
   }
-  .ovh .no2{ font-family:var(--mono); font-size:12.5px; color:#A9BFD4; }
-  .ovh h2{ font-family:var(--disp); font-weight:700; font-size:19px; margin:0; color:#fff; line-height:1.4; }
+  .ovh .no2{ font-family:var(--mono); font-size:12px; color:#A9BFD4; }
+  .ovh h2{ font-family:var(--disp); font-weight:700; font-size:17px; margin:0; color:#fff; line-height:1.4; }
   .ovh .sp{ flex:1 1 0; }
 
-  .ovsec{ margin-top:14px; }
+  .ovcols{ display:grid; gap:10px 14px; grid-template-columns:repeat(3,1fr); align-items:start; }
+  .ovbot{ display:grid; gap:10px 14px; grid-template-columns:2fr 1fr; margin-top:10px; align-items:start; }
+
+  .ovsec + .ovsec{ margin-top:10px; }
   .ovsec > .t{
-    font-family:var(--disp); font-weight:700; font-size:13.5px;
-    padding:5px 0 5px 10px; border-left:4px solid var(--safety); margin-bottom:6px;
+    font-family:var(--disp); font-weight:700; font-size:12.5px;
+    padding:2px 0 4px 9px; border-left:3px solid var(--safety); margin-bottom:5px;
   }
   .ovtbl{ background:var(--card); border:1px solid var(--rule); border-radius:2px; }
-  .ovr{ display:grid; grid-template-columns:136px 1fr; border-bottom:1px solid var(--rule-2); }
+  .ovr{ display:grid; grid-template-columns:104px 1fr; border-bottom:1px solid var(--rule-2); }
   .ovr:last-child{ border-bottom:none; }
   .ovr > .k{
-    background:#F1F3EF; padding:9px 12px; font-size:12.5px; font-weight:700;
+    background:#F1F3EF; padding:6px 9px; font-size:11.5px; font-weight:700;
     color:var(--sub); border-right:1px solid var(--rule-2); display:flex; align-items:center;
+    line-height:1.35;
   }
-  .ovr > .v{ padding:9px 13px; font-size:14px; min-width:0; overflow-wrap:anywhere; }
+  .ovr > .v{ padding:6px 10px; font-size:13px; min-width:0; overflow-wrap:anywhere; line-height:1.5; }
   .ovr > .v.num{ font-family:var(--mono); }
-  .ovr > .v .un{ color:var(--sub); font-size:12px; margin-left:4px; font-family:var(--body); }
+  .ovr > .v .un{ color:var(--sub); font-size:11px; margin-left:3px; font-family:var(--body); }
   .ovr > .v.empty{ color:#9AA39C; }
 
-  .ovpm{ width:100%; border-collapse:collapse; font-size:13px; background:var(--card);
+  .ovpm{ width:100%; border-collapse:collapse; font-size:12.5px; background:var(--card);
          border:1px solid var(--rule); border-radius:2px; }
-  .ovpm th{ background:#E3E6E0; text-align:left; padding:7px 11px; font-size:12px;
+  .ovpm th{ background:#E3E6E0; text-align:left; padding:5px 9px; font-size:11.5px;
             font-family:var(--disp); border-bottom:1px solid var(--rule); }
-  .ovpm td{ padding:7px 11px; border-bottom:1px solid var(--rule-2); vertical-align:top; }
+  .ovpm td{ padding:5px 9px; border-bottom:1px solid var(--rule-2); vertical-align:top; line-height:1.45; }
   .ovpm tr:last-child td{ border-bottom:none; }
-  .ovpm .mono{ font-family:var(--mono); font-size:12px; }
+  .ovpm .mono{ font-family:var(--mono); font-size:11.5px; }
 
-  .jump{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+  .jump{ display:grid; gap:6px; }
   .jump a{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
     background:var(--card); border:1px solid var(--rule); border-radius:2px;
-    padding:11px 13px; text-decoration:none; color:inherit; min-height:var(--tap);
-    font-family:var(--disp); font-weight:700; font-size:14px;
+    padding:8px 11px; text-decoration:none; color:inherit; min-height:40px;
+    font-family:var(--disp); font-weight:700; font-size:13px;
   }
   .jump a:hover{ border-color:var(--ink); }
-  .jump a .c{ font-family:var(--mono); font-weight:400; font-size:12.5px; color:var(--sub); }
+  .jump a .c{ font-family:var(--mono); font-weight:400; font-size:11.5px; color:var(--sub); }
+
+  @media (max-width:1180px){
+    .ovcols{ grid-template-columns:repeat(2,1fr); }
+    .ovbot{ grid-template-columns:1fr; }
+  }
+  @media (max-width:720px){
+    .ovcols{ grid-template-columns:1fr; }
+  }
 
   /* ---------- 許認可の編集 ---------- */
   .pmrow{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
@@ -67,11 +88,6 @@
   .pmrow .pdt{ flex:0 0 152px; width:152px; }
   .pmrow .pnt{ flex:1 1 140px; width:auto; min-width:0; }
 
-  @media (max-width:560px){
-    .ovr{ grid-template-columns:104px 1fr; }
-    .ovr > .k{ padding:8px 10px; font-size:11.5px; }
-    .ovr > .v{ padding:8px 11px; font-size:13.5px; }
-  }
 </style>
 </head>
 <body>
@@ -107,7 +123,8 @@
     <button class="btn ghost sm barbtn" id="ovedit" hidden>編集する</button>
     <button class="btn ghost sm barbtn" id="ovclose">閉じる</button>
   </header>
-  <div class="wrap" id="ovbody"></div>
+  <div id="ovhead"></div>
+  <div class="ovbody" id="ovbody"></div>
 </div>
 
 <!-- ========== 編集 ========== -->
@@ -400,62 +417,73 @@
         `</tbody></table>`
       : `<div class="ovtbl"><div class="ovr"><span class="k">許認可</span><span class="v empty">登録されていません</span></div></div>`;
 
-    $('ovbody').innerHTML = `
+    $('ovhead').innerHTML = `
       <div class="ovh">
         <span class="no2">${esc(p.project_no)}</span>
         <h2>${esc(p.name)}</h2>
         <span class="sp"></span>
         <span class="tag st-${p.status}" style="background:#fff">${STATUS[p.status]||p.status}</span>
-      </div>
+      </div>`;
 
-      <div class="ovsec"><div class="t">発注者</div><div class="ovtbl">
-        ${row('施主・元請', esc(pmap[p.client_partner_id]||''))}
-        ${row('担当者', esc(p.client_contact||''))}
-        ${row('連絡先', esc(p.client_tel||''), 'num')}
-      </div></div>
+    $('ovbody').innerHTML = `
+      <div class="ovcols">
 
-      <div class="ovsec"><div class="t">場所と規模</div><div class="ovtbl">
-        ${row('現場住所', esc(p.site_address||''))}
-        ${row('地番', esc(p.site_lot||''))}
-        ${row('施工面積', p.site_area ? Number(p.site_area).toLocaleString('ja-JP') + '<span class="un">㎡</span>' : '', 'num')}
-        ${row('工事種別', esc(p.construction_type||''))}
-      </div></div>
+        <div>
+          <div class="ovsec"><div class="t">発注者</div><div class="ovtbl">
+            ${row('施主・元請', esc(pmap[p.client_partner_id]||''))}
+            ${row('担当者', esc(p.client_contact||''))}
+            ${row('連絡先', esc(p.client_tel||''), 'num')}
+          </div></div>
 
-      <div class="ovsec"><div class="t">契約</div><div class="ovtbl">
-        ${row('契約日', p.contract_date ? fmtDate(p.contract_date) : '', 'num')}
-        ${row('契約金額（税抜）', amt ? fmtMoney(amt) : '', 'num')}
-        ${row('消費税', amt ? fmtMoney(tax) + `<span class="un">${(rate*100).toFixed(0)}%</span>` : '', 'num')}
-        ${row('税込', amt ? fmtMoney(amt + tax) : '', 'num')}
-      </div></div>
-
-      <div class="ovsec"><div class="t">工期</div><div class="ovtbl">
-        ${row('着工日', p.start_date ? fmtDate(p.start_date) : '', 'num')}
-        ${row('完成予定', p.end_date_planned ? fmtDate(p.end_date_planned) : '', 'num')}
-        ${row('完成日', p.end_date_actual ? fmtDate(p.end_date_actual) : '', 'num')}
-        ${row('工程表', `第 ${p.schedule_version ?? 1} 版　${p.schedule_revised_on ? fmtDate(p.schedule_revised_on) : ''}`, 'num')}
-      </div></div>
-
-      <div class="ovsec"><div class="t">体制</div><div class="ovtbl">
-        ${row('現場代理人', esc(p.agent_name||''))}
-        ${row('主任技術者', esc(p.engineer_name||''))}
-        ${row('現場担当', esc(umap[p.manager_user_id]||''))}
-      </div></div>
-
-      <div class="ovsec"><div class="t">許認可</div>${pmHtml}</div>
-
-      <div class="ovsec"><div class="t">その他</div><div class="ovtbl">
-        ${row('保険・保証', esc(p.insurance_note||''))}
-        ${row('備考', esc(p.note||'').replace(/\n/g,'<br>'))}
-      </div></div>
-
-      <div class="ovsec"><div class="t">この工事の記録</div>
-        <div class="jump">
-          <a href="schedule.html?p=${p.id}">工程表 <span class="c">${ph.count ?? 0} 工程</span></a>
-          <a href="reports.html?p=${p.id}">日報 <span class="c">${dr.count ?? 0} 件</span></a>
-          <a href="files.html?p=${p.id}">写真・書類 <span class="c">${pf.count ?? 0} 件</span></a>
+          <div class="ovsec"><div class="t">場所と規模</div><div class="ovtbl">
+            ${row('現場住所', esc(p.site_address||''))}
+            ${row('地番', esc(p.site_lot||''))}
+            ${row('施工面積', p.site_area ? Number(p.site_area).toLocaleString('ja-JP') + '<span class="un">㎡</span>' : '', 'num')}
+            ${row('工事種別', esc(p.construction_type||''))}
+          </div></div>
         </div>
+
+        <div>
+          <div class="ovsec"><div class="t">契約</div><div class="ovtbl">
+            ${row('契約日', p.contract_date ? fmtDate(p.contract_date) : '', 'num')}
+            ${row('契約金額', amt ? fmtMoney(amt) + '<span class="un">税抜</span>' : '', 'num')}
+            ${row('消費税', amt ? fmtMoney(tax) + `<span class="un">${(rate*100).toFixed(0)}%</span>` : '', 'num')}
+            ${row('税込', amt ? fmtMoney(amt + tax) : '', 'num')}
+          </div></div>
+
+          <div class="ovsec"><div class="t">工期</div><div class="ovtbl">
+            ${row('着工日', p.start_date ? fmtDate(p.start_date) : '', 'num')}
+            ${row('完成予定', p.end_date_planned ? fmtDate(p.end_date_planned) : '', 'num')}
+            ${row('完成日', p.end_date_actual ? fmtDate(p.end_date_actual) : '', 'num')}
+            ${row('工程表', `第${p.schedule_version ?? 1}版　${p.schedule_revised_on ? fmtDate(p.schedule_revised_on) : ''}`, 'num')}
+          </div></div>
+        </div>
+
+        <div>
+          <div class="ovsec"><div class="t">体制</div><div class="ovtbl">
+            ${row('現場代理人', esc(p.agent_name||''))}
+            ${row('主任技術者', esc(p.engineer_name||''))}
+            ${row('現場担当', esc(umap[p.manager_user_id]||''))}
+          </div></div>
+
+          <div class="ovsec"><div class="t">その他</div><div class="ovtbl">
+            ${row('保険・保証', esc(p.insurance_note||''))}
+            ${row('備考', esc(p.note||'').replace(/\n/g,'<br>'))}
+          </div></div>
+        </div>
+
       </div>
-      <div style="height:26px"></div>`;
+
+      <div class="ovbot">
+        <div class="ovsec"><div class="t">許認可</div>${pmHtml}</div>
+        <div class="ovsec"><div class="t">この工事の記録</div>
+          <div class="jump">
+            <a href="schedule.html?p=${p.id}">工程表 <span class="c">${ph.count ?? 0} 工程</span></a>
+            <a href="reports.html?p=${p.id}">日報 <span class="c">${dr.count ?? 0} 件</span></a>
+            <a href="files.html?p=${p.id}">写真・書類 <span class="c">${pf.count ?? 0} 件</span></a>
+          </div>
+        </div>
+      </div>`;
 
     $('ovedit').hidden = !canEdit;
     $('ovp').classList.add('open');
