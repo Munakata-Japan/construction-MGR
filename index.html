@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: index (ログイン) v20260723A -->
+<!-- BUILD: index (ログイン) v20260723D -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -73,7 +73,7 @@
       <button id="go" class="btn wide" type="submit">ログイン</button>
     </form>
 
-    <p class="foot">v20260723A</p>
+    <p class="foot">v20260723D</p>
   </div>
 </div>
 
@@ -88,7 +88,7 @@
 
   // 既にログイン済みなら一覧へ
   const { data:{ session } } = await sb.auth.getSession();
-  if (session) { location.replace('projects.html'); return; }
+  if (session) { location.replace('mode-select.html'); return; }
 
   form.addEventListener('submit', async function(e){
     e.preventDefault();
@@ -117,7 +117,7 @@
       return;
     }
 
-    location.replace('projects.html');
+    location.replace('mode-select.html');
   });
 })();
 </script>

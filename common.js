@@ -1,6 +1,6 @@
 /* ============================================================
    建設統合管理システム  共通処理
-   BUILD: common.js v20260723A
+   BUILD: common.js v20260723D
    ============================================================ */
 
 const STATUS = {
@@ -91,3 +91,33 @@ async function signOut(){
   await sb.auth.signOut();
   location.replace('index.html');
 }
+
+/* ---------- メニューへ戻る導線 ----------
+   全画面の見出し帯に自動で挿入する。
+   新しい画面を作ったときも、common.js を読み込むだけで付く。
+   ログイン画面とメニュー自身には付けない。
+------------------------------------------ */
+(function insertBack(){
+  const here = location.pathname.split('/').pop() || 'index.html';
+  if (/^(index|mode-select)\.html$/.test(here)) return;
+
+  function put(){
+    const bar = document.querySelector('.bar');
+    if (!bar) return;
+    if (bar.querySelector('.backbtn')) return;
+
+    const a = document.createElement('a');
+    a.className = 'btn ghost sm barbtn backbtn';
+    a.href = 'mode-select.html';
+    a.textContent = '◂ メニュー';
+
+    const mark = bar.querySelector('.mark');
+    if (mark) mark.after(a); else bar.prepend(a);
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', put);
+  } else {
+    put();
+  }
+})();

@@ -1,6 +1,6 @@
 /* ============================================================
    建設統合管理システム  共通スタイル
-   BUILD: common.css v20260723C
+   BUILD: common.css v20260723D
    設計方針: 工事現場の表示板を下敷きにした罫線グリッド。
              屋外・手袋での操作を想定し、文字とタップ領域を大きく。
    ============================================================ */
@@ -85,6 +85,81 @@ body{
 .btn.danger:hover{ background:#8F3125; }
 .btn.wide{ width:100%; }
 .btn.sm{ min-height:38px; padding:0 12px; font-size:13.5px; }
+
+/* 見出し帯の中に置くボタン（濃紺の上なので明るい線と文字にする） */
+.btn.barbtn{
+  color:#EBEDE8; border-color:#42627F; background:transparent;
+  flex:0 0 auto; text-decoration:none;
+}
+.btn.barbtn:hover{ background:#22456B; }
+
+/* ---------- セレクトモード ---------- */
+.hud{
+  display:flex; flex-wrap:wrap; gap:1px;
+  background:var(--rule); border:1px solid var(--rule);
+  border-radius:2px; margin-bottom:22px; overflow:hidden;
+}
+.hcell{
+  background:var(--card); flex:1 1 120px; min-width:0;
+  padding:11px 14px; display:flex; align-items:baseline; gap:9px;
+}
+.hlbl{ font-size:12px; color:var(--sub); white-space:nowrap; }
+.hval{
+  font-family:var(--mono); font-size:19px; font-weight:500;
+  color:var(--ink); line-height:1.2;
+}
+.hval.ok{ font-size:14px; color:var(--ok); }
+.hval.ng{ font-size:14px; color:var(--alert); }
+
+.grp{
+  display:flex; align-items:baseline; gap:12px;
+  margin:26px 0 12px; padding-bottom:6px;
+  border-bottom:1px solid var(--rule);
+}
+.grp:first-of-type{ margin-top:0; }
+.grp h2{
+  font-family:var(--disp); font-weight:700; font-size:16px;
+  margin:0; padding-left:10px; border-left:4px solid var(--safety);
+  line-height:1.4;
+}
+.gph{ font-family:var(--mono); font-size:11px; color:var(--sub); letter-spacing:.06em; }
+
+.modes{
+  display:grid; gap:8px;
+  grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
+}
+.mode{
+  display:grid; grid-template-columns:46px 1fr; align-items:stretch;
+  background:var(--card); border:1px solid var(--rule); border-radius:2px;
+  text-decoration:none; color:inherit; min-height:var(--tap);
+}
+.mode .mno{
+  background:var(--ink); color:#EBEDE8;
+  font-family:var(--mono); font-size:13px;
+  display:flex; align-items:center; justify-content:center;
+}
+.mode .mbody{ padding:9px 13px; min-width:0; }
+.mttl{
+  display:block; font-family:var(--disp); font-weight:700; font-size:15.5px;
+  line-height:1.4;
+}
+.msub{ display:block; font-size:12px; color:var(--sub); line-height:1.5; }
+
+a.mode:hover{ border-color:var(--ink); }
+a.mode:hover .mno{ background:var(--safety); color:var(--ink); }
+a.mode:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
+
+.mode.off{
+  background:transparent; border-style:dashed; color:var(--sub);
+  cursor:default;
+}
+.mode.off .mno{ background:#C9CEC7; color:#6C756E; }
+.mode.off .mttl{ font-weight:400; }
+
+.foot{
+  margin-top:30px; font-family:var(--mono); font-size:10.5px;
+  color:var(--sub); letter-spacing:.06em; text-align:center;
+}
 
 /* ---------- 罫線グリッドの入力欄（表示板の見立て） ---------- */
 .sheet{

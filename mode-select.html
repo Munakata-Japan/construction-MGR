@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<!-- BUILD: mode-select (セレクトモード) v20260723D -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>メニュー ｜ 建設統合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>建設統合管理システム</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+
+  <!-- 現況 -->
+  <div class="hud" id="hud">
+    <div class="hcell"><span class="hlbl">工事</span><span class="hval" id="h_all">–</span></div>
+    <div class="hcell"><span class="hlbl">着工中</span><span class="hval" id="h_run">–</span></div>
+    <div class="hcell"><span class="hlbl">完工</span><span class="hval" id="h_done">–</span></div>
+    <div class="hcell"><span class="hlbl">接続</span><span class="hval" id="h_sys">確認中</span></div>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <!-- 基本 -->
+  <div class="grp">
+    <h2>基本</h2><span class="gph">使えます</span>
+  </div>
+  <div class="modes">
+    <a class="mode" href="projects.html">
+      <span class="mno">01</span>
+      <span class="mbody"><span class="mttl">工事</span><span class="msub">一覧・登録・編集</span></span>
+    </a>
+    <span class="mode off">
+      <span class="mno">02</span>
+      <span class="mbody"><span class="mttl">取引先</span><span class="msub">準備中</span></span>
+    </span>
+    <span class="mode off" data-role="admin">
+      <span class="mno">03</span>
+      <span class="mbody"><span class="mttl">利用者</span><span class="msub">準備中</span></span>
+    </span>
+  </div>
+
+  <!-- 現場管理 -->
+  <div class="grp">
+    <h2>現場管理</h2><span class="gph">第一段階</span>
+  </div>
+  <div class="modes">
+    <span class="mode off">
+      <span class="mno">11</span>
+      <span class="mbody"><span class="mttl">工程表</span><span class="msub">準備中</span></span>
+    </span>
+    <span class="mode off">
+      <span class="mno">12</span>
+      <span class="mbody"><span class="mttl">日報</span><span class="msub">準備中</span></span>
+    </span>
+    <span class="mode off">
+      <span class="mno">13</span>
+      <span class="mbody"><span class="mttl">写真・書類</span><span class="msub">準備中</span></span>
+    </span>
+    <span class="mode off">
+      <span class="mno">14</span>
+      <span class="mbody"><span class="mttl">カレンダー</span><span class="msub">準備中</span></span>
+    </span>
+  </div>
+
+  <!-- 工事台帳 -->
+  <div class="grp">
+    <h2>工事台帳</h2><span class="gph">第二段階</span>
+  </div>
+  <div class="modes">
+    <span class="mode off" data-role="manager">
+      <span class="mno">21</span>
+      <span class="mbody"><span class="mttl">実行予算</span><span class="msub">準備中</span></span>
+    </span>
+    <span class="mode off" data-role="manager">
+      <span class="mno">22</span>
+      <span class="mbody"><span class="mttl">発注・支払</span><span class="msub">準備中</span></span>
+    </span>
+    <span class="mode off" data-role="manager">
+      <span class="mno">23</span>
+      <span class="mbody"><span class="mttl">請求・入金</span><span class="msub">準備中</span></span>
+    </span>
+    <span class="mode off" data-role="manager">
+      <span class="mno">24</span>
+      <span class="mbody"><span class="mttl">原価台帳</span><span class="msub">準備中</span></span>
+    </span>
+  </div>
+
+  <!-- 勤怠 -->
+  <div class="grp">
+    <h2>勤怠</h2><span class="gph">第三段階</span>
+  </div>
+  <div class="modes">
+    <span class="mode off">
+      <span class="mno">31</span>
+      <span class="mbody"><span class="mttl">打刻</span><span class="msub">準備中</span></span>
+    </span>
+    <span class="mode off" data-role="manager">
+      <span class="mno">32</span>
+      <span class="mbody"><span class="mttl">勤怠の確認</span><span class="msub">準備中</span></span>
+    </span>
+    <span class="mode off" data-role="admin">
+      <span class="mno">33</span>
+      <span class="mbody"><span class="mttl">月次締め</span><span class="msub">準備中</span></span>
+    </span>
+  </div>
+
+  <p class="foot">v20260723D</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+
+  // 権限に応じて表示を絞る
+  const rank = { member:0, manager:1, admin:2 };
+  document.querySelectorAll('.mode[data-role]').forEach(el => {
+    if (rank[me.role] < rank[el.dataset.role]) el.remove();
+  });
+  // 中身が空になった群は見出しごと隠す
+  document.querySelectorAll('.modes').forEach(box => {
+    if (!box.children.length){
+      box.previousElementSibling?.remove();
+      box.remove();
+    }
+  });
+
+  // 現況
+  const { data, error } = await sb.from('projects')
+    .select('status').eq('is_active', true);
+
+  if (error){
+    $('h_sys').textContent = '不通';
+    $('h_sys').classList.add('ng');
+    showMsg($('msg'), '工事の件数を取得できませんでした。' + error.message, 'err');
+    return;
+  }
+
+  const all  = data.length;
+  const run  = data.filter(p => p.status === 'started').length;
+  const done = data.filter(p => ['completed','invoiced','paid'].includes(p.status)).length;
+
+  $('h_all').textContent  = all;
+  $('h_run').textContent  = run;
+  $('h_done').textContent = done;
+  $('h_sys').textContent  = '正常';
+  $('h_sys').classList.add('ok');
+})();
+</script>
+</body>
+</html>
