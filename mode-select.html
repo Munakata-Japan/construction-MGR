@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: mode-select (セレクトモード) v20260723O -->
+<!-- BUILD: mode-select (セレクトモード) v20260723Y -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -59,6 +59,7 @@
     <div class="hcell"><span class="hlbl">工事</span><span class="hval" id="h_all">–</span></div>
     <div class="hcell"><span class="hlbl">着工中</span><span class="hval" id="h_run">–</span></div>
     <div class="hcell"><span class="hlbl">完工</span><span class="hval" id="h_done">–</span></div>
+    <div class="hcell wide"><span class="hlbl">保管量</span><span class="hval sm" id="h_st">–</span><span class="stbar"><i id="h_bar" style="width:0%"></i></span></div>
     <div class="hcell"><span class="hlbl">接続</span><span class="hval" id="h_sys">確認中</span></div>
   </div>
 
@@ -149,7 +150,7 @@
   </div>
 
   </div></div>
-  <p class="foot">v20260723O</p>
+  <p class="foot">v20260723Y</p>
  </div>
 </div>
 
@@ -200,6 +201,29 @@
   $('h_done').textContent = done;
   $('h_sys').textContent  = '正常';
   $('h_sys').classList.add('ok');
+
+  // 保管量（無料プランの上限 1GB）
+  const LIMIT = 1024 * 1024 * 1024;
+  const st = await sb.rpc('storage_used');
+  if (!st.error && st.data){
+    const b = Number(st.data.bytes) || 0;
+    const n = Number(st.data.files) || 0;
+    const pct = Math.min(100, b / LIMIT * 100);
+    const mb = b / 1024 / 1024;
+    $('h_st').textContent = `${mb.toFixed(1)} MB ／ 1024 MB（${pct.toFixed(0)}%・${n}件）`;
+    $('h_bar').style.width = Math.max(1, pct).toFixed(1) + '%';
+
+    const lv = pct >= 80 ? 'full' : (pct >= 50 ? 'warn' : '');
+    if (lv){ $('h_st').classList.add(lv); $('h_bar').classList.add(lv); }
+
+    if (pct >= 80){
+      showMsg($('msg'),
+        '保管領域が残り少なくなっています。上限に達すると、写真だけでなく工事や日報の保存もできなくなります。' +
+        '古い資料の整理か、有料プランへの切り替えをご検討ください。', 'err');
+    } else if (pct >= 50){
+      showMsg($('msg'), `保管領域を ${pct.toFixed(0)}% 使っています。`, 'err');
+    }
+  }
 })();
 </script>
 </body>

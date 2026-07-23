@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: files (写真・書類) v20260723R -->
+<!-- BUILD: files (写真・書類) v20260723Y -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -110,8 +110,8 @@
 
     <div class="opt2">
       <select id="u_purpose">
-        <option value="submit">提出用（原本のまま）</option>
-        <option value="internal">社内の記録（縮小する）</option>
+        <option value="submit">提出用（A4半分に印刷できる画質）</option>
+        <option value="internal">社内の記録（軽くする）</option>
       </select>
       <select id="u_phase"></select>
     </div>
@@ -162,7 +162,7 @@
       <div class="row">
         <label for="f_purpose">用途</label>
         <div class="fld"><select id="f_purpose">
-          <option value="submit">提出用（原本のまま）</option>
+          <option value="submit">提出用（A4半分に印刷できる画質）</option>
           <option value="internal">社内の記録</option>
         </select></div>
       </div>
@@ -294,16 +294,21 @@
     paintUsage();
   }
 
+  let usedPct = 0;
+
   async function paintUsage(){
-    const { data } = await sb.from('project_files').select('byte_size').eq('is_active', true);
-    const used = (data || []).reduce((a,x) => a + (Number(x.byte_size)||0), 0);
+    const { data, error } = await sb.rpc('storage_used');
+    if (error || !data) return;
+    const used = Number(data.bytes) || 0;
+    const cnt  = Number(data.files) || 0;
     const mb = used / 1024 / 1024;
-    const pct = Math.round(used / LIMIT_BYTES * 100);
+    usedPct = used / LIMIT_BYTES * 100;
     $('usage').textContent =
-      `保管している量  ${mb.toFixed(1)} MB ／ 目安 1024 MB（${pct}%）`;
-    $('usage').classList.toggle('warn', pct >= 70);
-    if (pct >= 70)
-      showMsg($('msg'), '保管領域が残り少なくなっています。有料プランへの切り替えをご検討ください。', 'err');
+      `保管している量  ${mb.toFixed(1)} MB ／ 上限 1024 MB（${usedPct.toFixed(0)}%・${cnt}件）`;
+    $('usage').classList.toggle('warn', usedPct >= 50);
+    if (usedPct >= 80)
+      showMsg($('msg'),
+        '保管領域が残りわずかです。上限に達すると、写真だけでなく工事や日報の保存もできなくなります。', 'err');
   }
 
   /* ================= 表示 ================= */
@@ -424,6 +429,9 @@
       return;
     }
 
+    if (usedPct >= 80 &&
+        !confirm(`保管領域を ${usedPct.toFixed(0)}% 使っています。\n上限に達すると工事や日報の保存もできなくなります。\n\nこのまま取り込みますか。`)) return;
+
     const purpose = $('u_purpose').value;
     const phase   = $('u_phase').value || null;
     const utitle  = $('u_title').value.trim() || null;
@@ -441,9 +449,13 @@
       try {
         let origBlob = f, w = null, h = null;
 
-        // 社内用は縮小したものを原本として扱う
-        if (purpose === 'internal' && f.type.startsWith('image/')){
-          const r = await shrinkImage(f, 2000, 0.82);
+        // 写真は用途に応じた大きさに落として保存する
+        //   提出用 : 長辺2000px（A4半分に約242dpi＝きれいに印刷できる）
+        //   社内用 : 長辺1200px
+        if (f.type.startsWith('image/')){
+          const edge = (purpose === 'submit') ? 2000 : 1200;
+          const q    = (purpose === 'submit') ? 0.85 : 0.75;
+          const r = await shrinkImage(f, edge, q);
           if (r){ origBlob = r.blob; w = r.w; h = r.h; }
         }
 
