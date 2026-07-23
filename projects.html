@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: projects (工事一覧・登録) v20260723D -->
+<!-- BUILD: projects (工事一覧・登録) v20260723E -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -145,6 +145,9 @@
     </div>
 
     <div style="height:16px"></div>
+    <a class="btn ghost wide" id="toSch" hidden>工程表を開く</a>
+
+    <div style="height:16px"></div>
     <button class="btn danger" id="del" hidden>この工事を削除する</button>
   </div>
 
@@ -288,6 +291,8 @@
     $('pdock').style.display = canEdit ? '' : 'none';
     $('ptadd').disabled = !canEdit;
     $('del').hidden = !(p && canDelete);
+    if (p){ $('toSch').href = 'schedule.html?p=' + p.id; $('toSch').hidden = false; }
+    else  { $('toSch').hidden = true; }
 
     $('panel').classList.add('open');
     window.scrollTo(0, 0);

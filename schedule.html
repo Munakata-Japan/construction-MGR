@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<!-- BUILD: schedule (工程表) v20260723E -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>工程表 ｜ 建設統合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+/* ---------- 工事の選択 ---------- */
+.pick{ display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+.pick select{ flex:1 1 260px; width:auto; min-width:0; min-height:44px; }
+
+/* ---------- 表示の切替 ---------- */
+.tabs{ display:flex; gap:0; margin-bottom:14px; border:1px solid var(--rule); border-radius:2px; overflow:hidden; width:fit-content; }
+.tabs button{
+  font-family:var(--body); font-size:14px; font-weight:700;
+  min-height:42px; padding:0 20px; border:none; cursor:pointer;
+  background:var(--card); color:var(--sub); border-right:1px solid var(--rule);
+}
+.tabs button:last-child{ border-right:none; }
+.tabs button.on{ background:var(--ink); color:#fff; }
+.tabs button:focus-visible{ outline:3px solid var(--safety); outline-offset:-3px; }
+
+/* ---------- ガント ---------- */
+.gwrap{ overflow-x:auto; border:1px solid var(--rule); background:var(--card); border-radius:2px; }
+.gtable{ min-width:max-content; }
+.grow{ display:grid; border-bottom:1px solid var(--rule-2); }
+.grow:last-child{ border-bottom:none; }
+.ghead{ position:sticky; top:0; z-index:5; background:#E3E6E0; border-bottom:1px solid var(--rule); }
+.gname{
+  padding:8px 12px; border-right:1px solid var(--rule); min-width:0;
+  position:sticky; left:0; background:var(--card); z-index:3;
+  display:flex; flex-direction:column; justify-content:center;
+}
+.ghead .gname{ background:#E3E6E0; z-index:6; font-family:var(--disp); font-weight:700; font-size:12.5px; }
+.gname .gn1{ font-family:var(--disp); font-weight:700; font-size:14px; line-height:1.4; overflow-wrap:anywhere; }
+.gname .gn2{ font-size:11.5px; color:var(--sub); font-family:var(--mono); }
+.gwk{
+  padding:6px 2px; text-align:center; font-family:var(--mono); font-size:10.5px;
+  color:var(--sub); border-right:1px solid var(--rule-2); line-height:1.3;
+}
+.gwk b{ display:block; color:var(--ink); font-weight:500; font-size:11px; }
+.gcell{ border-right:1px solid #EFF1ED; min-height:44px; }
+.glane{ position:relative; min-height:44px; display:grid; align-items:center; }
+
+.bar2{
+  grid-row:1; height:24px; border-radius:2px; cursor:pointer;
+  display:flex; align-items:center; padding:0 8px; gap:6px;
+  font-size:11.5px; color:#fff; border:1px solid transparent;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  font-family:var(--body); text-align:left;
+}
+.bar2:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
+.bar2 .md{ font-family:var(--mono); opacity:.85; }
+.b-not_started{ background:#8A938C; }
+.b-in_progress{ background:var(--safety); color:#3B2A00; }
+.b-done       { background:var(--ok); }
+.b-suspended  { background:var(--alert); }
+.bar2.crit{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.18); }
+
+.legend{ display:flex; flex-wrap:wrap; gap:6px 16px; margin:10px 0 0; font-size:12px; color:var(--sub); }
+.legend i{ display:inline-block; width:14px; height:11px; border-radius:1px; margin-right:5px; vertical-align:-1px; }
+
+/* ---------- ネットワーク ---------- */
+.nwrap{ overflow:auto; border:1px solid var(--rule); background:var(--card); border-radius:2px; padding:14px; }
+.nwrap svg{ display:block; }
+.nbox{ cursor:pointer; }
+.nbox:focus-visible{ outline:3px solid var(--safety); }
+
+/* ---------- モーダル内 ---------- */
+.deps{ display:grid; gap:6px; }
+.deprow{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.deprow select{ flex:1 1 150px; width:auto; min-width:0; }
+.deprow .lag{ flex:0 0 84px; width:84px; }
+.newwt{ display:none; gap:6px; margin-top:6px; flex-wrap:wrap; }
+.newwt.open{ display:flex; }
+.newwt select{ flex:1 1 130px; width:auto; min-width:0; }
+.newwt input{ flex:1 1 130px; width:auto; min-width:0; }
+.addwrap{ display:flex; gap:6px; width:100%; align-items:center; }
+.addwrap select{ flex:1 1 auto; width:auto; min-width:0; }
+.hint{ font-size:12px; color:var(--sub); margin:6px 0 0; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>工程表</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+  <div class="pick">
+    <select id="proj"><option value="">工事を選んでください</option></select>
+  </div>
+
+  <div id="msg" class="msg"></div>
+  <div id="alert" class="msg"></div>
+
+  <div class="tabs" id="tabs" hidden>
+    <button id="t_gantt" class="on">ガント</button>
+    <button id="t_net">ネットワーク</button>
+  </div>
+
+  <div id="gantt"></div>
+  <div id="network" hidden></div>
+
+  <div class="legend" id="legend" hidden>
+    <span><i style="background:#8A938C"></i>未着手</span>
+    <span><i style="background:#D99A00"></i>着手中</span>
+    <span><i style="background:#2F6B4F"></i>完了</span>
+    <span><i style="background:#A83A2C"></i>中断</span>
+    <span><i style="background:#fff;border:2px solid #111"></i>余裕なし（この遅れは全体に響く）</span>
+  </div>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="inner"><button class="btn wide" id="add">工程を追加する</button></div>
+</div>
+
+<!-- ========== 工程の詳細 ========== -->
+<div class="panel" id="panel">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1 id="ptitle">工程</h1>
+    <button class="btn ghost sm barbtn" id="close">閉じる</button>
+  </header>
+
+  <div class="wrap">
+    <div id="pmsg" class="msg"></div>
+
+    <div class="sheet">
+      <div class="head">作業の内容</div>
+
+      <div class="row">
+        <label for="f_wt">作業工程</label>
+        <div class="fld" style="flex-direction:column;align-items:stretch">
+          <div class="addwrap">
+            <select id="f_wt"></select>
+            <button class="btn ghost sm" id="wtadd" type="button" title="作業工程を追加">＋</button>
+          </div>
+          <div class="newwt" id="newwt">
+            <select id="f_wtcat"></select>
+            <input id="f_wtname" type="text" placeholder="作業工程の名称">
+            <button class="btn sm" id="wtsave" type="button">登録</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="f_name">工程名<span class="req">*</span></label>
+        <div class="fld"><input id="f_name" type="text" placeholder="盛土（南側）など"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_cat">大分類</label>
+        <div class="fld"><select id="f_cat"></select></div>
+      </div>
+
+      <div class="row">
+        <label for="f_start">開始日</label>
+        <div class="fld"><input id="f_start" type="date"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_end">終了日</label>
+        <div class="fld"><input id="f_end" type="date"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_md">想定工数</label>
+        <div class="fld"><input id="f_md" type="number" step="0.5" min="0" placeholder="0"><span style="font-size:13px;color:var(--sub);white-space:nowrap">人工</span></div>
+      </div>
+
+      <div class="row">
+        <label for="f_status">進み具合</label>
+        <div class="fld"><select id="f_status"></select></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+
+    <div class="sheet">
+      <div class="head">前に終わっている必要がある工程</div>
+      <div class="row" style="grid-template-columns:1fr">
+        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+          <div class="deps" id="deps"></div>
+          <div style="margin-top:8px"><button class="btn ghost sm" id="depadd" type="button">＋ 先行工程を足す</button></div>
+          <p class="hint">ここで繋いだ関係が、ネットワーク工程表の矢印になります。<br>「空け日数」は養生など、間に置く待ち時間です。</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+
+    <div class="sheet">
+      <div class="head">発注の管理</div>
+
+      <div class="row">
+        <label for="f_op">発注先</label>
+        <div class="fld"><select id="f_op"></select></div>
+      </div>
+
+      <div class="row">
+        <label for="f_oc">発注内容</label>
+        <div class="fld"><input id="f_oc" type="text" placeholder="重機手配・資材など"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_od">発注期限</label>
+        <div class="fld"><input id="f_od" type="date"></div>
+      </div>
+
+      <div class="row">
+        <label for="f_oa">知らせ始め</label>
+        <div class="fld"><input id="f_oa" type="number" step="1" min="0" placeholder="7"><span style="font-size:13px;color:var(--sub);white-space:nowrap">日前から</span></div>
+      </div>
+
+      <div class="row">
+        <label for="f_ou">知らせる相手</label>
+        <div class="fld"><select id="f_ou"></select></div>
+      </div>
+
+      <div class="row">
+        <label for="f_done">発注済み</label>
+        <div class="fld">
+          <input id="f_done" type="checkbox" style="width:22px;height:22px;min-height:22px;flex:0 0 22px">
+          <span style="font-size:13.5px;color:var(--sub)">入れるとお知らせが止まります</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="f_note">備考</label>
+        <div class="fld"><textarea id="f_note"></textarea></div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <button class="btn danger" id="del" hidden>この工程を削除する</button>
+  </div>
+
+  <div class="dock" id="pdock">
+    <div class="inner">
+      <button class="btn ghost" id="cancel" style="flex:0 0 auto">やめる</button>
+      <button class="btn wide" id="save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const DAY = 86400000;
+
+  const PH_STATUS = { not_started:'未着手', in_progress:'着手中', done:'完了', suspended:'中断' };
+  const DEP_TYPE  = { FS:'前が終わってから', SS:'同時に開始', FF:'同時に終了', SF:'まれな形' };
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const canEdit = (me.role === 'admin' || me.role === 'manager');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+
+  for (const [k,v] of Object.entries(PH_STATUS))
+    $('f_status').insertAdjacentHTML('beforeend', `<option value="${k}">${v}</option>`);
+
+  let cats = [], wts = [], partners = [], users = [], projects = [];
+  let projId = null, phases = [], deps = [], editing = null, view = 'gantt';
+
+  /* ================= 読み込み ================= */
+  async function loadRefs(){
+    const [c, w, p, u, pr] = await Promise.all([
+      sb.from('cost_categories').select('id,code,name,cost_group,sort_order').eq('is_active',true).order('sort_order'),
+      sb.from('work_types').select('id,cost_category_id,name,sort_order').eq('is_active',true).order('sort_order'),
+      sb.from('partners').select('id,name').eq('is_active',true).order('name'),
+      sb.from('app_users').select('id,name,role').eq('is_active',true).order('name'),
+      sb.from('projects').select('id,project_no,name,start_date,end_date_planned').eq('is_active',true).order('project_no',{ascending:false})
+    ]);
+    cats = c.data || []; wts = w.data || []; partners = p.data || [];
+    users = u.data || []; projects = pr.data || [];
+
+    $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
+      projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+
+    $('f_cat').innerHTML = '<option value="">（未設定）</option>' +
+      cats.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+    $('f_wtcat').innerHTML = cats.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+
+    $('f_op').innerHTML = '<option value="">（未設定）</option>' +
+      partners.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+    $('f_ou').innerHTML = '<option value="">（未設定）</option>' +
+      users.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+
+    paintWorkTypes();
+  }
+
+  function paintWorkTypes(){
+    const byCat = {};
+    wts.forEach(w => (byCat[w.cost_category_id] ||= []).push(w));
+    let html = '<option value="">（選ばない）</option>';
+    cats.forEach(c => {
+      const list = byCat[c.id];
+      if (!list || !list.length) return;
+      html += `<optgroup label="${esc(c.name)}">` +
+        list.map(w => `<option value="${w.id}">${esc(w.name)}</option>`).join('') +
+        '</optgroup>';
+    });
+    $('f_wt').innerHTML = html;
+  }
+
+  async function loadPhases(){
+    if (!projId){ phases = []; deps = []; draw(); return; }
+    const [a, b] = await Promise.all([
+      sb.from('project_phases').select('*').eq('project_id', projId).eq('is_active', true).order('seq'),
+      sb.from('phase_dependencies').select('*').eq('project_id', projId)
+    ]);
+    if (a.error){ showMsg($('msg'), '工程を読み込めませんでした。' + a.error.message, 'err'); return; }
+    phases = a.data || [];
+    deps   = b.data || [];
+    draw();
+  }
+
+  /* ================= 日付の道具 ================= */
+  const d2n = s => s ? Math.round(new Date(s + 'T00:00:00').getTime() / DAY) : null;
+  const n2d = n => new Date(n * DAY);
+  function monday(dt){ const d = new Date(dt); const w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); d.setHours(0,0,0,0); return d; }
+  const md = dt => `${dt.getMonth()+1}/${dt.getDate()}`;
+
+  /* ================= 余裕（クリティカルパス） ================= */
+  function computeSlack(){
+    const map = Object.fromEntries(phases.map(p => [p.id, p]));
+    const ok  = phases.filter(p => p.start_date && p.end_date);
+    if (!ok.length) return { slack:{}, cycle:false };
+
+    const ES = {}, EF = {}, dur = {};
+    ok.forEach(p => {
+      ES[p.id] = d2n(p.start_date);
+      EF[p.id] = d2n(p.end_date);
+      dur[p.id] = EF[p.id] - ES[p.id];
+    });
+
+    // 輪になっていないか（並べ替えできるか）
+    const succ = {}, indeg = {};
+    ok.forEach(p => { succ[p.id] = []; indeg[p.id] = 0; });
+    deps.forEach(d => {
+      if (!(d.from_phase_id in succ) || !(d.to_phase_id in succ)) return;
+      succ[d.from_phase_id].push(d);
+      indeg[d.to_phase_id]++;
+    });
+    let q = ok.filter(p => indeg[p.id] === 0).map(p => p.id), order = [];
+    while (q.length){
+      const id = q.shift(); order.push(id);
+      succ[id].forEach(d => { if (--indeg[d.to_phase_id] === 0) q.push(d.to_phase_id); });
+    }
+    const cycle = order.length !== ok.length;
+    if (cycle) return { slack:{}, cycle:true };
+
+    // 後ろから遅い方の期限を求める
+    const projEF = Math.max(...ok.map(p => EF[p.id]));
+    const LF = {}, LS = {};
+    [...order].reverse().forEach(id => {
+      const outs = succ[id];
+      if (!outs.length){ LF[id] = projEF; }
+      else {
+        LF[id] = Math.min(...outs.map(d => {
+          const s = d.to_phase_id, lag = d.lag_days || 0;
+          if (d.dep_type === 'SS') return (LS[s] ?? ES[s]) - lag + dur[id];
+          if (d.dep_type === 'FF') return (LF[s] ?? EF[s]) - lag;
+          if (d.dep_type === 'SF') return (LF[s] ?? EF[s]) - lag + dur[id];
+          return (LS[s] ?? ES[s]) - lag - 1;              // FS
+        }));
+      }
+      LS[id] = LF[id] - dur[id];
+    });
+
+    const slack = {};
+    ok.forEach(p => { slack[p.id] = LS[p.id] - ES[p.id]; });
+    return { slack, cycle:false };
+  }
+
+  /* ================= 描画 ================= */
+  function draw(){
+    const has = phases.length > 0;
+    $('tabs').hidden = !projId;
+    $('legend').hidden = !has;
+    $('dock').hidden = !(canEdit && projId);
+
+    drawAlert();
+
+    if (!projId){
+      $('gantt').innerHTML = `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、その工程表が出ます。</div>`;
+      $('network').innerHTML = '';
+      return;
+    }
+    if (!has){
+      $('gantt').innerHTML = `<div class="empty"><b>まだ工程がありません</b>${canEdit ? '下の「工程を追加する」から始めてください。' : '現場監督が登録すると、ここに表示されます。'}</div>`;
+      $('network').innerHTML = '';
+      return;
+    }
+
+    const { slack, cycle } = computeSlack();
+    if (cycle){
+      showMsg($('msg'), '工程の前後関係が輪になっています。どこかで「前に終わっている必要がある工程」を辿ると元に戻ってしまう状態です。関係を見直してください。', 'err');
+    } else if ($('msg').textContent.includes('輪')){
+      showMsg($('msg'), '');
+    }
+
+    drawGantt(slack);
+    drawNet(slack);
+  }
+
+  function drawAlert(){
+    const today = Math.round(Date.now() / DAY);
+    const hit = phases.filter(p =>
+      !p.ordered_at && p.order_deadline &&
+      (d2n(p.order_deadline) - today) <= (p.order_alert_days ?? 7));
+
+    if (!hit.length){ showMsg($('alert'), ''); return; }
+
+    const umap = Object.fromEntries(users.map(u => [u.id, u.name]));
+    const txt = hit.map(p => {
+      const left = d2n(p.order_deadline) - today;
+      const who  = umap[p.order_alert_user_id] ? `／${umap[p.order_alert_user_id]}` : '';
+      return `${p.name}：${left < 0 ? `期限を${-left}日過ぎています` : `あと${left}日`}（${fmtDate(p.order_deadline)}${who}）`;
+    }).join('\n');
+    showMsg($('alert'), `発注の期限が近づいています（${hit.length}件）\n` + txt, 'err');
+    $('alert').style.whiteSpace = 'pre-line';
+  }
+
+  function drawGantt(slack){
+    const ds = phases.map(p => d2n(p.start_date)).filter(Boolean);
+    const de = phases.map(p => d2n(p.end_date)).filter(Boolean);
+    const pr = projects.find(x => x.id === projId) || {};
+    if (pr.start_date) ds.push(d2n(pr.start_date));
+    if (pr.end_date_planned) de.push(d2n(pr.end_date_planned));
+
+    if (!ds.length || !de.length){
+      $('gantt').innerHTML = `<div class="empty"><b>日程が入っていません</b>工程に開始日と終了日を入れると、ここに帯が出ます。</div>`;
+      return;
+    }
+
+    const w0 = monday(n2d(Math.min(...ds)));
+    const wN = monday(n2d(Math.max(...de)));
+    const weeks = Math.floor((wN - w0) / (7*DAY)) + 1;
+    const wIdx = n => Math.floor((n2d(n) - w0) / (7*DAY));
+
+    const cols = `220px repeat(${weeks}, minmax(58px, 1fr))`;
+    let html = `<div class="gwrap"><div class="gtable">`;
+
+    // 見出し
+    html += `<div class="grow ghead" style="grid-template-columns:${cols}"><div class="gname">工程</div>`;
+    for (let i = 0; i < weeks; i++){
+      const d = new Date(w0.getTime() + i*7*DAY);
+      html += `<div class="gwk">${d.getDate() <= 7 ? (d.getMonth()+1)+'月' : '&nbsp;'}<b>${md(d)}</b></div>`;
+    }
+    html += `</div>`;
+
+    // 各工程
+    phases.forEach(p => {
+      const cat = cats.find(c => c.id === p.cost_category_id);
+      html += `<div class="grow" style="grid-template-columns:${cols}">`;
+      html += `<div class="gname"><span class="gn1">${esc(p.name)}</span>` +
+              `<span class="gn2">${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}</span></div>`;
+      html += `<div class="glane" style="grid-column:2 / -1; display:grid; grid-template-columns:repeat(${weeks}, minmax(58px,1fr))">`;
+
+      if (p.start_date && p.end_date){
+        const a = wIdx(d2n(p.start_date)) + 1;
+        const b = wIdx(d2n(p.end_date)) + 2;
+        const crit = (slack[p.id] !== undefined && slack[p.id] <= 0) ? ' crit' : '';
+        html += `<button class="bar2 b-${p.status}${crit}" data-id="${p.id}" ` +
+                `style="grid-column:${a} / ${b}">` +
+                `${esc(p.name)}<span class="md">${Number(p.planned_mandays)||0}人工</span></button>`;
+      } else {
+        html += `<button class="bar2 b-${p.status}" data-id="${p.id}" style="grid-column:1 / 2; background:transparent; color:var(--sub); border:1px dashed var(--rule)">日程未設定</button>`;
+      }
+      html += `</div></div>`;
+    });
+
+    html += `</div></div>`;
+    $('gantt').innerHTML = html;
+    $('gantt').querySelectorAll('.bar2').forEach(b =>
+      b.addEventListener('click', () => openPanel(phases.find(x => x.id === b.dataset.id))));
+  }
+
+  function drawNet(slack){
+    if (!phases.length){ $('network').innerHTML = ''; return; }
+
+    // 段（左から何番目か）を決める
+    const idset = new Set(phases.map(p => p.id));
+    const pred = {}, succ = {};
+    phases.forEach(p => { pred[p.id] = []; succ[p.id] = []; });
+    deps.forEach(d => {
+      if (!idset.has(d.from_phase_id) || !idset.has(d.to_phase_id)) return;
+      succ[d.from_phase_id].push(d.to_phase_id);
+      pred[d.to_phase_id].push(d.from_phase_id);
+    });
+
+    const level = {};
+    let changed = true, guard = 0;
+    phases.forEach(p => level[p.id] = 0);
+    while (changed && guard++ < 200){
+      changed = false;
+      phases.forEach(p => {
+        const mx = pred[p.id].length ? Math.max(...pred[p.id].map(x => level[x] + 1)) : 0;
+        if (mx > level[p.id]){ level[p.id] = mx; changed = true; }
+      });
+    }
+
+    const byLv = {};
+    phases.forEach(p => (byLv[level[p.id]] ||= []).push(p));
+    const lvs = Object.keys(byLv).map(Number).sort((a,b) => a-b);
+
+    const BW = 178, BH = 62, GX = 62, GY = 20, PAD = 10;
+    const pos = {};
+    lvs.forEach((lv, i) => {
+      byLv[lv].forEach((p, j) => {
+        pos[p.id] = { x: PAD + i*(BW+GX), y: PAD + j*(BH+GY) };
+      });
+    });
+    const W = PAD*2 + lvs.length*(BW+GX) - GX;
+    const H = PAD*2 + Math.max(...lvs.map(lv => byLv[lv].length))*(BH+GY) - GY;
+
+    const FILL = { not_started:'#F2F4F1', in_progress:'#FBF0D4', done:'#EAF2ED', suspended:'#FBEFEC' };
+    const LINE = { not_started:'#8A938C', in_progress:'#D99A00', done:'#2F6B4F', suspended:'#A83A2C' };
+
+    let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+    s += `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#16324F"/></marker></defs>`;
+
+    // 矢印
+    deps.forEach(d => {
+      const a = pos[d.from_phase_id], b = pos[d.to_phase_id];
+      if (!a || !b) return;
+      const x1 = a.x + BW, y1 = a.y + BH/2;
+      const x2 = b.x,      y2 = b.y + BH/2;
+      const mx = (x1 + x2) / 2;
+      const crit = (slack[d.from_phase_id] <= 0 && slack[d.to_phase_id] <= 0);
+      s += `<path d="M${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2-3} ${y2}" fill="none" ` +
+           `stroke="${crit ? '#111' : '#9AA39C'}" stroke-width="${crit ? 2.2 : 1.4}" marker-end="url(#ah)"/>`;
+      if (d.lag_days)
+        s += `<text x="${mx}" y="${(y1+y2)/2 - 5}" text-anchor="middle" font-size="10" fill="#4F5952" font-family="monospace">+${d.lag_days}日</text>`;
+    });
+
+    // 箱
+    phases.forEach(p => {
+      const q = pos[p.id]; if (!q) return;
+      const crit = (slack[p.id] !== undefined && slack[p.id] <= 0);
+      const nm = p.name.length > 12 ? p.name.slice(0,12) + '…' : p.name;
+      const cat = cats.find(c => c.id === p.cost_category_id);
+      const per = (p.start_date && p.end_date)
+        ? `${fmtDate(p.start_date).slice(5)}〜${fmtDate(p.end_date).slice(5)}` : '日程未設定';
+      s += `<g class="nbox" data-id="${p.id}" tabindex="0">`;
+      s += `<rect x="${q.x}" y="${q.y}" width="${BW}" height="${BH}" rx="3" fill="${FILL[p.status]}" ` +
+           `stroke="${crit ? '#111' : LINE[p.status]}" stroke-width="${crit ? 2.4 : 1.2}"/>`;
+      s += `<text x="${q.x+11}" y="${q.y+22}" font-size="13" font-weight="700" fill="#16324F" font-family="sans-serif">${esc(nm)}</text>`;
+      s += `<text x="${q.x+11}" y="${q.y+39}" font-size="10.5" fill="#4F5952" font-family="monospace">${esc(per)}</text>`;
+      s += `<text x="${q.x+11}" y="${q.y+53}" font-size="10.5" fill="#4F5952" font-family="sans-serif">${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}</text>`;
+      s += `</g>`;
+    });
+
+    s += `</svg>`;
+    $('network').innerHTML = `<div class="nwrap">${s}</div>`;
+    $('network').querySelectorAll('.nbox').forEach(g => {
+      const open = () => openPanel(phases.find(x => x.id === g.dataset.id));
+      g.addEventListener('click', open);
+      g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
+    });
+  }
+
+  /* ================= 切替 ================= */
+  $('t_gantt').addEventListener('click', () => {
+    view = 'gantt'; $('t_gantt').classList.add('on'); $('t_net').classList.remove('on');
+    $('gantt').hidden = false; $('network').hidden = true;
+  });
+  $('t_net').addEventListener('click', () => {
+    view = 'net'; $('t_net').classList.add('on'); $('t_gantt').classList.remove('on');
+    $('gantt').hidden = true; $('network').hidden = false;
+  });
+
+  /* ================= 工事の選択 ================= */
+  $('proj').addEventListener('change', async () => {
+    projId = $('proj').value || null;
+    const u = new URL(location.href);
+    if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+    showMsg($('msg'), '');
+    await loadPhases();
+  });
+
+  /* ================= モーダル ================= */
+  function depRow(d){
+    const others = phases.filter(p => !editing || p.id !== editing.id);
+    const opt = others.map(p => `<option value="${p.id}"${d && d.from_phase_id === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+    const typ = Object.entries(DEP_TYPE).map(([k,v]) =>
+      `<option value="${k}"${d && d.dep_type === k ? ' selected' : ''}>${v}</option>`).join('');
+    return `<div class="deprow">
+      <select class="d_from">${opt}</select>
+      <select class="d_type">${typ}</select>
+      <input class="lag d_lag" type="number" step="1" min="0" value="${d ? (d.lag_days||0) : 0}" title="空け日数">
+      <button class="btn ghost sm d_rm" type="button">削除</button>
+    </div>`;
+  }
+
+  function bindDepRemove(){
+    $('deps').querySelectorAll('.d_rm').forEach(b =>
+      b.onclick = () => { b.closest('.deprow').remove(); });
+  }
+
+  function openPanel(p){
+    editing = p || null;
+    showMsg($('pmsg'), '');
+    $('newwt').classList.remove('open');
+
+    $('ptitle').textContent = p ? '工程' : '工程の追加';
+    $('f_wt').value     = p ? (p.work_type_id || '') : '';
+    $('f_name').value   = p ? (p.name || '') : '';
+    $('f_cat').value    = p ? (p.cost_category_id || '') : '';
+    $('f_start').value  = p ? (p.start_date || '') : '';
+    $('f_end').value    = p ? (p.end_date || '') : '';
+    $('f_md').value     = p && Number(p.planned_mandays) ? p.planned_mandays : '';
+    $('f_status').value = p ? p.status : 'not_started';
+    $('f_op').value     = p ? (p.order_partner_id || '') : '';
+    $('f_oc').value     = p ? (p.order_content || '') : '';
+    $('f_od').value     = p ? (p.order_deadline || '') : '';
+    $('f_oa').value     = p ? (p.order_alert_days ?? 7) : 7;
+    $('f_ou').value     = p ? (p.order_alert_user_id || '') : '';
+    $('f_done').checked = !!(p && p.ordered_at);
+    $('f_note').value   = p ? (p.note || '') : '';
+
+    const mine = p ? deps.filter(d => d.to_phase_id === p.id) : [];
+    $('deps').innerHTML = mine.length ? mine.map(depRow).join('')
+      : `<p class="hint" style="margin:0">先行する工程はありません。</p>`;
+    bindDepRemove();
+
+    document.querySelectorAll('#panel input, #panel select, #panel textarea')
+      .forEach(el => el.disabled = !canEdit);
+    $('pdock').style.display = canEdit ? '' : 'none';
+    $('wtadd').disabled = !canEdit;
+    $('depadd').disabled = !canEdit;
+    $('del').hidden = !(p && canEdit);
+
+    $('panel').classList.add('open');
+    window.scrollTo(0,0);
+  }
+
+  function closePanel(){ $('panel').classList.remove('open'); editing = null; }
+
+  $('add').addEventListener('click', () => openPanel(null));
+  $('close').addEventListener('click', closePanel);
+  $('cancel').addEventListener('click', closePanel);
+
+  // 作業工程を選ぶと工程名と大分類が入る
+  $('f_wt').addEventListener('change', () => {
+    const w = wts.find(x => x.id === $('f_wt').value);
+    if (!w) return;
+    if (!$('f_name').value.trim()) $('f_name').value = w.name;
+    $('f_cat').value = w.cost_category_id;
+  });
+
+  // 作業工程の追加
+  $('wtadd').addEventListener('click', () => {
+    $('newwt').classList.toggle('open');
+    if ($('newwt').classList.contains('open')){
+      if ($('f_cat').value) $('f_wtcat').value = $('f_cat').value;
+      $('f_wtname').focus();
+    }
+  });
+
+  $('wtsave').addEventListener('click', async () => {
+    const nm  = $('f_wtname').value.trim();
+    const cat = $('f_wtcat').value;
+    if (!nm){ showMsg($('pmsg'), '作業工程の名称を入れてください。', 'err'); return; }
+    if (!cat){ showMsg($('pmsg'), '大分類を選んでください。', 'err'); return; }
+
+    const { data, error } = await sb.from('work_types')
+      .insert({ organization_id: me.organization_id, cost_category_id: cat, name: nm, sort_order: 900 })
+      .select('id,cost_category_id,name,sort_order').single();
+
+    if (error){
+      showMsg($('pmsg'), error.code === '23505'
+        ? 'その作業工程は既に登録されています。'
+        : '登録できませんでした。' + error.message, 'err');
+      return;
+    }
+    wts.push(data);
+    paintWorkTypes();
+    $('f_wt').value = data.id;
+    $('f_cat').value = data.cost_category_id;
+    if (!$('f_name').value.trim()) $('f_name').value = data.name;
+    $('f_wtname').value = '';
+    $('newwt').classList.remove('open');
+    showMsg($('pmsg'), `作業工程「${data.name}」を登録しました。`, 'ok');
+  });
+
+  // 先行工程の追加
+  $('depadd').addEventListener('click', () => {
+    const others = phases.filter(p => !editing || p.id !== editing.id);
+    if (!others.length){ showMsg($('pmsg'), 'ほかに工程がないため、先行工程を設定できません。', 'err'); return; }
+    if ($('deps').querySelector('.hint')) $('deps').innerHTML = '';
+    $('deps').insertAdjacentHTML('beforeend', depRow(null));
+    bindDepRemove();
+  });
+
+  /* ================= 保存 ================= */
+  $('save').addEventListener('click', async () => {
+    showMsg($('pmsg'), '');
+    const name = $('f_name').value.trim();
+    if (!name){ showMsg($('pmsg'), '工程名を入れてください。', 'err'); $('f_name').focus(); return; }
+
+    const s = $('f_start').value, e = $('f_end').value;
+    if (s && e && s > e){ showMsg($('pmsg'), '終了日が開始日より前になっています。', 'err'); return; }
+
+    const body = {
+      organization_id : me.organization_id,
+      project_id      : projId,
+      work_type_id    : $('f_wt').value || null,
+      cost_category_id: $('f_cat').value || null,
+      name            : name,
+      start_date      : s || null,
+      end_date        : e || null,
+      planned_mandays : $('f_md').value === '' ? 0 : Number($('f_md').value),
+      status          : $('f_status').value,
+      order_partner_id: $('f_op').value || null,
+      order_content   : $('f_oc').value.trim() || null,
+      order_deadline  : $('f_od').value || null,
+      order_alert_days: $('f_oa').value === '' ? 7 : Number($('f_oa').value),
+      order_alert_user_id: $('f_ou').value || null,
+      ordered_at      : $('f_done').checked ? (editing?.ordered_at || new Date().toISOString()) : null,
+      note            : $('f_note').value.trim() || null
+    };
+    if (!editing) body.seq = (phases.length ? Math.max(...phases.map(p => p.seq||0)) : 0) + 10;
+
+    $('save').disabled = true; $('save').textContent = '保存しています…';
+
+    let id = editing?.id, error;
+    if (editing){
+      ({ error } = await sb.from('project_phases').update(body).eq('id', editing.id));
+    } else {
+      const r = await sb.from('project_phases').insert(body).select('id').single();
+      error = r.error; id = r.data?.id;
+    }
+
+    if (!error && id){
+      // 先行関係を入れ替える
+      await sb.from('phase_dependencies').delete().eq('to_phase_id', id);
+      const rows = [];
+      const seen = new Set();
+      $('deps').querySelectorAll('.deprow').forEach(r => {
+        const from = r.querySelector('.d_from').value;
+        if (!from || from === id || seen.has(from)) return;
+        seen.add(from);
+        rows.push({
+          organization_id: me.organization_id,
+          project_id     : projId,
+          from_phase_id  : from,
+          to_phase_id    : id,
+          dep_type       : r.querySelector('.d_type').value,
+          lag_days       : Number(r.querySelector('.d_lag').value) || 0
+        });
+      });
+      if (rows.length){
+        const r2 = await sb.from('phase_dependencies').insert(rows);
+        if (r2.error) error = r2.error;
+      }
+    }
+
+    $('save').disabled = false; $('save').textContent = '保存する';
+
+    if (error){
+      showMsg($('pmsg'), error.code === '42501'
+        ? 'この操作を行う権限がありません。'
+        : '保存できませんでした。' + error.message, 'err');
+      return;
+    }
+
+    closePanel();
+    await loadPhases();
+    showMsg($('msg'), editing ? '工程を保存しました。' : '工程を追加しました。', 'ok');
+  });
+
+  /* ================= 削除 ================= */
+  $('del').addEventListener('click', async () => {
+    if (!editing) return;
+    if (!confirm(`「${editing.name}」を削除します。\nこの工程に繋がる前後関係も消えます。`)) return;
+    const { error } = await sb.from('project_phases').delete().eq('id', editing.id);
+    if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
+    closePanel();
+    await loadPhases();
+    showMsg($('msg'), '工程を削除しました。', 'ok');
+  });
+
+  /* ================= 起動 ================= */
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)){ projId = q; $('proj').value = q; }
+  await loadPhases();
+})();
+</script>
+</body>
+</html>
