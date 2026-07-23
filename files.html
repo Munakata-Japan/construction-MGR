@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: files (写真・書類) v20260723M -->
+<!-- BUILD: files (写真・書類) v20260723N -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -30,14 +30,15 @@
     aspect-ratio:4/3; background:#DFE2DC; display:flex; align-items:center;
     justify-content:center; overflow:hidden; position:relative;
   }
-  .card .ph img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .card .ph img{ position:absolute; inset:0; width:100%; height:100%;
+                 object-fit:cover; display:block; z-index:1; }
   .card .ph .ic{ font-family:var(--disp); font-size:12px; color:var(--sub); }
   .card .cb{ padding:8px 10px; min-width:0; }
   .card .c1{ font-family:var(--disp); font-weight:700; font-size:13px; line-height:1.4;
              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .card .c2{ font-size:11px; color:var(--sub); font-family:var(--mono); line-height:1.5; }
   .pill{
-    position:absolute; top:5px; left:5px; font-size:10px; font-weight:700;
+    position:absolute; top:5px; left:5px; z-index:2; font-size:10px; font-weight:700;
     padding:2px 6px; border-radius:2px; background:rgba(22,50,79,.86); color:#fff;
   }
   .pill.int{ background:rgba(122,131,124,.9); }
@@ -47,7 +48,15 @@
   .pick2{ display:flex; gap:8px; flex-wrap:wrap; }
   .pick2 .btn{ flex:1 1 150px; }
   .opt2{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-  .opt2 select{ flex:1 1 180px; width:auto; min-width:0; min-height:44px; }
+  .opt2 select, .opt2 input{ flex:1 1 180px; width:auto; min-width:0; min-height:44px; }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .chips:empty{ display:none; }
+  .chip{
+    font-size:12px; padding:5px 11px; border:1px solid var(--rule);
+    border-radius:2px; background:var(--card); color:var(--sub); cursor:pointer;
+  }
+  .chip:hover{ border-color:var(--ink); color:var(--ink); }
+  .chip.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
   .picked{ margin-top:10px; }
   .picked:empty{ display:none; }
   .pk{ display:flex; align-items:center; gap:9px; padding:7px 0;
@@ -106,6 +115,12 @@
       </select>
       <select id="u_phase"></select>
     </div>
+    <div class="opt2">
+      <input id="u_title" type="text" placeholder="題名（まとめて付ける・省略可）">
+      <input id="u_tags" type="text" list="taglist" placeholder="タグ（読点で区切る・省略可）">
+      <datalist id="taglist"></datalist>
+    </div>
+    <div class="chips" id="chips"></div>
     <button class="btn wide" id="u_go" style="margin-top:8px">取り込む</button>
     <div class="prog" id="prog"></div>
   </div>
@@ -241,6 +256,32 @@
     $('u_phase').innerHTML = '<option value="">工程を選ばない</option>' + opt;
   }
 
+  function paintTagHelp(){
+    const seen = {};
+    files.forEach(f => (f.tags || []).forEach(t => { seen[t] = (seen[t]||0) + 1; }));
+    const top = Object.entries(seen).sort((a,b) => b[1]-a[1]).slice(0, 12).map(x => x[0]);
+    const fixed = ['施工状況','出来形','使用材料','安全管理','着工前','完成'];
+    const all = [...new Set([...fixed, ...top])];
+
+    $('taglist').innerHTML = all.map(t => `<option value="${esc(t)}">`).join('');
+    $('chips').innerHTML = all.map(t => `<button class="chip" type="button" data-t="${esc(t)}">${esc(t)}</button>`).join('');
+    $('chips').querySelectorAll('.chip').forEach(b => b.onclick = () => {
+      const cur = $('u_tags').value.split(/[、,]/).map(x => x.trim()).filter(Boolean);
+      const t = b.dataset.t;
+      const i = cur.indexOf(t);
+      if (i >= 0) cur.splice(i, 1); else cur.push(t);
+      $('u_tags').value = cur.join('、');
+      syncChips();
+    });
+    syncChips();
+  }
+
+  function syncChips(){
+    const cur = $('u_tags').value.split(/[、,]/).map(x => x.trim()).filter(Boolean);
+    $('chips').querySelectorAll('.chip').forEach(b =>
+      b.classList.toggle('on', cur.includes(b.dataset.t)));
+  }
+
   async function loadFiles(){
     if (!projId){ files = []; render(); return; }
     const { data, error } = await sb.from('project_files')
@@ -249,6 +290,7 @@
     if (error){ showMsg($('msg'), '読み込めませんでした。' + error.message, 'err'); return; }
     files = data || [];
     render();
+    paintTagHelp();
     paintUsage();
   }
 
@@ -366,6 +408,7 @@
     e.target.value = '';
     paintPicked();
   }
+  $('u_tags').addEventListener('input', syncChips);
   $('cam').addEventListener('change', accept);
   $('file').addEventListener('change', accept);
 
@@ -403,6 +446,8 @@
 
     const purpose = $('u_purpose').value;
     const phase   = $('u_phase').value || null;
+    const utitle  = $('u_title').value.trim() || null;
+    const utags   = $('u_tags').value.split(/[、,]/).map(x => x.trim()).filter(Boolean);
     $('u_go').disabled = true;
     let ok = 0, ng = 0;
 
@@ -453,6 +498,8 @@
           byte_size      : origBlob.size,
           width_px       : w, height_px: h,
           phase_id       : phase,
+          title          : list.length > 1 && utitle ? `${utitle}（${i+1}）` : utitle,
+          tags           : utags,
           taken_on       : new Date(f.lastModified || Date.now()).toISOString().slice(0,10),
           uploaded_by    : me.id
         });
@@ -467,6 +514,7 @@
     $('u_go').disabled = false;
     picked = [];
     paintPicked();
+    $('u_title').value = '';
     $('prog').textContent = '';
     showMsg($('msg'), `${ok}件を取り込みました。${ng ? `${ng}件は失敗しました。` : ''}`, ng ? 'err' : 'ok');
     await loadFiles();
