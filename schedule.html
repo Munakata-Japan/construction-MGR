@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260723F -->
+<!-- BUILD: schedule (工程表) v20260723G -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -10,68 +10,114 @@
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <style>
-/* ---------- 工事の選択 ---------- */
-.pick{ display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
-.pick select{ flex:1 1 260px; width:auto; min-width:0; min-height:44px; }
+/* ---------- 全画面：スクロールさせない ---------- */
+[hidden]{ display:none !important; }   /* display 指定のあるクラスに負けないようにする */
+html,body{ height:100%; }
+body{ overflow:hidden; display:flex; flex-direction:column; }
+body > header.bar{ flex:0 0 auto; }
 
-/* ---------- 表示の切替 ---------- */
-.tabs{ display:flex; gap:0; margin-bottom:14px; border:1px solid var(--rule); border-radius:2px; overflow:hidden; width:fit-content; }
+.ctl{
+  flex:0 0 auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:8px 14px; background:var(--card); border-bottom:1px solid var(--rule);
+}
+.ctl select{ width:auto; min-width:220px; max-width:420px; min-height:38px; flex:0 1 auto; }
+.ctl .sp{ flex:1 1 0; }
+
+.tabs{ display:flex; border:1px solid var(--rule); border-radius:2px; overflow:hidden; }
 .tabs button{
-  font-family:var(--body); font-size:14px; font-weight:700;
-  min-height:42px; padding:0 20px; border:none; cursor:pointer;
+  font-family:var(--body); font-size:13.5px; font-weight:700;
+  min-height:38px; padding:0 16px; border:none; cursor:pointer;
   background:var(--card); color:var(--sub); border-right:1px solid var(--rule);
 }
 .tabs button:last-child{ border-right:none; }
 .tabs button.on{ background:var(--ink); color:#fff; }
 .tabs button:focus-visible{ outline:3px solid var(--safety); outline-offset:-3px; }
 
+.legend{ display:flex; gap:12px; font-size:11.5px; color:var(--sub); flex-wrap:wrap; }
+.legend i{ display:inline-block; width:12px; height:10px; border-radius:1px; margin-right:4px; vertical-align:-1px; }
+
+.warnbtn{
+  font-family:var(--body); font-size:13px; font-weight:700; min-height:38px;
+  padding:0 14px; border:1px solid var(--alert); background:#FBF1EF; color:#7A2A20;
+  border-radius:2px; cursor:pointer; white-space:nowrap;
+}
+.warnbtn.on{ background:var(--alert); color:#fff; }
+
+.drop{
+  flex:0 0 auto; background:#FBF1EF; border-bottom:1px solid var(--rule);
+  padding:10px 16px; font-size:13px; line-height:1.8; color:#7A2A20;
+  max-height:26vh; overflow-y:auto;
+}
+.drop.guide{ background:var(--card); color:var(--sub); }
+.drop.guide b{ color:var(--ink); }
+.drop.guide ul{ margin:5px 0 0; padding-left:1.2em; }
+
+.flash{ flex:0 0 auto; }
+.flash .msg{ margin:0; border-radius:0; border-left-width:3px; }
+
+/* ---------- 表示領域 ---------- */
+.view{ flex:1 1 auto; min-height:0; position:relative; }
+.view > div{ position:absolute; inset:0; }
+
 /* ---------- ガント ---------- */
-.gwrap{ overflow-x:auto; border:1px solid var(--rule); background:var(--card); border-radius:2px; }
-.gtable{ min-width:max-content; }
-.grow{ display:grid; border-bottom:1px solid var(--rule-2); }
-.grow:last-child{ border-bottom:none; }
-.ghead{ position:sticky; top:0; z-index:5; background:#E3E6E0; border-bottom:1px solid var(--rule); }
+.gwrap{ overflow:auto; background:var(--card); }
+.gtable{ display:grid; min-height:100%; min-width:100%; }
+.gh{
+  position:sticky; top:0; z-index:4; background:#E3E6E0;
+  border-bottom:1px solid var(--rule); border-right:1px solid var(--rule-2);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-family:var(--mono); font-size:10px; color:var(--sub); line-height:1.25;
+}
+.gh b{ color:var(--ink); font-weight:500; font-size:11px; }
+.gh.gname{ z-index:6; font-family:var(--disp); font-weight:700; font-size:12px;
+           color:var(--ink); align-items:flex-start; padding-left:12px; }
+.gstripe{ border-right:1px solid #EDEFEB; pointer-events:none; z-index:0; }
+.grule{ border-bottom:1px solid var(--rule-2); pointer-events:none; z-index:0; }
 .gname{
-  padding:8px 12px; border-right:1px solid var(--rule); min-width:0;
-  position:sticky; left:0; background:var(--card); z-index:3;
+  position:sticky; left:0; z-index:3; background:var(--card);
+  border-right:1px solid var(--rule); padding:2px 10px; min-width:0;
   display:flex; flex-direction:column; justify-content:center;
 }
-.ghead .gname{ background:#E3E6E0; z-index:6; font-family:var(--disp); font-weight:700; font-size:12.5px; }
-.gname .gn1{ font-family:var(--disp); font-weight:700; font-size:14px; line-height:1.4; overflow-wrap:anywhere; }
-.gname .gn2{ font-size:11.5px; color:var(--sub); font-family:var(--mono); }
-.gwk{
-  padding:6px 2px; text-align:center; font-family:var(--mono); font-size:10.5px;
-  color:var(--sub); border-right:1px solid var(--rule-2); line-height:1.3;
+.gname .gn1{
+  font-family:var(--disp); font-weight:700; font-size:12.5px; line-height:1.3;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-.gwk b{ display:block; color:var(--ink); font-weight:500; font-size:11px; }
-.gcell{ border-right:1px solid #EFF1ED; min-height:44px; }
-.glane{ position:relative; min-height:44px; display:grid; align-items:center; }
+.gname .gn2{
+  font-size:10px; color:var(--sub); font-family:var(--mono); line-height:1.3;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.dense .gname .gn2{ display:none; }
 
 .bar2{
-  grid-row:1; height:24px; border-radius:2px; cursor:pointer;
-  display:flex; align-items:center; padding:0 8px; gap:6px;
-  font-size:11.5px; color:#fff; border:1px solid transparent;
+  z-index:2; align-self:center; height:var(--bh,20px); border-radius:2px; cursor:pointer;
+  display:flex; align-items:center; padding:0 6px; gap:5px; margin:0 1px;
+  font-size:10.5px; color:#fff; border:1px solid transparent;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  font-family:var(--body); text-align:left;
+  font-family:var(--body); text-align:left; min-width:0;
 }
-.bar2:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
+.bar2:focus-visible{ outline:3px solid var(--safety); outline-offset:1px; }
 .bar2 .md{ font-family:var(--mono); opacity:.85; }
 .b-not_started{ background:#8A938C; }
 .b-in_progress{ background:var(--safety); color:#3B2A00; }
 .b-done       { background:var(--ok); }
 .b-suspended  { background:var(--alert); }
-.bar2.crit{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.18); }
+.bar2.crit{ border-color:#111; box-shadow:0 0 0 1.5px rgba(0,0,0,.2); }
 
-.legend{ display:flex; flex-wrap:wrap; gap:6px 16px; margin:10px 0 0; font-size:12px; color:var(--sub); }
-.legend i{ display:inline-block; width:14px; height:11px; border-radius:1px; margin-right:5px; vertical-align:-1px; }
+.hold{ height:100%; display:flex; align-items:center; justify-content:center; padding:24px; }
+.hold .empty{ max-width:420px; }
 
 /* ---------- ネットワーク ---------- */
-.nwrap{ overflow:auto; border:1px solid var(--rule); background:var(--card); border-radius:2px; padding:14px; }
-.nwrap svg{ display:block; }
+.nwrap{ display:flex; align-items:center; justify-content:center; padding:14px; background:var(--card); }
+.nwrap svg{ width:100%; height:100%; }
 .nbox{ cursor:pointer; }
 .nbox:focus-visible{ outline:3px solid var(--safety); }
 
+/* ---------- 下部の操作 ---------- */
+#dock{ position:static; flex:0 0 auto; backdrop-filter:none; background:var(--paper); }
+#dock .inner{ max-width:none; }
+
 /* ---------- モーダル内 ---------- */
+.panel{ overflow-y:auto; }
 .deps{ display:grid; gap:6px; }
 .deprow{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .deprow select{ flex:1 1 150px; width:auto; min-width:0; }
@@ -87,14 +133,11 @@
   margin-top:8px; padding:11px 14px; border-left:3px solid var(--safety);
   background:#FBF6E8; font-size:13.5px; line-height:1.8; color:#4A3B14;
 }
-.guide{
-  border:1px solid var(--rule); border-left:3px solid var(--ink-2);
-  background:var(--card); padding:13px 16px; margin-bottom:12px;
-  font-size:13.5px; line-height:1.85; color:var(--sub);
+
+@media (max-width:700px){
+  .ctl select{ min-width:150px; }
+  .legend{ display:none; }
 }
-.guide b{ color:var(--ink); }
-.guide ul{ margin:7px 0 0; padding-left:1.2em; }
-.guide li{ margin-bottom:3px; }
 </style>
 </head>
 <body>
@@ -106,42 +149,42 @@
   <button class="btn ghost sm barbtn" id="out">出る</button>
 </header>
 
-<div class="wrap">
-  <div class="pick">
-    <select id="proj"><option value="">工事を選んでください</option></select>
-    <button class="btn ghost" id="sample" hidden>見本を開く</button>
-  </div>
-
-  <div id="msg" class="msg"></div>
-  <div id="alert" class="msg"></div>
-
-  <div class="tabs" id="tabs" hidden>
+<div class="ctl">
+  <select id="proj"><option value="">工事を選んでください</option></select>
+  <button class="btn ghost sm" id="sample" hidden>見本</button>
+  <div class="tabs">
     <button id="t_gantt" class="on">ガント</button>
     <button id="t_net">ネットワーク</button>
   </div>
-
-  <div id="gantt"></div>
-  <div id="network" hidden>
-    <div class="guide">
-      <b>ネットワーク工程表の見方</b>
-      <ul>
-        <li>箱ひとつが工程です。矢印は「この工程が終わってから次へ」という繋がりを表します。</li>
-        <li>矢印の上の「＋日数」は、間に置く待ち時間です。養生などに使います。</li>
-        <li>黒い太線でつながった箱が、余裕のない経路です。ここが遅れると全体が遅れます。</li>
-        <li>横に並ぶ位置は前後関係から自動で決まります。並べ替えの必要はありません。</li>
-      </ul>
-      引き方が分からないときは、上の「見本を開く」で造成工事の例を見てください。
-    </div>
-    <div id="netbody"></div>
-  </div>
-
+  <button class="warnbtn" id="alertbtn" hidden></button>
+  <button class="btn ghost sm" id="guidebtn" hidden>見方</button>
+  <span class="sp"></span>
   <div class="legend" id="legend" hidden>
     <span><i style="background:#8A938C"></i>未着手</span>
     <span><i style="background:#D99A00"></i>着手中</span>
     <span><i style="background:#2F6B4F"></i>完了</span>
     <span><i style="background:#A83A2C"></i>中断</span>
-    <span><i style="background:#fff;border:2px solid #111"></i>余裕なし（この遅れは全体に響く）</span>
+    <span><i style="background:#fff;border:2px solid #111"></i>余裕なし</span>
   </div>
+</div>
+
+<div class="drop" id="alertbox" hidden></div>
+
+<div class="drop guide" id="guidebox" hidden>
+  <b>ネットワーク工程表の見方</b>
+  <ul>
+    <li>箱ひとつが工程です。矢印は「この工程が終わってから次へ」という繋がりを表します。</li>
+    <li>矢印の上の「＋日数」は、間に置く待ち時間です。養生などに使います。</li>
+    <li>黒い太線でつながった箱が、余裕のない経路です。ここが遅れると全体が遅れます。</li>
+    <li>矢印は、後になる工程を開いて「前に終わっている必要がある工程」を選ぶと引けます。</li>
+  </ul>
+</div>
+
+<div class="flash"><div id="msg" class="msg"></div></div>
+
+<div class="view">
+  <div id="gantt" class="gwrap"></div>
+  <div id="network" class="nwrap" hidden></div>
 </div>
 
 <div class="dock" id="dock" hidden>
@@ -424,22 +467,25 @@
   /* ================= 描画 ================= */
   function draw(){
     const has = phases.length > 0;
-    $('tabs').hidden = !projId;
     $('legend').hidden = !has;
+    $('guidebtn').hidden = !(has && view === 'net');
     $('dock').hidden = !(canEdit && projId);
 
     drawAlert();
 
     if (!projId){
-      $('gantt').innerHTML = `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、その工程表が出ます。</div>`;
-      $('netbody').innerHTML = '';
+      $('gantt').innerHTML = `<div class="hold"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、その工程表が出ます。</div></div>`;
+      $('gantt').classList.remove('gwrap');
+      $('network').innerHTML = '';
       return;
     }
     if (!has){
-      $('gantt').innerHTML = `<div class="empty"><b>まだ工程がありません</b>${canEdit ? '下の「工程を追加する」から始めてください。' : '現場監督が登録すると、ここに表示されます。'}</div>`;
-      $('netbody').innerHTML = '';
+      $('gantt').innerHTML = `<div class="hold"><div class="empty"><b>まだ工程がありません</b>${canEdit ? '下の「工程を追加する」から始めてください。' : '現場監督が登録すると、ここに表示されます。'}</div></div>`;
+      $('gantt').classList.remove('gwrap');
+      $('network').innerHTML = '';
       return;
     }
+    $('gantt').classList.add('gwrap');
 
     const { slack, cycle } = computeSlack();
     if (cycle){
@@ -458,18 +504,25 @@
       !p.ordered_at && p.order_deadline &&
       (d2n(p.order_deadline) - today) <= (p.order_alert_days ?? 7));
 
-    if (!hit.length){ showMsg($('alert'), ''); return; }
+    if (!hit.length){
+      $('alertbtn').hidden = true;
+      $('alertbox').hidden = true;
+      $('alertbtn').classList.remove('on');
+      return;
+    }
 
     const umap = Object.fromEntries(users.map(u => [u.id, u.name]));
-    const txt = hit.map(p => {
+    $('alertbtn').hidden = false;
+    $('alertbtn').innerHTML = `発注の期限 <b>${hit.length}</b>件`;
+    $('alertbox').innerHTML = hit.map(p => {
       const left = d2n(p.order_deadline) - today;
-      const who  = umap[p.order_alert_user_id] ? `／${umap[p.order_alert_user_id]}` : '';
-      return `${p.name}：${left < 0 ? `期限を${-left}日過ぎています` : `あと${left}日`}（${fmtDate(p.order_deadline)}${who}）`;
-    }).join('\n');
-    showMsg($('alert'), `発注の期限が近づいています（${hit.length}件）\n` + txt, 'err');
-    $('alert').style.whiteSpace = 'pre-line';
+      const who  = umap[p.order_alert_user_id] ? ` ／ ${esc(umap[p.order_alert_user_id])}` : '';
+      const ct   = p.order_content ? `（${esc(p.order_content)}）` : '';
+      return `<div>${esc(p.name)}${ct}　${left < 0 ? `期限を${-left}日過ぎています` : `あと${left}日`}　${fmtDate(p.order_deadline)}${who}</div>`;
+    }).join('');
   }
 
+  /* ---- ガント：画面に収める ---- */
   function drawGantt(slack){
     const ds = phases.map(p => d2n(p.start_date)).filter(Boolean);
     const de = phases.map(p => d2n(p.end_date)).filter(Boolean);
@@ -478,57 +531,76 @@
     if (pr.end_date_planned) de.push(d2n(pr.end_date_planned));
 
     if (!ds.length || !de.length){
-      $('gantt').innerHTML = `<div class="empty"><b>日程が入っていません</b>工程に開始日と終了日を入れると、ここに帯が出ます。</div>`;
+      $('gantt').innerHTML = `<div class="hold"><div class="empty"><b>日程が入っていません</b>工程に開始日と終了日を入れると、ここに帯が出ます。</div></div>`;
+      $('gantt').classList.remove('gwrap');
       return;
     }
+    $('gantt').classList.add('gwrap');
 
     const w0 = monday(n2d(Math.min(...ds)));
     const wN = monday(n2d(Math.max(...de)));
-    const weeks = Math.floor((wN - w0) / (7*DAY)) + 1;
+    const W  = Math.floor((wN - w0) / (7*DAY)) + 1;
+    const N  = phases.length;
     const wIdx = n => Math.floor((n2d(n) - w0) / (7*DAY));
 
-    const cols = `220px repeat(${weeks}, minmax(58px, 1fr))`;
-    let html = `<div class="gwrap"><div class="gtable">`;
+    // 画面の高さから1行の高さを決める
+    const boxH = $('gantt').clientHeight || 480;
+    const boxW = $('gantt').clientWidth  || 900;
+    const HEAD = 32;
+    const rowH = Math.max(22, Math.floor((boxH - HEAD) / N));
+    const dense = rowH < 34;
+    const barH = Math.max(12, Math.min(20, rowH - 6));
+    const nameW = Math.max(130, Math.min(210, Math.floor(boxW * 0.18)));
+    const colW = Math.max(26, Math.floor((boxW - nameW) / W));
+
+    let h = `<div class="gtable${dense ? ' dense' : ''}" style="` +
+            `grid-template-columns:${nameW}px repeat(${W}, minmax(${colW}px, 1fr));` +
+            `grid-template-rows:${HEAD}px repeat(${N}, ${rowH}px);--bh:${barH}px">`;
 
     // 見出し
-    html += `<div class="grow ghead" style="grid-template-columns:${cols}"><div class="gname">工程</div>`;
-    for (let i = 0; i < weeks; i++){
+    h += `<div class="gh gname">工程</div>`;
+    for (let i = 0; i < W; i++){
       const d = new Date(w0.getTime() + i*7*DAY);
-      html += `<div class="gwk">${d.getDate() <= 7 ? (d.getMonth()+1)+'月' : '&nbsp;'}<b>${md(d)}</b></div>`;
+      h += `<div class="gh">${d.getDate() <= 7 ? (d.getMonth()+1)+'月' : '&nbsp;'}<b>${md(d)}</b></div>`;
     }
-    html += `</div>`;
+    // 縦の区切り
+    for (let i = 0; i < W; i++)
+      h += `<div class="gstripe" style="grid-column:${i+2};grid-row:2 / -1"></div>`;
+    // 横の区切り
+    for (let r = 0; r < N; r++)
+      h += `<div class="grule" style="grid-column:1 / -1;grid-row:${r+2}"></div>`;
 
-    // 各工程
-    phases.forEach(p => {
+    // 工程名と帯
+    phases.forEach((p, r) => {
       const cat = cats.find(c => c.id === p.cost_category_id);
-      html += `<div class="grow" style="grid-template-columns:${cols}">`;
-      html += `<div class="gname"><span class="gn1">${esc(p.name)}</span>` +
-              `<span class="gn2">${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}</span></div>`;
-      html += `<div class="glane" style="grid-column:2 / -1; display:grid; grid-template-columns:repeat(${weeks}, minmax(58px,1fr))">`;
+      const sub = `${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}`;
+      h += `<div class="gname" style="grid-row:${r+2}" title="${esc(p.name)}／${sub}">` +
+           `<span class="gn1">${esc(p.name)}</span><span class="gn2">${sub}</span></div>`;
 
       if (p.start_date && p.end_date){
-        const a = wIdx(d2n(p.start_date)) + 1;
-        const b = wIdx(d2n(p.end_date)) + 2;
+        const c1 = wIdx(d2n(p.start_date)) + 2;
+        const c2 = wIdx(d2n(p.end_date)) + 3;
         const crit = (slack[p.id] !== undefined && slack[p.id] <= 0) ? ' crit' : '';
-        html += `<button class="bar2 b-${p.status}${crit}" data-id="${p.id}" ` +
-                `style="grid-column:${a} / ${b}">` +
-                `${esc(p.name)}<span class="md">${Number(p.planned_mandays)||0}人工</span></button>`;
+        h += `<button class="bar2 b-${p.status}${crit}" data-id="${p.id}" ` +
+             `title="${esc(p.name)}　${fmtDate(p.start_date)}〜${fmtDate(p.end_date)}" ` +
+             `style="grid-row:${r+2};grid-column:${c1} / ${c2}">` +
+             `${esc(p.name)}<span class="md">${Number(p.planned_mandays)||0}人工</span></button>`;
       } else {
-        html += `<button class="bar2 b-${p.status}" data-id="${p.id}" style="grid-column:1 / 2; background:transparent; color:var(--sub); border:1px dashed var(--rule)">日程未設定</button>`;
+        h += `<button class="bar2 b-${p.status}" data-id="${p.id}" ` +
+             `style="grid-row:${r+2};grid-column:2 / 3;background:transparent;color:var(--sub);border:1px dashed var(--rule)">日程未設定</button>`;
       }
-      html += `</div></div>`;
     });
 
-    html += `</div></div>`;
-    $('gantt').innerHTML = html;
+    h += `</div>`;
+    $('gantt').innerHTML = h;
     $('gantt').querySelectorAll('.bar2').forEach(b =>
       b.addEventListener('click', () => openPanel(phases.find(x => x.id === b.dataset.id))));
   }
 
+  /* ---- ネットワーク：画面に収める ---- */
   function drawNet(slack){
-    if (!phases.length){ $('netbody').innerHTML = ''; return; }
+    if (!phases.length){ $('network').innerHTML = ''; return; }
 
-    // 段（左から何番目か）を決める
     const idset = new Set(phases.map(p => p.id));
     const pred = {}, succ = {};
     phases.forEach(p => { pred[p.id] = []; succ[p.id] = []; });
@@ -553,24 +625,21 @@
     phases.forEach(p => (byLv[level[p.id]] ||= []).push(p));
     const lvs = Object.keys(byLv).map(Number).sort((a,b) => a-b);
 
-    const BW = 178, BH = 62, GX = 62, GY = 20, PAD = 10;
+    const BW = 168, BH = 58, GX = 58, GY = 18, PAD = 12;
     const pos = {};
     lvs.forEach((lv, i) => {
-      byLv[lv].forEach((p, j) => {
-        pos[p.id] = { x: PAD + i*(BW+GX), y: PAD + j*(BH+GY) };
-      });
+      byLv[lv].forEach((p, j) => { pos[p.id] = { x: PAD + i*(BW+GX), y: PAD + j*(BH+GY) }; });
     });
-    const W = PAD*2 + lvs.length*(BW+GX) - GX;
-    const H = PAD*2 + Math.max(...lvs.map(lv => byLv[lv].length))*(BH+GY) - GY;
+    const VW = PAD*2 + lvs.length*(BW+GX) - GX;
+    const VH = PAD*2 + Math.max(...lvs.map(lv => byLv[lv].length))*(BH+GY) - GY;
 
     const FILL = { not_started:'#F2F4F1', in_progress:'#FBF0D4', done:'#EAF2ED', suspended:'#FBEFEC' };
     const LINE = { not_started:'#8A938C', in_progress:'#D99A00', done:'#2F6B4F', suspended:'#A83A2C' };
 
-    let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+    let s = `<svg viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">`;
     s += `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
             <path d="M0 0 L10 5 L0 10 z" fill="#16324F"/></marker></defs>`;
 
-    // 矢印
     deps.forEach(d => {
       const a = pos[d.from_phase_id], b = pos[d.to_phase_id];
       if (!a || !b) return;
@@ -584,26 +653,25 @@
         s += `<text x="${mx}" y="${(y1+y2)/2 - 5}" text-anchor="middle" font-size="10" fill="#4F5952" font-family="monospace">+${d.lag_days}日</text>`;
     });
 
-    // 箱
     phases.forEach(p => {
       const q = pos[p.id]; if (!q) return;
       const crit = (slack[p.id] !== undefined && slack[p.id] <= 0);
-      const nm = p.name.length > 12 ? p.name.slice(0,12) + '…' : p.name;
+      const nm = p.name.length > 11 ? p.name.slice(0,11) + '…' : p.name;
       const cat = cats.find(c => c.id === p.cost_category_id);
       const per = (p.start_date && p.end_date)
         ? `${fmtDate(p.start_date).slice(5)}〜${fmtDate(p.end_date).slice(5)}` : '日程未設定';
-      s += `<g class="nbox" data-id="${p.id}" tabindex="0">`;
+      s += `<g class="nbox" data-id="${p.id}" tabindex="0"><title>${esc(p.name)}</title>`;
       s += `<rect x="${q.x}" y="${q.y}" width="${BW}" height="${BH}" rx="3" fill="${FILL[p.status]}" ` +
            `stroke="${crit ? '#111' : LINE[p.status]}" stroke-width="${crit ? 2.4 : 1.2}"/>`;
-      s += `<text x="${q.x+11}" y="${q.y+22}" font-size="13" font-weight="700" fill="#16324F" font-family="sans-serif">${esc(nm)}</text>`;
-      s += `<text x="${q.x+11}" y="${q.y+39}" font-size="10.5" fill="#4F5952" font-family="monospace">${esc(per)}</text>`;
-      s += `<text x="${q.x+11}" y="${q.y+53}" font-size="10.5" fill="#4F5952" font-family="sans-serif">${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}</text>`;
+      s += `<text x="${q.x+10}" y="${q.y+21}" font-size="13" font-weight="700" fill="#16324F" font-family="sans-serif">${esc(nm)}</text>`;
+      s += `<text x="${q.x+10}" y="${q.y+37}" font-size="10.5" fill="#4F5952" font-family="monospace">${esc(per)}</text>`;
+      s += `<text x="${q.x+10}" y="${q.y+51}" font-size="10.5" fill="#4F5952" font-family="sans-serif">${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}</text>`;
       s += `</g>`;
     });
 
     s += `</svg>`;
-    $('netbody').innerHTML = `<div class="nwrap">${s}</div>`;
-    $('netbody').querySelectorAll('.nbox').forEach(g => {
+    $('network').innerHTML = s;
+    $('network').querySelectorAll('.nbox').forEach(g => {
       const open = () => openPanel(phases.find(x => x.id === g.dataset.id));
       g.addEventListener('click', open);
       g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
@@ -611,13 +679,47 @@
   }
 
   /* ================= 切替 ================= */
-  $('t_gantt').addEventListener('click', () => {
-    view = 'gantt'; $('t_gantt').classList.add('on'); $('t_net').classList.remove('on');
-    $('gantt').hidden = false; $('network').hidden = true;
+  function setView(v){
+    view = v;
+    $('t_gantt').classList.toggle('on', v === 'gantt');
+    $('t_net').classList.toggle('on', v === 'net');
+    $('gantt').hidden  = (v !== 'gantt');
+    $('network').hidden = (v !== 'net');
+    $('guidebtn').hidden = !(phases.length && v === 'net');
+    if (v !== 'net'){ $('guidebox').hidden = true; }
+    if (v === 'gantt' && phases.length){
+      const { slack } = computeSlack();
+      drawGantt(slack);          // 表示してから幅と高さを測り直す
+    }
+  }
+  $('t_gantt').addEventListener('click', () => setView('gantt'));
+  $('t_net').addEventListener('click', () => setView('net'));
+
+  // 発注の知らせ
+  $('alertbtn').addEventListener('click', () => {
+    const open = $('alertbox').hidden;
+    $('alertbox').hidden = !open;
+    $('alertbtn').classList.toggle('on', open);
+    if (view === 'gantt' && phases.length){
+      requestAnimationFrame(() => { const { slack } = computeSlack(); drawGantt(slack); });
+    }
   });
-  $('t_net').addEventListener('click', () => {
-    view = 'net'; $('t_net').classList.add('on'); $('t_gantt').classList.remove('on');
-    $('gantt').hidden = true; $('network').hidden = false;
+
+  // ネットワークの見方
+  $('guidebtn').addEventListener('click', () => {
+    $('guidebox').hidden = !$('guidebox').hidden;
+  });
+
+  // 画面の大きさが変わったら引き直す
+  let rt;
+  window.addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => {
+      if (view === 'gantt' && phases.length){
+        const { slack } = computeSlack();
+        drawGantt(slack);
+      }
+    }, 150);
   });
 
   /* ================= 工事の選択 ================= */
@@ -854,6 +956,12 @@
   const q = new URL(location.href).searchParams.get('p');
   if (q && projects.some(x => x.id === q)){ projId = q; $('proj').value = q; }
   await loadPhases();
+  requestAnimationFrame(() => {
+    if (view === 'gantt' && phases.length){
+      const { slack } = computeSlack();
+      drawGantt(slack);
+    }
+  });
 })();
 </script>
 </body>
