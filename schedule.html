@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260724D -->
+<!-- BUILD: schedule (工程表) v20260724E -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -33,6 +33,7 @@ body > header.bar{ flex:0 0 auto; }
 .tabs button.on{ background:var(--ink); color:#fff; }
 .tabs button:focus-visible{ outline:3px solid var(--safety); outline-offset:-3px; }
 #zoom button{ min-width:44px; padding:0 10px; font-family:var(--mono); font-size:14px; }
+#notebtn.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
 #zoom button#z_fit{ font-family:var(--body); font-size:12.5px; }
 
 .legend{ display:flex; gap:12px; font-size:11.5px; color:var(--sub); flex-wrap:wrap; }
@@ -139,6 +140,66 @@ body > header.bar{ flex:0 0 auto; }
 .b-suspended  { background:var(--alert); }
 .bar2.crit{ border-color:#111; box-shadow:0 0 0 1.5px rgba(0,0,0,.2); }
 
+/* ---------- 発注の付箋（図面の注記のように置く） ---------- */
+.gtable{ position:relative; }
+.olay{ position:absolute; inset:0; pointer-events:none; z-index:6; }
+.olay svg{ position:absolute; left:0; top:0; overflow:visible; }
+
+.onote{
+  position:absolute; pointer-events:auto; cursor:grab;
+  display:flex; align-items:stretch; min-width:0; max-width:196px;
+  background:var(--card); border:1px solid var(--ink);
+  border-radius:2px; box-shadow:0 1px 3px rgba(22,50,79,.22);
+  font-family:var(--body); text-align:left; padding:0;
+  touch-action:none;
+}
+.onote:active{ cursor:grabbing; }
+.onote.drag{ box-shadow:0 4px 12px rgba(22,50,79,.35); z-index:20; }
+.onote:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
+.onote .bar3{ width:5px; flex:0 0 5px; background:var(--alert); }
+.onote.inr .bar3{ background:var(--ink-2); }
+.onote.done .bar3{ background:var(--ok); }
+.onote .txt{ padding:3px 7px; min-width:0; overflow:hidden; }
+.onote .t1{
+  display:block; font-family:var(--disp); font-weight:700; font-size:11px;
+  line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.onote .t2{ display:block; font-family:var(--mono); font-size:9.5px; color:var(--sub); line-height:1.3; }
+.onote.done .t1{ text-decoration:line-through; color:var(--sub); }
+
+/* ---------- 発注の一覧 ---------- */
+.ogrp{ margin-top:12px; }
+.ogrp > .t{
+  font-family:var(--disp); font-weight:700; font-size:13px;
+  padding:3px 0 4px 9px; border-left:3px solid var(--safety); margin-bottom:6px;
+}
+.orow{
+  display:grid; grid-template-columns:52px 1fr 148px 118px;
+  align-items:center; gap:8px; background:var(--card);
+  border:1px solid var(--rule); border-radius:2px; margin-bottom:5px;
+  padding:7px 10px; cursor:pointer; text-align:left; width:100%;
+  font-family:var(--body); color:inherit; font-size:13px;
+}
+.orow:hover{ border-color:var(--ink); }
+.orow:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
+.obadge{
+  font-size:11px; font-weight:700; padding:2px 0; border-radius:2px;
+  text-align:center; border:1px solid currentColor;
+}
+.obadge.ex{ color:var(--alert); }
+.obadge.in{ color:var(--ink-2); }
+.orow .oti{ font-family:var(--disp); font-weight:700; min-width:0;
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.orow .osub{ font-size:11.5px; color:var(--sub); }
+.orow .odue{ font-family:var(--mono); font-size:12px; }
+.orow .odue.near{ color:var(--alert); font-weight:700; }
+.orow .ost{ font-size:11.5px; color:var(--sub); text-align:right; }
+.orow .ost.done{ color:var(--ok); font-weight:700; }
+@media (max-width:820px){
+  .orow{ grid-template-columns:48px 1fr; }
+  .orow .odue, .orow .ost{ grid-column:2; text-align:left; }
+}
+
 .hold{ height:100%; display:flex; align-items:center; justify-content:center; padding:24px; }
 .hold .empty{ max-width:420px; }
 
@@ -197,6 +258,7 @@ body > header.bar{ flex:0 0 auto; }
     <button id="z_fit" class="on" title="画面に合わせる">全体</button>
     <button id="z_in" title="週の幅を広げる">＋</button>
   </div>
+  <button class="btn ghost sm" id="notebtn">付箋</button>
   <button class="btn ghost sm" id="ordbtn">発注</button>
   <button class="warnbtn" id="alertbtn" hidden></button>
   <button class="btn ghost sm" id="guidebtn" hidden>見方</button>
@@ -506,6 +568,8 @@ body > header.bar{ flex:0 0 auto; }
 
   paintBar(me, await loadOrgName(me.organization_id));
   $('out').addEventListener('click', signOut);
+
+  $('notebtn').classList.add('on');
 
   for (const [k,v] of Object.entries(PH_STATUS))
     $('f_status').insertAdjacentHTML('beforeend', `<option value="${k}">${v}</option>`);
@@ -828,34 +892,162 @@ body > header.bar{ flex:0 0 auto; }
              `style="grid-row:${r+2};grid-column:3 / 4;background:transparent;color:var(--sub);border:1px dashed var(--rule)">日程未設定</button>`;
       }
 
-      // 発注の印（期限のある週に置く）
-      const mine = orders.filter(o => o.phase_id === p.id && o.due_date && o.status !== 'cancelled');
-      const byWeek = {};
-      mine.forEach(o => {
-        const wi = wIdx(d2n(o.due_date));
-        if (wi < 0 || wi >= W) return;
-        (byWeek[wi] ||= []).push(o);
-      });
-      Object.entries(byWeek).forEach(([wi, list]) => {
-        const ex   = list.some(o => o.scope === 'external');
-        const done = list.every(o => o.status !== 'planned');
-        const cls  = 'omk' + (ex ? '' : ' inr') + (done ? ' done' : '');
-        const tip  = list.map(o =>
-          `${o.scope === 'external' ? '社外' : '社内'}／${o.title}／${fmtDate(o.due_date)}`).join('\n');
-        h += `<button class="${cls}" data-ph="${p.id}" title="${esc(tip)}" ` +
-             `style="grid-row:${r+2};grid-column:${Number(wi)+3}">` +
-             `<span class="tri"></span>` +
-             (list.length > 1 ? `<span class="cnt">${list.length}</span>` : '') +
-             `</button>`;
-      });
     });
 
+    h += `<div class="olay"><svg id="olines"></svg><div id="onotes"></div></div>`;
     h += `</div>`;
     $('gantt').innerHTML = h;
     $('gantt').querySelectorAll('.bar2').forEach(b =>
       b.addEventListener('click', () => openPanel(phases.find(x => x.id === b.dataset.id))));
-    $('gantt').querySelectorAll('.omk').forEach(b =>
-      b.addEventListener('click', e => { e.stopPropagation(); openOrders(b.dataset.ph); }));
+    layoutNotes(W, N);
+  }
+
+  /* ---- 発注の付箋と引き出し線 ---- */
+  let showNotes = true;
+
+  function layoutNotes(W, N){
+    const tbl = $('gantt').querySelector('.gtable');
+    const lay = $('gantt').querySelector('.olay');
+    if (!tbl || !lay) return;
+
+    const box = $('onotes'), svg = $('olines');
+    if (!showNotes){ box.innerHTML = ''; svg.innerHTML = ''; return; }
+
+    // 対象の点を測る：列は縦の区切り、行は横の区切りから
+    const cols = [...tbl.querySelectorAll('.gstripe')];
+    const rows = [...tbl.querySelectorAll('.grule')];
+    if (!cols.length || !rows.length) return;
+
+    const w0 = monday(n2d(Math.min(...phases.map(p => d2n(p.start_date)).filter(Boolean))));
+    const wIdx2 = n => Math.floor((n2d(n) - w0) / (7*DAY));
+
+    const target = orders.filter(o => o.due_date && o.status !== 'cancelled');
+    const anchors = {};
+
+    let html = '';
+    target.forEach((o, i) => {
+      const wi = wIdx2(d2n(o.due_date));
+      if (wi < 0 || wi >= W) return;
+      const ri = o.phase_id ? phases.findIndex(p => p.id === o.phase_id) : -1;
+      const col = cols[wi];
+      const row = rows[ri >= 0 ? ri : 0];
+      if (!col || !row) return;
+
+      const ax = col.offsetLeft + col.offsetWidth / 2;
+      const ay = row.offsetTop + row.offsetHeight / 2;
+
+      // 置き場所：覚えていればその位置、無ければ右上へ少しずらす
+      const dx = (o.note_dx !== null && o.note_dx !== undefined) ? o.note_dx : 30;
+      const dy = (o.note_dy !== null && o.note_dy !== undefined) ? o.note_dy : -34 - (i % 3) * 8;
+
+      anchors[o.id] = { ax, ay, dx, dy };
+
+      const cls = 'onote' + (o.scope === 'internal' ? ' inr' : '') +
+                  (o.status !== 'planned' ? ' done' : '');
+      html += `<button class="${cls}" data-id="${o.id}" title="${esc(o.title)}／${fmtDate(o.due_date)}">
+        <span class="bar3"></span>
+        <span class="txt"><span class="t1">${esc(o.title)}</span>
+          <span class="t2">${fmtDate(o.due_date).slice(5)}</span></span>
+      </button>`;
+    });
+
+    box.innerHTML = html;
+    svg.setAttribute('width', tbl.scrollWidth);
+    svg.setAttribute('height', tbl.scrollHeight);
+
+    // 位置を当てる
+    box.querySelectorAll('.onote').forEach(el => {
+      const a = anchors[el.dataset.id];
+      if (!a) return;
+      el.style.left = (a.ax + a.dx) + 'px';
+      el.style.top  = (a.ay + a.dy) + 'px';
+    });
+
+    drawLines(anchors);
+    bindNoteDrag(anchors);
+  }
+
+  // 引き出し線：水平と垂直だけで結ぶ
+  function drawLines(anchors){
+    const svg = $('olines'), box = $('onotes');
+    if (!svg || !box) return;
+    let s2 = '';
+    box.querySelectorAll('.onote').forEach(el => {
+      const a = anchors[el.dataset.id];
+      if (!a) return;
+      const w = el.offsetWidth, h = el.offsetHeight;
+      const cx = el.offsetLeft + w/2, cy = el.offsetTop + h/2;
+      const vx = cx - a.ax, vy = cy - a.ay;
+
+      let pts;
+      if (Math.abs(vy) >= Math.abs(vx)){
+        // 上下に離れている → 付箋の上辺か下辺へ
+        const ty = cy + (vy > 0 ? -h/2 : h/2);
+        pts = [[a.ax, a.ay], [cx, a.ay], [cx, ty]];
+      } else {
+        // 左右に離れている → 付箋の左辺か右辺へ
+        const tx = cx + (vx > 0 ? -w/2 : w/2);
+        pts = [[a.ax, a.ay], [a.ax, cy], [tx, cy]];
+      }
+      const d = pts.map(q => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' ');
+      s2 += `<polyline points="${d}" fill="none" stroke="#A83A2C" stroke-width="1.2" ` +
+            `stroke-dasharray="4 3" stroke-linejoin="miter"/>`;
+      s2 += `<circle cx="${a.ax.toFixed(1)}" cy="${a.ay.toFixed(1)}" r="3" fill="#A83A2C"/>`;
+    });
+    svg.innerHTML = s2;
+  }
+
+  // 付箋を動かす
+  let saveTimer = null;
+  function bindNoteDrag(anchors){
+    const box = $('onotes');
+    box.querySelectorAll('.onote').forEach(el => {
+      let sx=0, sy=0, ox=0, oy=0, moved=false;
+
+      el.addEventListener('pointerdown', e => {
+        if (!canEdit) return;
+        e.preventDefault();
+        el.setPointerCapture(e.pointerId);
+        el.classList.add('drag');
+        sx = e.clientX; sy = e.clientY;
+        ox = el.offsetLeft; oy = el.offsetTop;
+        moved = false;
+      });
+
+      el.addEventListener('pointermove', e => {
+        if (!el.classList.contains('drag')) return;
+        const mx = e.clientX - sx, my = e.clientY - sy;
+        if (Math.abs(mx) > 2 || Math.abs(my) > 2) moved = true;
+        el.style.left = (ox + mx) + 'px';
+        el.style.top  = (oy + my) + 'px';
+        drawLines(anchors);
+      });
+
+      const finish = e => {
+        if (!el.classList.contains('drag')) return;
+        el.classList.remove('drag');
+        try { el.releasePointerCapture(e.pointerId); } catch(err){}
+        if (!moved) return;
+        const a = anchors[el.dataset.id];
+        if (!a) return;
+        a.dx = Math.round(el.offsetLeft - a.ax);
+        a.dy = Math.round(el.offsetTop  - a.ay);
+        const o = orders.find(x => x.id === el.dataset.id);
+        if (o){ o.note_dx = a.dx; o.note_dy = a.dy; }
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(async () => {
+          await sb.from('phase_orders')
+            .update({ note_dx: a.dx, note_dy: a.dy }).eq('id', el.dataset.id);
+        }, 600);
+      };
+      el.addEventListener('pointerup', finish);
+      el.addEventListener('pointercancel', finish);
+
+      el.addEventListener('click', e => {
+        if (moved){ e.preventDefault(); return; }
+        openOrderEdit(orders.find(x => x.id === el.dataset.id));
+      });
+    });
   }
 
   /* ---- ネットワーク：画面に収める ---- */
@@ -1008,6 +1200,12 @@ body > header.bar{ flex:0 0 auto; }
     $('opanel').classList.add('open');
   }
   $('ordbtn').addEventListener('click', () => openOrders(null));
+
+  $('notebtn').addEventListener('click', () => {
+    showNotes = !showNotes;
+    $('notebtn').classList.toggle('on', showNotes);
+    redrawGantt();
+  });
   $('oclose').addEventListener('click', () => $('opanel').classList.remove('open'));
 
   function openOrderEdit(o){
@@ -1108,6 +1306,7 @@ body > header.bar{ flex:0 0 auto; }
     $('gantt').hidden  = (v !== 'gantt');
     $('network').hidden = (v !== 'net');
     $('zoom').hidden = (v !== 'gantt');
+    $('notebtn').hidden = (v !== 'gantt');
     $('guidebtn').hidden = !(phases.length && v === 'net');
     if (v !== 'net'){ $('guidebox').hidden = true; }
     if (v === 'gantt' && phases.length){
