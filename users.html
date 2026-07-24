@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: users (利用者) v20260724F -->
+<!-- BUILD: users (利用者) v20260724G -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -207,7 +207,10 @@
 
       <div class="sh">決裁権</div>
       <span class="k">決裁の上限</span>
-      <span class="dv r"><span class="yen">¥</span><input id="f_lim" class="money" type="text" inputmode="numeric" placeholder="0"><span class="u2">税抜</span></span>
+      <span class="dv r">
+        <label class="chk"><input id="f_unl" type="checkbox">上限なし</label>
+        <span class="yen">¥</span><input id="f_lim" class="money" type="text" inputmode="numeric" placeholder="0" style="flex:1 1 110px"><span class="u2">税抜</span>
+      </span>
       <span class="k">日給・時給</span>
       <span class="dv"><span class="yen">¥</span><input id="f_rate" class="money" type="text" inputmode="numeric" placeholder="0">
         <select id="f_ratet" style="flex:0 0 88px"><option value="daily">日給</option><option value="hourly">時給</option></select></span>
@@ -215,6 +218,7 @@
       <div class="full">
         <p class="tip">
           <b>決裁の上限</b>は、この人が承認できる金額です。空または0なら決裁権はありません。<br>
+          金額の制限を設けない場合は「上限なし」に印を付けてください。<br>
           <b>日給・時給</b>は本人と経営者だけが見られます。現場監督にも見えません。
         </p>
       </div>
@@ -366,8 +370,9 @@
       if (EMP[u.employee_type]) meta.push(EMP[u.employee_type]);
       if (u.email) meta.push(esc(u.email));
 
-      const lim = Number(u.approve_limit) > 0
-        ? `<span class="lim">決裁 ${fmtMoney(u.approve_limit)}</span>` : '';
+      const lim = u.approve_unlimited
+        ? `<span class="lim">決裁 上限なし</span>`
+        : (Number(u.approve_limit) > 0 ? `<span class="lim">決裁 ${fmtMoney(u.approve_limit)}</span>` : '');
 
       return `<button class="item" data-id="${u.id}" style="${u.is_active ? '' : 'opacity:.6'}">
         <span class="flag ${u.role === 'admin' ? 'fl-cancelled' : (u.role === 'manager' ? 'fl-started' : 'fl-estimate')}"></span>
@@ -451,7 +456,9 @@
     $('f_title').value = g('title','');
     $('f_role').value  = g('role','member');
     $('f_sup').value   = g('supervisor_user_id','') || '';
+    $('f_unl').checked = !!g('approve_unlimited', false);
     setMoney($('f_lim'), g('approve_limit',''));
+    $('f_lim').disabled = $('f_unl').checked;
     $('f_uid').value   = g('auth_user_id','') || '';
     $('f_note').value  = g('note','');
 
@@ -469,6 +476,7 @@
 
     document.querySelectorAll('#panel input, #panel select, #panel textarea')
       .forEach(el => el.disabled = !isAdmin);
+    if (isAdmin) $('f_lim').disabled = $('f_unl').checked;
     $('pdock').style.display = isAdmin ? '' : 'none';
     $('del').hidden = !(u && isAdmin && u.id !== me.id);
 
@@ -525,7 +533,9 @@
       title           : $('f_title').value.trim() || null,
       role            : $('f_role').value,
       supervisor_user_id: $('f_sup').value || null,
-      approve_limit   : digits($('f_lim')) === '' ? null : Number(digits($('f_lim'))),
+      approve_unlimited: $('f_unl').checked,
+      approve_limit   : $('f_unl').checked ? null
+                        : (digits($('f_lim')) === '' ? null : Number(digits($('f_lim')))),
       auth_user_id    : uid || null,
       note            : $('f_note').value.trim() || null
     };
@@ -582,6 +592,12 @@
     $('panel').classList.remove('open'); editing = null;
     await load();
     showMsg($('msg'), '削除しました。', 'ok');
+  });
+
+  /* ================= 上限なしの印 ================= */
+  $('f_unl').addEventListener('change', () => {
+    $('f_lim').disabled = $('f_unl').checked;
+    if ($('f_unl').checked) $('f_lim').value = '';
   });
 
   /* ================= 社外の印で所属先を促す ================= */
