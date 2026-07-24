@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260723J -->
+<!-- BUILD: schedule (工程表) v20260724D -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -197,6 +197,7 @@ body > header.bar{ flex:0 0 auto; }
     <button id="z_fit" class="on" title="画面に合わせる">全体</button>
     <button id="z_in" title="週の幅を広げる">＋</button>
   </div>
+  <button class="btn ghost sm" id="ordbtn">発注</button>
   <button class="warnbtn" id="alertbtn" hidden></button>
   <button class="btn ghost sm" id="guidebtn" hidden>見方</button>
   <span class="sp"></span>
@@ -244,6 +245,116 @@ body > header.bar{ flex:0 0 auto; }
 
 <div class="dock" id="dock" hidden>
   <div class="inner"><button class="btn wide" id="add">工程を追加する</button></div>
+</div>
+
+<!-- ========== 発注・依頼 ========== -->
+<div class="panel" id="opanel">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1>発注・依頼</h1>
+    <button class="btn ghost sm barbtn" id="oadd" hidden>追加</button>
+    <button class="btn ghost sm barbtn" id="oclose">閉じる</button>
+  </header>
+  <div class="wrap">
+    <div id="omsg" class="msg"></div>
+    <div id="olist"></div>
+  </div>
+</div>
+
+<!-- ========== 発注の編集 ========== -->
+<div class="panel" id="oedit">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1 id="oettl">発注・依頼</h1>
+    <button class="btn ghost sm barbtn" id="oeclose">閉じる</button>
+  </header>
+  <div class="wrap">
+    <div id="oemsg" class="msg"></div>
+
+    <div class="sheet">
+      <div class="head">何を出すか</div>
+      <div class="row">
+        <label for="o_scope">区分</label>
+        <div class="fld"><select id="o_scope">
+          <option value="external">社外への発注</option>
+          <option value="internal">社内への依頼</option>
+        </select></div>
+      </div>
+      <div class="row">
+        <label for="o_title">内容<span class="req">*</span></label>
+        <div class="fld"><input id="o_title" type="text" placeholder="側溝二次製品の発注 など"></div>
+      </div>
+      <div class="row">
+        <label for="o_phase">関わる工程</label>
+        <div class="fld"><select id="o_phase"></select></div>
+      </div>
+      <div class="row">
+        <label for="o_partner">発注先</label>
+        <div class="fld"><select id="o_partner"></select></div>
+      </div>
+      <div class="row">
+        <label for="o_user">担当者</label>
+        <div class="fld"><select id="o_user"></select></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">いつまでに出すか</div>
+      <div class="row">
+        <label for="o_due">期限</label>
+        <div class="fld"><input id="o_due" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="o_note2">時期の目安</label>
+        <div class="fld"><input id="o_note2" type="text" placeholder="日付が未定のとき：外構に着手する1か月前 など"></div>
+      </div>
+      <div class="row">
+        <label for="o_lead">届くまで</label>
+        <div class="fld"><input id="o_lead" type="number" min="0" step="1" placeholder="0"><span style="font-size:13px;color:var(--sub)">日</span></div>
+      </div>
+      <div class="row">
+        <label for="o_alert">知らせ始め</label>
+        <div class="fld"><input id="o_alert" type="number" min="0" step="1" placeholder="14"><span style="font-size:13px;color:var(--sub)">日前から</span></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">進み具合</div>
+      <div class="row">
+        <label for="o_status">状態</label>
+        <div class="fld"><select id="o_status">
+          <option value="planned">これから出す</option>
+          <option value="ordered">発注済み</option>
+          <option value="delivered">届いた・完了</option>
+          <option value="cancelled">取りやめ</option>
+        </select></div>
+      </div>
+      <div class="row">
+        <label for="o_odate">発注した日</label>
+        <div class="fld"><input id="o_odate" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="o_ddate">届いた日</label>
+        <div class="fld"><input id="o_ddate" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="o_note">備考</label>
+        <div class="fld"><textarea id="o_note"></textarea></div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <button class="btn danger" id="odel" hidden>この発注を削除する</button>
+  </div>
+
+  <div class="dock" id="oedock">
+    <div class="inner">
+      <span style="flex:1 1 auto"></span>
+      <button class="btn" id="osave" style="min-width:160px">保存する</button>
+    </div>
+  </div>
 </div>
 
 <!-- ========== 工程の詳細 ========== -->
@@ -400,7 +511,8 @@ body > header.bar{ flex:0 0 auto; }
     $('f_status').insertAdjacentHTML('beforeend', `<option value="${k}">${v}</option>`);
 
   let cats = [], wts = [], partners = [], users = [], projects = [];
-  let projId = null, phases = [], deps = [], editing = null, view = 'gantt';
+  let projId = null, phases = [], deps = [], orders = [], editing = null, view = 'gantt';
+  let oediting = null;
   let zoomW = null;          // 週の幅（px）。null なら画面に合わせる
 
   /* ================= 読み込み ================= */
@@ -470,14 +582,22 @@ body > header.bar{ flex:0 0 auto; }
   }
 
   async function loadPhases(){
-    if (!projId){ phases = []; deps = []; draw(); return; }
-    const [a, b] = await Promise.all([
+    if (!projId){ phases = []; deps = []; orders = []; draw(); return; }
+    const [a, b, c] = await Promise.all([
       sb.from('project_phases').select('*').eq('project_id', projId).eq('is_active', true).order('seq'),
-      sb.from('phase_dependencies').select('*').eq('project_id', projId)
+      sb.from('phase_dependencies').select('*').eq('project_id', projId),
+      sb.from('phase_orders').select('*').eq('project_id', projId).eq('is_active', true).order('seq')
     ]);
     if (a.error){ showMsg($('msg'), '工程を読み込めませんでした。' + a.error.message, 'err'); return; }
+    if (c.error){
+      showMsg($('msg'),
+        /relation .* does not exist|schema cache/i.test(c.error.message || '')
+          ? 'データベースに発注の表がまだありません。Supabase の SQL Editor で phase_orders.sql を実行してください。'
+          : '発注を読み込めませんでした。' + c.error.message, 'err');
+    }
     phases = a.data || [];
     deps   = b.data || [];
+    orders = c.data || [];
     draw();
   }
 
@@ -603,9 +723,11 @@ body > header.bar{ flex:0 0 auto; }
 
   function drawAlert(){
     const today = Math.round(Date.now() / DAY);
-    const hit = phases.filter(p =>
-      !p.ordered_at && p.order_deadline &&
-      (d2n(p.order_deadline) - today) <= (p.order_alert_days ?? 7));
+    const hit = orders.filter(o =>
+      o.status === 'planned' && o.due_date &&
+      (d2n(o.due_date) - today) <= (o.alert_days ?? 14));
+
+    $('ordbtn').innerHTML = orders.length ? `発注 <b>${orders.length}</b>` : '発注';
 
     if (!hit.length){
       $('alertbtn').hidden = true;
@@ -615,13 +737,18 @@ body > header.bar{ flex:0 0 auto; }
     }
 
     const umap = Object.fromEntries(users.map(u => [u.id, u.name]));
+    const pmap = Object.fromEntries(phases.map(p => [p.id, p.name]));
+    hit.sort((a,b) => (a.due_date || '').localeCompare(b.due_date || ''));
+
     $('alertbtn').hidden = false;
     $('alertbtn').innerHTML = `発注の期限 <b>${hit.length}</b>件`;
-    $('alertbox').innerHTML = hit.map(p => {
-      const left = d2n(p.order_deadline) - today;
-      const who  = umap[p.order_alert_user_id] ? ` ／ ${esc(umap[p.order_alert_user_id])}` : '';
-      const ct   = p.order_content ? `（${esc(p.order_content)}）` : '';
-      return `<div>${esc(p.name)}${ct}　${left < 0 ? `期限を${-left}日過ぎています` : `あと${left}日`}　${fmtDate(p.order_deadline)}${who}</div>`;
+    $('alertbox').innerHTML = hit.map(o => {
+      const left = d2n(o.due_date) - today;
+      const who  = umap[o.assignee_user_id] ? ` ／ ${esc(umap[o.assignee_user_id])}` : '';
+      const ph   = pmap[o.phase_id] ? `［${esc(pmap[o.phase_id])}］` : '';
+      const sc   = o.scope === 'external' ? '社外' : '社内';
+      return `<div>【${sc}】${ph}${esc(o.title)}　` +
+             `${left < 0 ? `期限を${-left}日過ぎています` : `あと${left}日`}　${fmtDate(o.due_date)}${who}</div>`;
     }).join('');
   }
 
@@ -700,12 +827,35 @@ body > header.bar{ flex:0 0 auto; }
         h += `<button class="bar2 b-${p.status}" data-id="${p.id}" ` +
              `style="grid-row:${r+2};grid-column:3 / 4;background:transparent;color:var(--sub);border:1px dashed var(--rule)">日程未設定</button>`;
       }
+
+      // 発注の印（期限のある週に置く）
+      const mine = orders.filter(o => o.phase_id === p.id && o.due_date && o.status !== 'cancelled');
+      const byWeek = {};
+      mine.forEach(o => {
+        const wi = wIdx(d2n(o.due_date));
+        if (wi < 0 || wi >= W) return;
+        (byWeek[wi] ||= []).push(o);
+      });
+      Object.entries(byWeek).forEach(([wi, list]) => {
+        const ex   = list.some(o => o.scope === 'external');
+        const done = list.every(o => o.status !== 'planned');
+        const cls  = 'omk' + (ex ? '' : ' inr') + (done ? ' done' : '');
+        const tip  = list.map(o =>
+          `${o.scope === 'external' ? '社外' : '社内'}／${o.title}／${fmtDate(o.due_date)}`).join('\n');
+        h += `<button class="${cls}" data-ph="${p.id}" title="${esc(tip)}" ` +
+             `style="grid-row:${r+2};grid-column:${Number(wi)+3}">` +
+             `<span class="tri"></span>` +
+             (list.length > 1 ? `<span class="cnt">${list.length}</span>` : '') +
+             `</button>`;
+      });
     });
 
     h += `</div>`;
     $('gantt').innerHTML = h;
     $('gantt').querySelectorAll('.bar2').forEach(b =>
       b.addEventListener('click', () => openPanel(phases.find(x => x.id === b.dataset.id))));
+    $('gantt').querySelectorAll('.omk').forEach(b =>
+      b.addEventListener('click', e => { e.stopPropagation(); openOrders(b.dataset.ph); }));
   }
 
   /* ---- ネットワーク：画面に収める ---- */
@@ -788,6 +938,167 @@ body > header.bar{ flex:0 0 auto; }
       g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
     });
   }
+
+  /* ================= 発注・依頼 ================= */
+  const OSTAT = { planned:'これから出す', ordered:'発注済み',
+                  delivered:'届いた', cancelled:'取りやめ' };
+
+  function orderRow(o, today){
+    const pmap = Object.fromEntries(phases.map(p => [p.id, p.name]));
+    const umap = Object.fromEntries(users.map(u => [u.id, u.name]));
+    const ptmap = Object.fromEntries(partners.map(x => [x.id, x.name]));
+
+    const left = o.due_date ? d2n(o.due_date) - today : null;
+    const near = (o.status === 'planned' && left !== null && left <= (o.alert_days ?? 14));
+    const due  = o.due_date
+      ? `${fmtDate(o.due_date)}${o.status === 'planned' && left !== null
+          ? `<br><span style="font-size:11px">${left < 0 ? `${-left}日超過` : `あと${left}日`}</span>` : ''}`
+      : `<span style="color:var(--sub)">${esc(o.due_note || '時期未定')}</span>`;
+
+    const sub = [];
+    if (pmap[o.phase_id]) sub.push(esc(pmap[o.phase_id]));
+    if (ptmap[o.partner_id]) sub.push(esc(ptmap[o.partner_id]));
+    if (umap[o.assignee_user_id]) sub.push('担当 ' + esc(umap[o.assignee_user_id]));
+    if (o.lead_days) sub.push(`届くまで${o.lead_days}日`);
+
+    return `<button class="orow" data-id="${o.id}">
+      <span class="obadge ${o.scope === 'external' ? 'ex' : 'in'}">${o.scope === 'external' ? '社外' : '社内'}</span>
+      <span><span class="oti">${esc(o.title)}</span>
+        <span class="osub">${sub.join(' ・ ') || '&nbsp;'}</span></span>
+      <span class="odue${near ? ' near' : ''}">${due}</span>
+      <span class="ost${o.status !== 'planned' ? ' done' : ''}">${OSTAT[o.status]}</span>
+      <span></span>
+    </button>`;
+  }
+
+  function paintOrders(focusPhase){
+    const today = Math.round(Date.now() / DAY);
+    const dated  = orders.filter(o => o.due_date).sort((a,b) => a.due_date.localeCompare(b.due_date));
+    const undate = orders.filter(o => !o.due_date);
+
+    let h = '';
+    if (!orders.length){
+      h = `<div class="empty"><b>発注・依頼がありません</b>${canEdit ? '右上の「追加」から登録してください。' : ''}</div>`;
+    } else {
+      if (dated.length)
+        h += `<div class="ogrp"><div class="t">期限が決まっているもの（${dated.length}件）</div>` +
+             dated.map(o => orderRow(o, today)).join('') + `</div>`;
+      if (undate.length)
+        h += `<div class="ogrp"><div class="t">時期が未定のもの（${undate.length}件）</div>` +
+             undate.map(o => orderRow(o, today)).join('') + `</div>`;
+    }
+    $('olist').innerHTML = h;
+    $('olist').querySelectorAll('.orow').forEach(b =>
+      b.addEventListener('click', () => openOrderEdit(orders.find(x => x.id === b.dataset.id))));
+
+    if (focusPhase){
+      const pm = phases.find(p => p.id === focusPhase);
+      showMsg($('omsg'), pm ? `「${pm.name}」に関わる発注に印を付けています。` : '', pm ? 'ok' : '');
+      $('olist').querySelectorAll('.orow').forEach(b => {
+        const o = orders.find(x => x.id === b.dataset.id);
+        if (o && o.phase_id === focusPhase) b.style.borderColor = 'var(--safety)';
+      });
+    } else showMsg($('omsg'), '');
+  }
+
+  function openOrders(focusPhase){
+    if (!projId){ showMsg($('msg'), '工事を選んでください。', 'err'); return; }
+    $('oadd').hidden = !canEdit;
+    paintOrders(focusPhase);
+    $('opanel').classList.add('open');
+  }
+  $('ordbtn').addEventListener('click', () => openOrders(null));
+  $('oclose').addEventListener('click', () => $('opanel').classList.remove('open'));
+
+  function openOrderEdit(o){
+    oediting = o || null;
+    showMsg($('oemsg'), '');
+    $('oettl').textContent = o ? '発注・依頼' : '発注・依頼の追加';
+
+    $('o_phase').innerHTML = '<option value="">（工事全体）</option>' +
+      phases.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    $('o_partner').innerHTML = '<option value="">（未設定）</option>' +
+      partners.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    $('o_user').innerHTML = '<option value="">（未設定）</option>' +
+      users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
+
+    $('o_scope').value  = o ? o.scope : 'external';
+    $('o_title').value  = o ? (o.title || '') : '';
+    $('o_phase').value  = o ? (o.phase_id || '') : '';
+    $('o_partner').value= o ? (o.partner_id || '') : '';
+    $('o_user').value   = o ? (o.assignee_user_id || '') : '';
+    $('o_due').value    = o ? (o.due_date || '') : '';
+    $('o_note2').value  = o ? (o.due_note || '') : '';
+    $('o_lead').value   = o && o.lead_days ? o.lead_days : '';
+    $('o_alert').value  = o ? (o.alert_days ?? 14) : 14;
+    $('o_status').value = o ? o.status : 'planned';
+    $('o_odate').value  = o ? (o.ordered_on || '') : '';
+    $('o_ddate').value  = o ? (o.delivered_on || '') : '';
+    $('o_note').value   = o ? (o.note || '') : '';
+
+    document.querySelectorAll('#oedit input, #oedit select, #oedit textarea')
+      .forEach(el => el.disabled = !canEdit);
+    $('oedock').style.display = canEdit ? '' : 'none';
+    $('odel').hidden = !(o && canEdit);
+
+    $('oedit').classList.add('open');
+    const w = $('oedit').querySelector('.wrap');
+    if (w) w.scrollTop = 0;
+  }
+  $('oadd').addEventListener('click', () => openOrderEdit(null));
+  $('oeclose').addEventListener('click', () => $('oedit').classList.remove('open'));
+
+  $('osave').addEventListener('click', async () => {
+    showMsg($('oemsg'), '');
+    const t = $('o_title').value.trim();
+    if (!t){ showMsg($('oemsg'), '内容を入れてください。', 'err'); $('o_title').focus(); return; }
+
+    const body = {
+      organization_id : me.organization_id,
+      project_id      : projId,
+      phase_id        : $('o_phase').value || null,
+      scope           : $('o_scope').value,
+      title           : t,
+      partner_id      : $('o_partner').value || null,
+      assignee_user_id: $('o_user').value || null,
+      due_date        : $('o_due').value || null,
+      due_note        : $('o_note2').value.trim() || null,
+      lead_days       : $('o_lead').value === '' ? null : Number($('o_lead').value),
+      alert_days      : $('o_alert').value === '' ? 14 : Number($('o_alert').value),
+      status          : $('o_status').value,
+      ordered_on      : $('o_odate').value || null,
+      delivered_on    : $('o_ddate').value || null,
+      note            : $('o_note').value.trim() || null
+    };
+    if (!oediting) body.seq = (orders.length ? Math.max(...orders.map(o => o.seq||0)) : 0) + 10;
+
+    $('osave').disabled = true; $('osave').textContent = '保存しています…';
+    let error;
+    if (oediting) ({ error } = await sb.from('phase_orders').update(body).eq('id', oediting.id));
+    else          ({ error } = await sb.from('phase_orders').insert(body));
+    $('osave').disabled = false; $('osave').textContent = '保存する';
+
+    if (error){
+      showMsg($('oemsg'), error.code === '42501'
+        ? 'この操作を行う権限がありません。' : '保存できませんでした。' + error.message, 'err');
+      return;
+    }
+    $('oedit').classList.remove('open');
+    await loadPhases();
+    paintOrders(null);
+    showMsg($('omsg'), '保存しました。', 'ok');
+  });
+
+  $('odel').addEventListener('click', async () => {
+    if (!oediting) return;
+    if (!confirm(`「${oediting.title}」を削除します。取り消せません。`)) return;
+    const { error } = await sb.from('phase_orders').delete().eq('id', oediting.id);
+    if (error){ showMsg($('oemsg'), '削除できませんでした。' + error.message, 'err'); return; }
+    $('oedit').classList.remove('open');
+    await loadPhases();
+    paintOrders(null);
+    showMsg($('omsg'), '削除しました。', 'ok');
+  });
 
   /* ================= 切替 ================= */
   function setView(v){

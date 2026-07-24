@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: calendar (カレンダー) v20260724C -->
+<!-- BUILD: calendar (カレンダー) v20260724D -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -79,6 +79,8 @@
   .ev.k-ph.s-suspended{ background:var(--alert); }
   .ev.k-ph.crit{ border-color:#111; }
   .ev.k-ord{ background:#FBF1EF; color:#7A2A20; border-color:var(--alert); }
+  .ev.k-req{ background:#EEF3F8; color:#1F4463; border-color:var(--ink-2); }
+  .ev.done{ opacity:.55; text-decoration:line-through; }
   .ev.k-st{ background:#E6F0F8; color:#16324F; border-color:var(--ink-2); }
   .ev.k-end{ background:#EFF5F1; color:#1D4F38; border-color:var(--ok); }
   .evmore{ font-size:10px; color:var(--sub); padding:1px 5px; }
@@ -135,7 +137,8 @@
     <span><i style="background:#8A938C"></i>未着手</span>
     <span><i style="background:#D99A00"></i>着手中</span>
     <span><i style="background:#2F6B4F"></i>完了</span>
-    <span><i style="background:#FBF1EF;border:1px solid #A83A2C"></i>発注期限</span>
+    <span><i style="background:#FBF1EF;border:1px solid #A83A2C"></i>社外発注</span>
+    <span><i style="background:#EEF3F8;border:1px solid #2E5C86"></i>社内依頼</span>
     <span><i style="background:#E6F0F8;border:1px solid #2E5C86"></i>着工</span>
     <span><i style="background:#EFF5F1;border:1px solid #2F6B4F"></i>完成予定</span>
   </div>
@@ -170,7 +173,7 @@
   paintBar(me, await loadOrgName(me.organization_id));
   $('out').addEventListener('click', signOut);
 
-  let projects = [], users = [], phases = [], deps = [];
+  let projects = [], users = [], phases = [], orders = [];
   let cur = new Date(); cur.setDate(1); cur.setHours(0,0,0,0);
 
   /* ================= 日付の道具 ================= */
@@ -207,13 +210,23 @@
     const a = new Date(cur); a.setMonth(a.getMonth() - 1);
     const b = new Date(cur); b.setMonth(b.getMonth() + 2);
 
-    const { data, error } = await sb.from('project_phases')
-      .select('id,project_id,name,start_date,end_date,status,planned_mandays,order_deadline,order_alert_days,order_content,ordered_at,cost_category_id')
-      .eq('is_active', true)
-      .or(`and(start_date.lte.${iso(b)},end_date.gte.${iso(a)}),order_deadline.gte.${iso(a)}`);
+    const [ph, od] = await Promise.all([
+      sb.from('project_phases')
+        .select('id,project_id,name,start_date,end_date,status,planned_mandays')
+        .eq('is_active', true)
+        .lte('start_date', iso(b)).gte('end_date', iso(a)),
+      sb.from('phase_orders')
+        .select('id,project_id,phase_id,scope,title,due_date,status,assignee_user_id,alert_days')
+        .eq('is_active', true).neq('status', 'cancelled')
+        .gte('due_date', iso(a)).lte('due_date', iso(b))
+    ]);
 
-    if (error){ showMsg($('msg'), '工程を読み込めませんでした。' + error.message, 'err'); return; }
-    phases = data || [];
+    if (ph.error){ showMsg($('msg'), '工程を読み込めませんでした。' + ph.error.message, 'err'); return; }
+    if (od.error && !/relation .* does not exist|schema cache/i.test(od.error.message || ''))
+      showMsg($('msg'), '発注を読み込めませんでした。' + od.error.message, 'err');
+
+    phases = ph.data || [];
+    orders = od.data || [];
     draw();
   }
 
@@ -237,16 +250,25 @@
         md:Number(ph.planned_mandays)||0
       });
 
-      // 発注の期限
-      if (ph.order_deadline && !ph.ordered_at){
-        const n = d2n(ph.order_deadline);
-        ev.push({
-          from:n, to:n, kind:'ord',
-          label:`発注期限 ${ph.name}`,
-          sub:`${pj.project_no} ${ph.order_content || ''}`.trim(),
-          projectId:ph.project_id
-        });
-      }
+    });
+
+    // 発注・依頼（担当者で絞る）
+    const phmap = Object.fromEntries(phases.map(x => [x.id, x.name]));
+    orders.forEach(o => {
+      const pj = pmap[o.project_id];
+      if (!pj || !o.due_date) return;
+      if (pp && o.project_id !== pp) return;
+      // 担当者が指定されていればその人、いなければ工事の現場担当で絞る
+      if (pu && (o.assignee_user_id ? o.assignee_user_id !== pu : pj.manager_user_id !== pu)) return;
+      const n = d2n(o.due_date);
+      ev.push({
+        from:n, to:n,
+        kind: o.scope === 'external' ? 'ord' : 'req',
+        label:`${o.scope === 'external' ? '発注' : '依頼'} ${o.title}`,
+        sub:`${pj.project_no}${phmap[o.phase_id] ? ' ／ ' + phmap[o.phase_id] : ''}`,
+        projectId:o.project_id,
+        done: o.status !== 'planned'
+      });
     });
 
     // 工事の着工日と完成予定
@@ -292,7 +314,10 @@
         const cls = [ 'cell', out ? 'out' : '', n === todayN ? 'today' : '' ].filter(Boolean).join(' ');
 
         const list = ev.filter(x => n >= x.from && n <= x.to)
-                       .sort((a,b) => (a.kind === b.kind) ? 0 : (a.kind === 'ord' ? -1 : 1));
+                       .sort((a,b) => {
+                         const w = k => (k === 'ord' ? 0 : k === 'req' ? 1 : k === 'st' ? 2 : k === 'end' ? 3 : 4);
+                         return w(a.kind) - w(b.kind);
+                       });
         const show = list.slice(0, 4);
 
         h += `<div class="${cls}" data-n="${n}">` +
@@ -301,7 +326,7 @@
           `<div class="evs">` +
           show.map((x,i) => {
             const first2 = (n === x.from);
-            const kls = `ev k-${x.kind}` + (x.kind === 'ph' ? ` s-${x.status}` : '');
+            const kls = `ev k-${x.kind}` + (x.kind === 'ph' ? ` s-${x.status}` : '') + (x.done ? ' done' : '');
             const txt = (x.kind === 'ph' && !first2) ? `　${esc(x.label)}` : esc(x.label);
             return `<button class="${kls}" data-n="${n}" title="${esc(x.label)}／${esc(x.sub)}">${txt}</button>`;
           }).join('') +
@@ -326,11 +351,11 @@
 
     $('dpttl').textContent = `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日（${wd}）　${list.length}件`;
 
-    const KIND = { ph:'工程', ord:'発注期限', st:'着工', end:'完成予定' };
+    const KIND = { ph:'工程', ord:'社外発注', req:'社内依頼', st:'着工', end:'完成予定' };
     $('dplist').innerHTML = list.length ? list.map(x => {
       const col = x.kind === 'ph'
         ? ({ not_started:'#8A938C', in_progress:'#D99A00', done:'#2F6B4F', suspended:'#A83A2C' }[x.status] || '#8A938C')
-        : ({ ord:'#A83A2C', st:'#2E5C86', end:'#2F6B4F' }[x.kind]);
+        : ({ ord:'#A83A2C', req:'#2E5C86', st:'#2E5C86', end:'#2F6B4F' }[x.kind]);
       const span = (x.from !== x.to)
         ? `${fmtDate(new Date(x.from*DAY).toISOString().slice(0,10))} 〜 ${fmtDate(new Date(x.to*DAY).toISOString().slice(0,10))}`
         : '';
