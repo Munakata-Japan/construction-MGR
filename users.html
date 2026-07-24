@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<!-- BUILD: users (利用者) v20260724F -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>利用者 ｜ 建設統合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  .ctl select{ width:auto; min-width:150px; min-height:44px; flex:0 1 auto; }
+  .ctl input[type=text]{ width:auto; flex:1 1 180px; min-width:0; min-height:44px; }
+  .ctl .sp{ flex:1 1 0; }
+
+  .kb{ font-size:11px; font-weight:700; padding:2px 7px; border-radius:2px;
+       border:1px solid currentColor; white-space:nowrap; }
+  .kb.ad{ color:var(--alert); }
+  .kb.mg{ color:#9A6E00; }
+  .kb.mb{ color:var(--sub); }
+  .kb.ex{ color:var(--ink-2); background:#EEF3F8; }
+  .kb.nl{ color:#9AA39C; }
+  .item .kbs{ display:flex; gap:5px; flex-wrap:wrap; margin-top:3px; }
+  .item .side .lim{ font-family:var(--mono); font-size:12px; color:var(--sub); }
+
+  /* 編集 */
+  #panel{ display:none; flex-direction:column; overflow:hidden; }
+  #panel.open{ display:flex; }
+  #panel > header.bar{ flex:0 0 auto; }
+  #panel > .wrap{ flex:1 1 auto; min-height:0; overflow:auto; display:flex;
+                  max-width:none !important; width:100%; padding:14px clamp(10px,2vw,22px) 16px; }
+  #panel > .dock{ position:static; flex:0 0 auto; backdrop-filter:none; background:var(--paper); }
+  #panel > .dock .inner{ max-width:1280px; margin:0 auto; align-items:center; gap:14px;
+                         padding:0 clamp(10px,2vw,22px); }
+  #panel > .dock .hintl{ flex:1 1 auto; font-size:12px; color:var(--sub); }
+  #panel > .dock .btn{ flex:0 0 auto; min-width:168px; }
+  #pdoc{ margin:auto; width:100%; max-width:1280px; }
+
+  .docform{
+    background:var(--card); border:1px solid var(--rule); border-radius:2px;
+    display:grid; grid-template-columns:112px minmax(0,1fr) 112px minmax(0,1fr);
+  }
+  .docform > .sh{
+    grid-column:1 / -1; background:#E3E6E0; color:var(--ink);
+    font-family:var(--disp); font-weight:700; font-size:11.5px; letter-spacing:.06em;
+    padding:5px 12px; border-bottom:1px solid var(--rule);
+    box-shadow:inset 4px 0 0 var(--safety);
+  }
+  .docform > .k{
+    background:#F1F3EF; padding:5px 9px; font-size:11.5px; font-weight:700;
+    color:var(--sub); border-right:1px solid var(--rule-2);
+    border-bottom:1px solid var(--rule-2); display:flex; align-items:center; line-height:1.3;
+  }
+  .docform > .k .req{ color:var(--alert); margin-left:3px; }
+  .docform > .dv{
+    padding:3px 7px; border-bottom:1px solid var(--rule-2); min-width:0;
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  }
+  .docform > .dv.r{ border-right:1px solid var(--rule-2); }
+  .docform > .full{ grid-column:1 / -1; padding:8px 11px; border-bottom:1px solid var(--rule-2); }
+  .docform input[type=text], .docform input[type=date], .docform select{
+    min-height:32px; padding:3px 8px; font-size:13.5px; width:100%; min-width:0; }
+  .docform textarea{ min-height:52px; padding:5px 8px; font-size:13.5px; }
+  .docform .u2{ font-size:11.5px; color:var(--sub); white-space:nowrap; }
+  .docform .yen{ font-family:var(--mono); font-size:14px; color:var(--sub); flex:0 0 auto; }
+  .docform input.money{ font-family:var(--mono); text-align:right; }
+
+  .chk{ display:flex; align-items:center; gap:5px; font-size:12.5px; white-space:nowrap; }
+  .chk input{ width:19px; height:19px; min-height:19px; flex:0 0 19px; margin:0; }
+
+  .tip{ font-size:12px; color:var(--sub); line-height:1.7; }
+  .tip b{ color:var(--ink); }
+
+  /* 階層の管理 */
+  .rk{ display:flex; gap:6px; align-items:center; margin-bottom:5px; }
+  .rk input[type=text]{ flex:1 1 160px; width:auto; min-width:0; }
+  .rk input[type=number]{ flex:0 0 84px; width:84px; }
+
+  @media (max-width:900px){
+    .docform{ grid-template-columns:104px 1fr; }
+    .docform > .dv.r{ border-right:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>利用者</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+  <div id="msg" class="msg"></div>
+
+  <div class="ctl">
+    <input type="text" id="q" placeholder="氏名で絞り込み" inputmode="search">
+    <select id="frole">
+      <option value="">すべての役割</option>
+      <option value="admin">経営者</option>
+      <option value="manager">現場監督</option>
+      <option value="member">作業員</option>
+    </select>
+    <select id="fside">
+      <option value="">社内・社外すべて</option>
+      <option value="in">社内</option>
+      <option value="ex">社外</option>
+    </select>
+    <span class="sp"></span>
+    <button class="btn ghost sm" id="rkbtn" hidden>階層の管理</button>
+  </div>
+
+  <div id="rkbox" hidden>
+    <div class="sheet" style="margin-bottom:14px">
+      <div class="head">階層（組織上の序列）</div>
+      <div class="row" style="grid-template-columns:1fr">
+        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+          <div id="rks"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn ghost sm" id="rkadd" type="button">＋ 階層を足す</button>
+            <button class="btn sm" id="rksave" type="button">階層を保存</button>
+          </div>
+          <p class="tip" style="margin-top:8px">
+            序列の数が小さいほど上位です。役割（経営者・現場監督・作業員）とは別の軸で、
+            組織上の位置づけを表します。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="count" id="count"></p>
+  <div class="list" id="list"></div>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="inner"><button class="btn wide" id="add">利用者を登録する</button></div>
+</div>
+
+<!-- ========== 編集 ========== -->
+<div class="panel" id="panel">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1 id="ptitle">利用者の登録</h1>
+    <button class="btn ghost sm barbtn" id="close">閉じる</button>
+  </header>
+
+  <div class="wrap">
+   <div id="pdoc">
+    <div id="pmsg" class="msg"></div>
+
+    <div class="docform">
+      <div class="sh">その人</div>
+      <span class="k">氏名<span class="req">*</span></span>
+      <span class="dv r"><input id="f_name" type="text" placeholder="山田 太郎"></span>
+      <span class="k">社員番号</span>
+      <span class="dv"><input id="f_no" type="text"></span>
+
+      <span class="k">メール</span>
+      <span class="dv r"><input id="f_mail" type="text" inputmode="email"></span>
+      <span class="k">電話</span>
+      <span class="dv"><input id="f_tel" type="text" inputmode="tel"></span>
+
+      <span class="k">入社日</span>
+      <span class="dv r"><input id="f_hired" type="date"></span>
+      <span class="k">在籍</span>
+      <span class="dv"><label class="chk"><input id="f_act" type="checkbox" checked>在籍中</label></span>
+
+      <div class="sh">社内・社外</div>
+      <span class="k">区分</span>
+      <span class="dv r"><label class="chk"><input id="f_ext" type="checkbox">社外の人（協力会社など）</label></span>
+      <span class="k">所属先</span>
+      <span class="dv"><select id="f_partner"></select></span>
+
+      <span class="k">働き方</span>
+      <span class="dv r"><select id="f_emp">
+        <option value="employee">社員</option>
+        <option value="craftsman">職人</option>
+        <option value="subcontractor">外注</option>
+      </select></span>
+      <span class="k">所属部門</span>
+      <span class="dv"><select id="f_dept">
+        <option value="">（未設定）</option>
+        <option value="site">現場</option>
+        <option value="info">会社の情報部</option>
+        <option value="exec">経営</option>
+        <option value="other">その他</option>
+      </select></span>
+
+      <div class="sh">階層と役割</div>
+      <span class="k">階層</span>
+      <span class="dv r"><select id="f_rank"></select></span>
+      <span class="k">役職名</span>
+      <span class="dv"><input id="f_title" type="text" placeholder="工事部長 など"></span>
+
+      <span class="k">役割<span class="req">*</span></span>
+      <span class="dv r"><select id="f_role">
+        <option value="member">作業員（見るだけ・自分の日報）</option>
+        <option value="manager">現場監督（工事と工程を扱える）</option>
+        <option value="admin">経営者（すべて扱える）</option>
+      </select></span>
+      <span class="k">上長</span>
+      <span class="dv"><select id="f_sup"></select></span>
+
+      <div class="sh">決裁権</div>
+      <span class="k">決裁の上限</span>
+      <span class="dv r"><span class="yen">¥</span><input id="f_lim" class="money" type="text" inputmode="numeric" placeholder="0"><span class="u2">税抜</span></span>
+      <span class="k">日給・時給</span>
+      <span class="dv"><span class="yen">¥</span><input id="f_rate" class="money" type="text" inputmode="numeric" placeholder="0">
+        <select id="f_ratet" style="flex:0 0 88px"><option value="daily">日給</option><option value="hourly">時給</option></select></span>
+
+      <div class="full">
+        <p class="tip">
+          <b>決裁の上限</b>は、この人が承認できる金額です。空または0なら決裁権はありません。<br>
+          <b>日給・時給</b>は本人と経営者だけが見られます。現場監督にも見えません。
+        </p>
+      </div>
+
+      <div class="sh">ログイン</div>
+      <div class="full">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+          <input id="f_uid" type="text" placeholder="ログイン用のUID（Supabaseで作ったもの）"
+                 style="flex:1 1 320px;min-width:0;min-height:32px;padding:3px 8px;font-size:13px;font-family:var(--mono)">
+          <span id="uidst" style="font-size:12px;color:var(--sub)"></span>
+        </div>
+        <p class="tip">
+          ログインさせる場合は、先に Supabase の Authentication → Users でアカウントを作り、
+          そこに出る <b>UID</b> をここに貼ってください。<br>
+          ログインしない人（日報や勤怠の記録にだけ出てくる職人など）は、空のままで登録できます。
+        </p>
+      </div>
+
+      <div class="sh">備考</div>
+      <div class="full"><textarea id="f_note" style="width:100%"></textarea></div>
+    </div>
+
+    <div style="height:12px"></div>
+    <button class="btn danger" id="del" hidden>この利用者を削除する</button>
+   </div>
+  </div>
+
+  <div class="dock" id="pdock">
+    <div class="inner">
+      <span class="hintl">＊ の項目は必ず入れてください</span>
+      <button class="btn" id="save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isAdmin = (me.role === 'admin');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+  $('dock').hidden = !isAdmin;
+  $('rkbtn').hidden = !isAdmin;
+
+  const ROLE = { admin:'経営者', manager:'現場監督', member:'作業員' };
+  const EMP  = { employee:'社員', craftsman:'職人', subcontractor:'外注' };
+  const DEPT = { site:'現場', info:'情報部', exec:'経営', other:'その他' };
+
+  let users = [], ranks = [], partners = [], rates = {}, editing = null;
+
+  /* ---- 金額の桁区切り ---- */
+  function bindMoney(el){
+    el.addEventListener('input', function(){
+      const back = this.value.length - (this.selectionStart || 0);
+      const d = this.value.replace(/[^\d]/g, '').slice(0, 12);
+      this.value = d ? Number(d).toLocaleString('ja-JP') : '';
+      const pos = Math.max(0, this.value.length - back);
+      try { this.setSelectionRange(pos, pos); } catch(e){}
+    });
+  }
+  const digits = el => el.value.replace(/[^\d]/g, '');
+  function setMoney(el, v){
+    const n = Number(v);
+    el.value = (v !== null && v !== undefined && v !== '' && n) ? n.toLocaleString('ja-JP') : '';
+  }
+  bindMoney($('f_lim')); bindMoney($('f_rate'));
+
+  /* ================= 読み込み ================= */
+  async function load(){
+    const [u, r, p] = await Promise.all([
+      sb.from('app_users').select('*').order('name'),
+      sb.from('job_ranks').select('*').eq('is_active', true).order('rank_order'),
+      sb.from('partners').select('id,name').eq('is_active', true).order('name')
+    ]);
+    if (u.error || r.error){
+      const e = u.error || r.error;
+      showMsg($('msg'),
+        /column .* does not exist|schema cache|relation .* does not exist/i.test(e.message||'')
+          ? 'データベースに必要な項目がまだありません。Supabase の SQL Editor で partners_users.sql を実行してください。'
+          : '読み込めませんでした。' + e.message, 'err');
+      return;
+    }
+    users = u.data || []; ranks = r.data || []; partners = p.data || [];
+
+    // 単価（見られるものだけ返る）
+    const rt = await sb.from('app_user_rates').select('*');
+    rates = {};
+    (rt.data || []).forEach(x => { rates[x.app_user_id] = x; });
+
+    paintSelects();
+    render();
+  }
+
+  function paintSelects(){
+    $('f_rank').innerHTML = '<option value="">（未設定）</option>' +
+      ranks.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+    $('f_partner').innerHTML = '<option value="">（未設定）</option>' +
+      partners.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    $('f_sup').innerHTML = '<option value="">（未設定）</option>' +
+      users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  }
+
+  /* ================= 一覧 ================= */
+  function render(){
+    const q = $('q').value.trim().toLowerCase();
+    const fr = $('frole').value, fs = $('fside').value;
+    const rmap = Object.fromEntries(ranks.map(r => [r.id, r]));
+    const pmap = Object.fromEntries(partners.map(p => [p.id, p.name]));
+
+    const rows = users.filter(u => {
+      if (fr && u.role !== fr) return false;
+      if (fs === 'in' && u.is_external) return false;
+      if (fs === 'ex' && !u.is_external) return false;
+      if (!q) return true;
+      return (u.name||'').toLowerCase().includes(q);
+    }).sort((a,b) => {
+      const ra = rmap[a.job_rank_id]?.rank_order ?? 999;
+      const rb = rmap[b.job_rank_id]?.rank_order ?? 999;
+      return ra - rb || (a.name||'').localeCompare(b.name||'', 'ja');
+    });
+
+    $('count').textContent = `${rows.length} 人 ／ 全 ${users.length} 人`;
+
+    if (!rows.length){
+      $('list').innerHTML = `<div class="empty"><b>該当する利用者がいません</b></div>`;
+      return;
+    }
+
+    $('list').innerHTML = rows.map(u => {
+      const rk = rmap[u.job_rank_id];
+      const kbs = [];
+      kbs.push(`<span class="kb ${u.role === 'admin' ? 'ad' : (u.role === 'manager' ? 'mg' : 'mb')}">${ROLE[u.role]}</span>`);
+      if (rk) kbs.push(`<span class="kb mb">${esc(rk.name)}</span>`);
+      if (u.is_external) kbs.push(`<span class="kb ex">社外${pmap[u.partner_id] ? '・' + esc(pmap[u.partner_id]) : ''}</span>`);
+      if (!u.auth_user_id) kbs.push('<span class="kb nl">ログインなし</span>');
+      if (!u.is_active) kbs.push('<span class="kb nl">退職・停止</span>');
+
+      const meta = [];
+      if (u.title) meta.push(esc(u.title));
+      if (DEPT[u.department]) meta.push(DEPT[u.department]);
+      if (EMP[u.employee_type]) meta.push(EMP[u.employee_type]);
+      if (u.email) meta.push(esc(u.email));
+
+      const lim = Number(u.approve_limit) > 0
+        ? `<span class="lim">決裁 ${fmtMoney(u.approve_limit)}</span>` : '';
+
+      return `<button class="item" data-id="${u.id}" style="${u.is_active ? '' : 'opacity:.6'}">
+        <span class="flag ${u.role === 'admin' ? 'fl-cancelled' : (u.role === 'manager' ? 'fl-started' : 'fl-estimate')}"></span>
+        <span class="body">
+          <span class="nm">${esc(u.name)}</span>
+          <span class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</span>
+          <span class="kbs">${kbs.join('')}</span>
+        </span>
+        <span class="side">${lim}</span>
+      </button>`;
+    }).join('');
+
+    $('list').querySelectorAll('.item').forEach(b =>
+      b.addEventListener('click', () => openPanel(users.find(x => x.id === b.dataset.id))));
+  }
+
+  $('q').addEventListener('input', render);
+  $('frole').addEventListener('change', render);
+  $('fside').addEventListener('change', render);
+
+  /* ================= 階層の管理 ================= */
+  function rkRow(r){
+    return `<div class="rk" data-id="${r ? r.id : ''}">
+      <input type="text" class="r_name" placeholder="階層の名称" value="${esc((r&&r.name)||'')}">
+      <input type="number" class="r_ord" placeholder="序列" value="${r ? r.rank_order : ''}">
+      <label class="chk"><input type="checkbox" class="r_ext"${r&&r.is_external?' checked':''}>社外</label>
+      <button class="btn ghost sm r_rm" type="button">削除</button>
+    </div>`;
+  }
+  function bindRk(){
+    $('rks').querySelectorAll('.r_rm').forEach(b => b.onclick = () => b.closest('.rk').remove());
+  }
+  $('rkbtn').addEventListener('click', () => {
+    const open = $('rkbox').hidden;
+    $('rkbox').hidden = !open;
+    if (open){ $('rks').innerHTML = ranks.map(rkRow).join(''); bindRk(); }
+  });
+  $('rkadd').addEventListener('click', () => {
+    $('rks').insertAdjacentHTML('beforeend', rkRow(null)); bindRk();
+  });
+  $('rksave').addEventListener('click', async () => {
+    const rows = [...$('rks').querySelectorAll('.rk')].map(r => ({
+      id  : r.dataset.id || null,
+      name: r.querySelector('.r_name').value.trim(),
+      ord : Number(r.querySelector('.r_ord').value) || 0,
+      ext : r.querySelector('.r_ext').checked
+    })).filter(x => x.name);
+
+    const keep = rows.filter(x => x.id).map(x => x.id);
+    const gone = ranks.filter(r => !keep.includes(r.id)).map(r => r.id);
+    if (gone.length) await sb.from('job_ranks').update({ is_active:false }).in('id', gone);
+
+    for (const x of rows){
+      if (x.id) await sb.from('job_ranks').update({ name:x.name, rank_order:x.ord, is_external:x.ext }).eq('id', x.id);
+      else await sb.from('job_ranks').insert({
+        organization_id: me.organization_id, name:x.name, rank_order:x.ord, is_external:x.ext });
+    }
+    await load();
+    $('rks').innerHTML = ranks.map(rkRow).join(''); bindRk();
+    showMsg($('msg'), '階層を保存しました。', 'ok');
+  });
+
+  /* ================= 編集 ================= */
+  function openPanel(u){
+    editing = u || null;
+    showMsg($('pmsg'), '');
+    $('ptitle').textContent = u ? '利用者の編集' : '利用者の登録';
+
+    const g = (k, d) => u ? (u[k] ?? d) : d;
+    $('f_name').value  = g('name','');
+    $('f_no').value    = g('employee_no','');
+    $('f_mail').value  = g('email','');
+    $('f_tel').value   = g('tel','');
+    $('f_hired').value = g('hired_on','') || '';
+    $('f_act').checked = u ? !!u.is_active : true;
+    $('f_ext').checked = !!g('is_external', false);
+    $('f_partner').value = g('partner_id','') || '';
+    $('f_emp').value   = g('employee_type','employee');
+    $('f_dept').value  = g('department','') || '';
+    $('f_rank').value  = g('job_rank_id','') || '';
+    $('f_title').value = g('title','');
+    $('f_role').value  = g('role','member');
+    $('f_sup').value   = g('supervisor_user_id','') || '';
+    setMoney($('f_lim'), g('approve_limit',''));
+    $('f_uid').value   = g('auth_user_id','') || '';
+    $('f_note').value  = g('note','');
+
+    const rt = u ? rates[u.id] : null;
+    setMoney($('f_rate'), rt ? rt.amount : '');
+    $('f_ratet').value = rt ? rt.rate_type : 'daily';
+
+    $('uidst').textContent = (u && u.auth_user_id) ? 'ログインできます' : 'ログインなし';
+
+    // 上長の候補から自分自身を外す
+    $('f_sup').innerHTML = '<option value="">（未設定）</option>' +
+      users.filter(x => !u || x.id !== u.id)
+           .map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+    $('f_sup').value = g('supervisor_user_id','') || '';
+
+    document.querySelectorAll('#panel input, #panel select, #panel textarea')
+      .forEach(el => el.disabled = !isAdmin);
+    $('pdock').style.display = isAdmin ? '' : 'none';
+    $('del').hidden = !(u && isAdmin && u.id !== me.id);
+
+    $('panel').classList.add('open');
+    const w = $('panel').querySelector('.wrap');
+    if (w) w.scrollTop = 0;
+    snapshot = formState();
+  }
+
+  let snapshot = '';
+  function formState(){
+    const v = [];
+    $('panel').querySelectorAll('input, select, textarea').forEach(el =>
+      v.push(el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value));
+    return v.join('\u0001');
+  }
+  function tryClose(){
+    if (formState() !== snapshot &&
+        !confirm('保存していない内容があります。\n閉じると入力した内容は消えます。\n\n閉じますか。')) return;
+    $('panel').classList.remove('open');
+    editing = null;
+  }
+  $('close').addEventListener('click', tryClose);
+  $('add').addEventListener('click', () => openPanel(null));
+
+  /* ================= 保存 ================= */
+  $('save').addEventListener('click', async () => {
+    showMsg($('pmsg'), '');
+    const nm = $('f_name').value.trim();
+    if (!nm){ showMsg($('pmsg'), '氏名を入れてください。', 'err'); $('f_name').focus(); return; }
+
+    const uid = $('f_uid').value.trim();
+    if (uid && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){
+      showMsg($('pmsg'), 'UIDの形式が正しくありません。Supabase の Authentication → Users からそのまま写してください。', 'err');
+      return;
+    }
+    if ($('f_ext').checked && !$('f_partner').value){
+      showMsg($('pmsg'), '社外の人は所属先を選んでください。', 'err'); return;
+    }
+
+    const body = {
+      organization_id : me.organization_id,
+      name            : nm,
+      employee_no     : $('f_no').value.trim() || null,
+      email           : $('f_mail').value.trim() || null,
+      tel             : $('f_tel').value.trim() || null,
+      hired_on        : $('f_hired').value || null,
+      is_active       : $('f_act').checked,
+      is_external     : $('f_ext').checked,
+      partner_id      : $('f_partner').value || null,
+      employee_type   : $('f_emp').value,
+      department      : $('f_dept').value || null,
+      job_rank_id     : $('f_rank').value || null,
+      title           : $('f_title').value.trim() || null,
+      role            : $('f_role').value,
+      supervisor_user_id: $('f_sup').value || null,
+      approve_limit   : digits($('f_lim')) === '' ? null : Number(digits($('f_lim'))),
+      auth_user_id    : uid || null,
+      note            : $('f_note').value.trim() || null
+    };
+
+    $('save').disabled = true; $('save').textContent = '保存しています…';
+    let error, id = editing ? editing.id : null;
+    if (editing) ({ error } = await sb.from('app_users').update(body).eq('id', editing.id));
+    else {
+      const r = await sb.from('app_users').insert(body).select('id').single();
+      error = r.error; id = r.data ? r.data.id : null;
+    }
+
+    // 単価
+    if (!error && id){
+      const amt = digits($('f_rate'));
+      const cur = rates[id];
+      if (amt !== ''){
+        if (cur) await sb.from('app_user_rates').update({
+          amount: Number(amt), rate_type: $('f_ratet').value }).eq('id', cur.id);
+        else await sb.from('app_user_rates').insert({
+          organization_id: me.organization_id, app_user_id: id,
+          amount: Number(amt), rate_type: $('f_ratet').value });
+      } else if (cur){
+        await sb.from('app_user_rates').delete().eq('id', cur.id);
+      }
+    }
+
+    $('save').disabled = false; $('save').textContent = '保存する';
+    if (error){
+      showMsg($('pmsg'),
+        error.code === '23505' ? 'そのUIDは既に別の利用者に使われています。'
+        : error.code === '42501' ? 'この操作を行う権限がありません。'
+        : '保存できませんでした。' + error.message, 'err');
+      return;
+    }
+    snapshot = formState();
+    $('panel').classList.remove('open'); editing = null;
+    await load();
+    showMsg($('msg'), '保存しました。', 'ok');
+  });
+
+  /* ================= 削除 ================= */
+  $('del').addEventListener('click', async () => {
+    if (!editing) return;
+    if (!confirm(`「${editing.name}」を削除します。\n日報や工程の担当から外れます。取り消せません。\n\n退職の場合は「在籍中」の印を外すほうが記録が残ります。`)) return;
+    const { error } = await sb.from('app_users').delete().eq('id', editing.id);
+    if (error){
+      showMsg($('pmsg'), error.code === '23503'
+        ? 'この利用者は記録で使われているため削除できません。「在籍中」の印を外してください。'
+        : '削除できませんでした。' + error.message, 'err');
+      return;
+    }
+    snapshot = formState();
+    $('panel').classList.remove('open'); editing = null;
+    await load();
+    showMsg($('msg'), '削除しました。', 'ok');
+  });
+
+  /* ================= 社外の印で所属先を促す ================= */
+  $('f_ext').addEventListener('change', () => {
+    if ($('f_ext').checked){
+      const rk = ranks.find(r => r.is_external);
+      if (rk && !$('f_rank').value) $('f_rank').value = rk.id;
+      if ($('f_emp').value === 'employee') $('f_emp').value = 'subcontractor';
+    }
+  });
+
+  await load();
+})();
+</script>
+</body>
+</html>

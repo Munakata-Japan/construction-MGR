@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<!-- BUILD: partners (取引先) v20260724F -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>取引先 ｜ 建設統合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  .ctl select{ width:auto; min-width:150px; min-height:44px; flex:0 1 auto; }
+  .ctl input[type=text]{ width:auto; flex:1 1 200px; min-width:0; min-height:44px; }
+
+  .kb{ font-size:11px; font-weight:700; padding:2px 7px; border-radius:2px;
+       border:1px solid currentColor; white-space:nowrap; }
+  .kb.cl{ color:var(--ink-2); }
+  .kb.sb{ color:#9A6E00; }
+  .kb.sp{ color:var(--ok); }
+  .kb.al{ color:var(--alert); background:#FBF1EF; }
+
+  .item .kbs{ display:flex; gap:5px; flex-wrap:wrap; margin-top:3px; }
+
+  /* 編集：一枚の書類 */
+  #panel{ display:none; flex-direction:column; overflow:hidden; }
+  #panel.open{ display:flex; }
+  #panel > header.bar{ flex:0 0 auto; }
+  #panel > .wrap{ flex:1 1 auto; min-height:0; overflow:auto; display:flex;
+                  max-width:none !important; width:100%; padding:14px clamp(10px,2vw,22px) 16px; }
+  #panel > .dock{ position:static; flex:0 0 auto; backdrop-filter:none; background:var(--paper); }
+  #panel > .dock .inner{ max-width:1560px; margin:0 auto; align-items:center; gap:14px;
+                         padding:0 clamp(10px,2vw,22px); }
+  #panel > .dock .hintl{ flex:1 1 auto; font-size:12px; color:var(--sub); }
+  #panel > .dock .btn{ flex:0 0 auto; min-width:168px; }
+  #pdoc{ margin:auto; width:100%; max-width:1560px; }
+
+  .docform{
+    background:var(--card); border:1px solid var(--rule); border-radius:2px;
+    display:grid; grid-template-columns:104px minmax(0,1fr) 104px minmax(0,1fr);
+  }
+  .docform > .sh{
+    grid-column:1 / -1; background:#E3E6E0; color:var(--ink);
+    font-family:var(--disp); font-weight:700; font-size:11.5px; letter-spacing:.06em;
+    padding:5px 12px; border-bottom:1px solid var(--rule);
+    box-shadow:inset 4px 0 0 var(--safety);
+  }
+  .docform > .k{
+    background:#F1F3EF; padding:5px 9px; font-size:11.5px; font-weight:700;
+    color:var(--sub); border-right:1px solid var(--rule-2);
+    border-bottom:1px solid var(--rule-2); display:flex; align-items:center; line-height:1.3;
+  }
+  .docform > .k .req{ color:var(--alert); margin-left:3px; }
+  .docform > .dv{
+    padding:3px 7px; border-bottom:1px solid var(--rule-2); min-width:0;
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  }
+  .docform > .dv.r{ border-right:1px solid var(--rule-2); }
+  .docform > .dv.wide{ grid-column:2 / -1; }
+  .docform > .full{ grid-column:1 / -1; padding:8px 10px; border-bottom:1px solid var(--rule-2); }
+  .docform input[type=text], .docform input[type=date], .docform input[type=number],
+  .docform select{ min-height:32px; padding:3px 8px; font-size:13.5px; width:100%; min-width:0; }
+  .docform textarea{ min-height:52px; padding:5px 8px; font-size:13.5px; line-height:1.55; }
+  .docform .u2{ font-size:11.5px; color:var(--sub); white-space:nowrap; }
+  .docform input[type=number]{ -moz-appearance:textfield; }
+  .docform input[type=number]::-webkit-outer-spin-button,
+  .docform input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+
+  .chk{ display:flex; align-items:center; gap:5px; font-size:12.5px; white-space:nowrap; }
+  .chk input{ width:19px; height:19px; min-height:19px; flex:0 0 19px; margin:0; }
+
+  .cts{ display:grid; gap:6px; }
+  .ctrow{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .ctrow .cn{ flex:1 1 130px; width:auto; min-width:0; }
+  .ctrow .ct{ flex:1 1 110px; width:auto; min-width:0; }
+  .ctrow .cp{ flex:1 1 130px; width:auto; min-width:0; }
+
+  @media (max-width:900px){
+    .docform{ grid-template-columns:100px 1fr; }
+    .docform > .dv.r{ border-right:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>取引先</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+  <div id="msg" class="msg"></div>
+
+  <div class="ctl">
+    <input type="text" id="q" placeholder="会社名・カナで絞り込み" inputmode="search">
+    <select id="fkind">
+      <option value="">すべての区分</option>
+      <option value="client">クライアント</option>
+      <option value="sub">協力会社</option>
+      <option value="sup">仕入先</option>
+    </select>
+    <select id="fwarn">
+      <option value="">すべて</option>
+      <option value="lic">許可の期限が近い・切れている</option>
+      <option value="si">社会保険が未確認</option>
+    </select>
+  </div>
+
+  <p class="count" id="count"></p>
+  <div class="list" id="list"></div>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="inner"><button class="btn wide" id="add">取引先を登録する</button></div>
+</div>
+
+<!-- ========== 編集 ========== -->
+<div class="panel" id="panel">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1 id="ptitle">取引先の登録</h1>
+    <button class="btn ghost sm barbtn" id="close">閉じる</button>
+  </header>
+
+  <div class="wrap">
+   <div id="pdoc">
+    <div id="pmsg" class="msg"></div>
+
+    <div class="docform">
+      <div class="sh">会社</div>
+      <span class="k">会社名<span class="req">*</span></span>
+      <span class="dv r"><input id="f_name" type="text" placeholder="〇〇建設株式会社"></span>
+      <span class="k">カナ</span>
+      <span class="dv"><input id="f_kana" type="text" placeholder="マルマルケンセツ"></span>
+
+      <span class="k">区分<span class="req">*</span></span>
+      <span class="dv r">
+        <label class="chk"><input id="f_cl" type="checkbox">クライアント</label>
+        <label class="chk"><input id="f_sb" type="checkbox">協力会社</label>
+        <label class="chk"><input id="f_sp" type="checkbox">仕入先</label>
+      </span>
+      <span class="k">代表者</span>
+      <span class="dv"><input id="f_rep" type="text"></span>
+
+      <span class="k">法人番号</span>
+      <span class="dv r"><input id="f_cno" type="text" inputmode="numeric" placeholder="13桁"></span>
+      <span class="k">インボイス</span>
+      <span class="dv"><input id="f_inv" type="text" placeholder="T＋13桁"></span>
+
+      <div class="sh">連絡先</div>
+      <span class="k">郵便番号</span>
+      <span class="dv r"><input id="f_zip" type="text" inputmode="numeric" placeholder="811-0000"></span>
+      <span class="k">住所</span>
+      <span class="dv"><input id="f_addr" type="text"></span>
+
+      <span class="k">電話</span>
+      <span class="dv r"><input id="f_tel" type="text" inputmode="tel"></span>
+      <span class="k">FAX</span>
+      <span class="dv"><input id="f_fax" type="text" inputmode="tel"></span>
+
+      <span class="k">メール</span>
+      <span class="dv r"><input id="f_mail" type="text" inputmode="email"></span>
+      <span class="k">取引開始</span>
+      <span class="dv"><input id="f_start" type="date"></span>
+
+      <div class="sh">建設業許可（協力会社に出すときの確認）</div>
+      <span class="k">許可番号</span>
+      <span class="dv r"><input id="f_lic" type="text" placeholder="福岡県知事許可（般-5）第12345号"></span>
+      <span class="k">許可業種</span>
+      <span class="dv"><input id="f_lkind" type="text" placeholder="土木一式、とび・土工、舗装（読点で区切る）"></span>
+
+      <span class="k">許可の開始</span>
+      <span class="dv r"><input id="f_lst" type="date"></span>
+      <span class="k">許可の期限</span>
+      <span class="dv"><input id="f_led" type="date"></span>
+
+      <div class="sh">社会保険と振込先</div>
+      <span class="k">加入状況</span>
+      <span class="dv r">
+        <label class="chk"><input id="f_sih" type="checkbox">健康保険</label>
+        <label class="chk"><input id="f_sip" type="checkbox">厚生年金</label>
+        <label class="chk"><input id="f_sie" type="checkbox">雇用保険</label>
+      </span>
+      <span class="k">確認した日</span>
+      <span class="dv"><input id="f_sid" type="date"></span>
+
+      <span class="k">金融機関</span>
+      <span class="dv r"><input id="f_bank" type="text" placeholder="福岡銀行"></span>
+      <span class="k">支店</span>
+      <span class="dv"><input id="f_branch" type="text" placeholder="宗像支店"></span>
+
+      <span class="k">口座</span>
+      <span class="dv r">
+        <select id="f_batype" style="flex:0 0 92px">
+          <option value="">—</option><option value="futsu">普通</option>
+          <option value="touza">当座</option><option value="chochiku">貯蓄</option>
+        </select>
+        <input id="f_bano" type="text" inputmode="numeric" placeholder="口座番号" style="flex:1 1 100px">
+      </span>
+      <span class="k">名義</span>
+      <span class="dv"><input id="f_bahol" type="text" placeholder="カナ"></span>
+
+      <div class="sh">支払・入金の条件</div>
+      <span class="k">締め日</span>
+      <span class="dv r"><input id="f_close" type="number" min="1" max="31" placeholder="20"><span class="u2">日</span></span>
+      <span class="k">支払</span>
+      <span class="dv">
+        <select id="f_moff" style="flex:0 0 96px">
+          <option value="0">当月</option><option value="1">翌月</option><option value="2">翌々月</option>
+        </select>
+        <input id="f_pday" type="number" min="1" max="31" placeholder="25" style="flex:0 0 84px"><span class="u2">日</span>
+      </span>
+
+      <div class="sh">担当者</div>
+      <div class="full">
+        <div class="cts" id="cts"></div>
+        <button class="btn ghost sm" id="ctadd" type="button" style="margin-top:6px">＋ 担当者を足す</button>
+      </div>
+
+      <div class="sh">備考</div>
+      <div class="full"><textarea id="f_note" style="width:100%"></textarea></div>
+    </div>
+
+    <div style="height:12px"></div>
+    <button class="btn danger" id="del" hidden>この取引先を削除する</button>
+   </div>
+  </div>
+
+  <div class="dock" id="pdock">
+    <div class="inner">
+      <span class="hintl">＊ の項目は必ず入れてください</span>
+      <button class="btn" id="save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const DAY = 86400000;
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const canEdit = (me.role === 'admin' || me.role === 'manager');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+  if (canEdit) $('dock').hidden = false;
+
+  let partners = [], contacts = {}, editing = null;
+
+  /* ================= 読み込み ================= */
+  async function load(){
+    const [p, c] = await Promise.all([
+      sb.from('partners').select('*').eq('is_active', true).order('name'),
+      sb.from('partner_contacts').select('*').eq('is_active', true).order('sort_order')
+    ]);
+    if (p.error){
+      showMsg($('msg'),
+        /column .* does not exist|schema cache|relation .* does not exist/i.test(p.error.message||'')
+          ? 'データベースに必要な項目がまだありません。Supabase の SQL Editor で partners_users.sql を実行してください。'
+          : '読み込めませんでした。' + p.error.message, 'err');
+      return;
+    }
+    partners = p.data || [];
+    contacts = {};
+    (c.data || []).forEach(x => (contacts[x.partner_id] ||= []).push(x));
+    render();
+  }
+
+  /* ================= 判定 ================= */
+  const today = Math.round(Date.now() / DAY);
+  const d2n = s => s ? Math.round(new Date(s + 'T00:00:00').getTime() / DAY) : null;
+
+  function licState(p){
+    if (!p.is_subcontractor) return null;
+    if (!p.license_end_on) return { lv:'none', txt:'許可未登録' };
+    const left = d2n(p.license_end_on) - today;
+    if (left < 0)  return { lv:'over', txt:`許可の期限切れ（${-left}日前）` };
+    if (left < 90) return { lv:'near', txt:`許可の期限まで${left}日` };
+    return null;
+  }
+  function siState(p){
+    if (!p.is_subcontractor) return null;
+    if (p.si_health === null || p.si_health === undefined) return { txt:'社会保険が未確認' };
+    if (!(p.si_health && p.si_pension && p.si_employment)) return { txt:'社会保険に未加入あり' };
+    return null;
+  }
+
+  /* ================= 一覧 ================= */
+  function render(){
+    const q  = $('q').value.trim().toLowerCase();
+    const kd = $('fkind').value, wn = $('fwarn').value;
+
+    const rows = partners.filter(p => {
+      if (kd === 'client' && !p.is_client) return false;
+      if (kd === 'sub'    && !p.is_subcontractor) return false;
+      if (kd === 'sup'    && !p.is_supplier) return false;
+      if (wn === 'lic' && !licState(p)) return false;
+      if (wn === 'si'  && !siState(p)) return false;
+      if (!q) return true;
+      return (p.name||'').toLowerCase().includes(q) || (p.name_kana||'').toLowerCase().includes(q);
+    });
+
+    $('count').textContent = `${rows.length} 件 ／ 全 ${partners.length} 件`;
+
+    if (!rows.length){
+      $('list').innerHTML = partners.length
+        ? `<div class="empty"><b>該当する取引先がありません</b>絞り込みの条件を変えてください。</div>`
+        : `<div class="empty"><b>まだ取引先がありません</b>${canEdit ? '下の「取引先を登録する」から始めてください。' : ''}</div>`;
+      return;
+    }
+
+    $('list').innerHTML = rows.map(p => {
+      const kbs = [];
+      if (p.is_client) kbs.push('<span class="kb cl">クライアント</span>');
+      if (p.is_subcontractor) kbs.push('<span class="kb sb">協力会社</span>');
+      if (p.is_supplier) kbs.push('<span class="kb sp">仕入先</span>');
+      const lic = licState(p), si = siState(p);
+      if (lic) kbs.push(`<span class="kb al">${esc(lic.txt)}</span>`);
+      if (si)  kbs.push(`<span class="kb al">${esc(si.txt)}</span>`);
+
+      const meta = [];
+      if (p.rep_name) meta.push('代表 ' + esc(p.rep_name));
+      if (p.tel) meta.push(esc(p.tel));
+      const ct = (contacts[p.id] || [])[0];
+      if (ct) meta.push(`担当 ${esc(ct.name)}`);
+      if (p.invoice_reg_no) meta.push('インボイス登録あり');
+
+      const flag = lic ? 'fl-cancelled' : (p.is_subcontractor ? 'fl-started' : 'fl-ordered');
+
+      return `<button class="item" data-id="${p.id}">
+        <span class="flag ${flag}"></span>
+        <span class="body">
+          <span class="nm">${esc(p.name)}</span>
+          <span class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</span>
+          <span class="kbs">${kbs.join('')}</span>
+        </span>
+        <span class="side"></span>
+      </button>`;
+    }).join('');
+
+    $('list').querySelectorAll('.item').forEach(b =>
+      b.addEventListener('click', () => openPanel(partners.find(x => x.id === b.dataset.id))));
+  }
+
+  $('q').addEventListener('input', render);
+  $('fkind').addEventListener('change', render);
+  $('fwarn').addEventListener('change', render);
+
+  /* ================= 担当者の行 ================= */
+  function ctRow(c){
+    return `<div class="ctrow">
+      <input class="cn c_name" type="text" placeholder="氏名" value="${esc((c&&c.name)||'')}">
+      <input class="ct c_title" type="text" placeholder="役職" value="${esc((c&&c.title)||'')}">
+      <input class="cp c_tel" type="text" placeholder="電話・携帯" value="${esc((c&&(c.tel||c.mobile))||'')}">
+      <input class="cp c_mail" type="text" placeholder="メール" value="${esc((c&&c.email)||'')}">
+      <label class="chk"><input class="c_pri" type="checkbox"${c&&c.is_primary?' checked':''}>主担当</label>
+      <button class="btn ghost sm c_rm" type="button">削除</button>
+    </div>`;
+  }
+  function bindCtRm(){
+    $('cts').querySelectorAll('.c_rm').forEach(b => b.onclick = () => b.closest('.ctrow').remove());
+  }
+  $('ctadd').addEventListener('click', () => {
+    $('cts').insertAdjacentHTML('beforeend', ctRow(null)); bindCtRm();
+  });
+
+  /* ================= 編集 ================= */
+  function openPanel(p){
+    editing = p || null;
+    showMsg($('pmsg'), '');
+    $('ptitle').textContent = p ? '取引先の編集' : '取引先の登録';
+
+    const g = (k, d) => p ? (p[k] ?? d) : d;
+    $('f_name').value  = g('name','');
+    $('f_kana').value  = g('name_kana','');
+    $('f_cl').checked  = !!g('is_client', false);
+    $('f_sb').checked  = !!g('is_subcontractor', false);
+    $('f_sp').checked  = !!g('is_supplier', false);
+    $('f_rep').value   = g('rep_name','');
+    $('f_cno').value   = g('corporate_number','');
+    $('f_inv').value   = g('invoice_reg_no','');
+    $('f_zip').value   = g('postal_code','');
+    $('f_addr').value  = g('address','');
+    $('f_tel').value   = g('tel','');
+    $('f_fax').value   = g('fax','');
+    $('f_mail').value  = g('email','');
+    $('f_start').value = g('trade_start_on','') || '';
+    $('f_lic').value   = g('license_no','');
+    $('f_lkind').value = (g('license_kinds', []) || []).join('、');
+    $('f_lst').value   = g('license_start_on','') || '';
+    $('f_led').value   = g('license_end_on','') || '';
+    $('f_sih').checked = !!g('si_health', false);
+    $('f_sip').checked = !!g('si_pension', false);
+    $('f_sie').checked = !!g('si_employment', false);
+    $('f_sid').value   = g('si_checked_on','') || '';
+    $('f_bank').value  = g('bank_name','');
+    $('f_branch').value= g('bank_branch','');
+    $('f_batype').value= g('bank_acc_type','') || '';
+    $('f_bano').value  = g('bank_acc_no','');
+    $('f_bahol').value = g('bank_holder','');
+    $('f_close').value = g('closing_day','') || '';
+    $('f_moff').value  = String(g('payment_month_offset', 1) ?? 1);
+    $('f_pday').value  = g('payment_day','') || '';
+    $('f_note').value  = g('note','');
+
+    const cs = p ? (contacts[p.id] || []) : [];
+    $('cts').innerHTML = cs.length ? cs.map(ctRow).join('') : ctRow(null);
+    bindCtRm();
+
+    document.querySelectorAll('#panel input, #panel select, #panel textarea')
+      .forEach(el => el.disabled = !canEdit);
+    $('pdock').style.display = canEdit ? '' : 'none';
+    $('ctadd').disabled = !canEdit;
+    $('del').hidden = !(p && me.role === 'admin');
+
+    $('panel').classList.add('open');
+    const w = $('panel').querySelector('.wrap');
+    if (w) w.scrollTop = 0;
+    snapshot = formState();
+  }
+
+  /* ---- 保存していない変更の見張り ---- */
+  let snapshot = '';
+  function formState(){
+    const v = [];
+    $('panel').querySelectorAll('input, select, textarea').forEach(el =>
+      v.push(el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value));
+    return v.join('\u0001');
+  }
+  function tryClose(){
+    if (formState() !== snapshot &&
+        !confirm('保存していない内容があります。\n閉じると入力した内容は消えます。\n\n閉じますか。')) return;
+    $('panel').classList.remove('open');
+    editing = null;
+  }
+  $('close').addEventListener('click', tryClose);
+  $('add').addEventListener('click', () => openPanel(null));
+
+  /* ================= 保存 ================= */
+  $('save').addEventListener('click', async () => {
+    showMsg($('pmsg'), '');
+    const nm = $('f_name').value.trim();
+    if (!nm){ showMsg($('pmsg'), '会社名を入れてください。', 'err'); $('f_name').focus(); return; }
+    if (!$('f_cl').checked && !$('f_sb').checked && !$('f_sp').checked){
+      showMsg($('pmsg'), '区分を1つ以上選んでください。', 'err'); return;
+    }
+
+    const body = {
+      organization_id : me.organization_id,
+      name            : nm,
+      name_kana       : $('f_kana').value.trim() || null,
+      is_client       : $('f_cl').checked,
+      is_subcontractor: $('f_sb').checked,
+      is_supplier     : $('f_sp').checked,
+      partner_type    : $('f_cl').checked ? 'client' : ($('f_sb').checked ? 'subcontractor' : 'supplier'),
+      rep_name        : $('f_rep').value.trim() || null,
+      corporate_number: $('f_cno').value.trim() || null,
+      invoice_reg_no  : $('f_inv').value.trim() || null,
+      postal_code     : $('f_zip').value.trim() || null,
+      address         : $('f_addr').value.trim() || null,
+      tel             : $('f_tel').value.trim() || null,
+      fax             : $('f_fax').value.trim() || null,
+      email           : $('f_mail').value.trim() || null,
+      trade_start_on  : $('f_start').value || null,
+      license_no      : $('f_lic').value.trim() || null,
+      license_kinds   : $('f_lkind').value.split(/[、,]/).map(x => x.trim()).filter(Boolean),
+      license_start_on: $('f_lst').value || null,
+      license_end_on  : $('f_led').value || null,
+      si_health       : $('f_sih').checked,
+      si_pension      : $('f_sip').checked,
+      si_employment   : $('f_sie').checked,
+      si_checked_on   : $('f_sid').value || null,
+      bank_name       : $('f_bank').value.trim() || null,
+      bank_branch     : $('f_branch').value.trim() || null,
+      bank_acc_type   : $('f_batype').value || null,
+      bank_acc_no     : $('f_bano').value.trim() || null,
+      bank_holder     : $('f_bahol').value.trim() || null,
+      closing_day     : $('f_close').value === '' ? null : Number($('f_close').value),
+      payment_month_offset: Number($('f_moff').value),
+      payment_day     : $('f_pday').value === '' ? null : Number($('f_pday').value),
+      note            : $('f_note').value.trim() || null
+    };
+
+    $('save').disabled = true; $('save').textContent = '保存しています…';
+    let error, id = editing ? editing.id : null;
+    if (editing) ({ error } = await sb.from('partners').update(body).eq('id', editing.id));
+    else {
+      const r = await sb.from('partners').insert(body).select('id').single();
+      error = r.error; id = r.data ? r.data.id : null;
+    }
+
+    // 担当者を入れ替える
+    if (!error && id){
+      await sb.from('partner_contacts').delete().eq('partner_id', id);
+      const rows = [...$('cts').querySelectorAll('.ctrow')].map((r,i) => ({
+        organization_id: me.organization_id,
+        partner_id     : id,
+        name           : r.querySelector('.c_name').value.trim(),
+        title          : r.querySelector('.c_title').value.trim() || null,
+        tel            : r.querySelector('.c_tel').value.trim() || null,
+        email          : r.querySelector('.c_mail').value.trim() || null,
+        is_primary     : r.querySelector('.c_pri').checked,
+        sort_order     : (i+1)*10
+      })).filter(x => x.name);
+      if (rows.length){
+        const r2 = await sb.from('partner_contacts').insert(rows);
+        if (r2.error) error = r2.error;
+      }
+    }
+
+    $('save').disabled = false; $('save').textContent = '保存する';
+    if (error){
+      showMsg($('pmsg'), error.code === '42501'
+        ? 'この操作を行う権限がありません。' : '保存できませんでした。' + error.message, 'err');
+      return;
+    }
+    snapshot = formState();
+    $('panel').classList.remove('open');
+    editing = null;
+    await load();
+    showMsg($('msg'), '保存しました。', 'ok');
+  });
+
+  /* ================= 削除 ================= */
+  $('del').addEventListener('click', async () => {
+    if (!editing) return;
+    if (!confirm(`「${editing.name}」を削除します。取り消せません。`)) return;
+    const { error } = await sb.from('partners').delete().eq('id', editing.id);
+    if (error){
+      showMsg($('pmsg'), error.code === '23503'
+        ? 'この取引先は工事や発注で使われているため削除できません。' : '削除できませんでした。' + error.message, 'err');
+      return;
+    }
+    snapshot = formState();
+    $('panel').classList.remove('open'); editing = null;
+    await load();
+    showMsg($('msg'), '削除しました。', 'ok');
+  });
+
+  await load();
+})();
+</script>
+</body>
+</html>
