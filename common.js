@@ -13,7 +13,7 @@ const STATUS = {
   cancelled: '中止'
 };
 
-const ROLE_LABEL = { admin:'経営者', manager:'現場監督', member:'作業員' };
+const ROLE_LABEL = { admin:'管理者', manager:'現場監督', member:'作業員' };
 
 /* ---------- 表示の整形 ---------- */
 function fmtMoney(v){
@@ -78,7 +78,7 @@ async function requireAuth(){
 function paintBar(me, orgName){
   const who = document.getElementById('who');
   if (!who) return;
-  who.innerHTML = `<b>${esc(me.name)}</b>${esc(orgName || '')} ／ ${esc(ROLE_LABEL[me.role] || me.role)}`;
+  who.innerHTML = `<b>${esc(ROLE_LABEL[me.role] || me.role)}</b>${esc(orgName || '')}`;
 }
 
 async function loadOrgName(orgId){
