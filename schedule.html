@@ -125,6 +125,12 @@ body > header.bar{ flex:0 0 auto; }
 }
 .dense .gname .gn2{ display:none; }
 
+.gname-rz{
+  position:sticky; z-index:7; width:8px; cursor:col-resize;
+  background:transparent; margin-left:-4px;
+}
+.gname-rz:hover{ background:var(--safety); opacity:.5; }
+
 .bar2{
   z-index:2; align-self:center; height:var(--bh,20px); border-radius:2px; cursor:pointer;
   display:flex; align-items:center; padding:0 6px; gap:5px; margin:0 1px;
@@ -578,6 +584,7 @@ body > header.bar{ flex:0 0 auto; }
   let projId = null, phases = [], deps = [], orders = [], editing = null, view = 'gantt';
   let oediting = null;
   let zoomW = null;          // 週の幅（px）。null なら画面に合わせる
+  let manualNameW = null;    // 工程欄の幅（px）。null なら自動
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
@@ -844,7 +851,7 @@ body > header.bar{ flex:0 0 auto; }
     const rowH = Math.max(22, Math.floor((boxH - HEAD) / N));
     const dense = rowH < 34;
     const barH = Math.max(12, Math.min(20, rowH - 6));
-    const nameW = Math.max(120, Math.min(200, Math.floor(boxW * 0.17)));
+    const nameW = manualNameW || Math.max(120, Math.min(200, Math.floor(boxW * 0.17)));
     const fitW  = Math.max(26, Math.floor((boxW - nameW - 40) / W));
     const colW  = zoomW ? Math.max(20, Math.min(400, zoomW)) : fitW;
     $('z_fit').classList.toggle('on', !zoomW);
@@ -857,6 +864,7 @@ body > header.bar{ flex:0 0 auto; }
     // 見出し
     h += `<div class="gh gno" style="grid-column:1;grid-row:1">No</div>`;
     h += `<div class="gh gname" style="grid-column:2;grid-row:1;left:${NOW}px">工程</div>`;
+    h += `<div class="gname-rz" id="gnameRz" style="grid-column:2;grid-row:1 / -1;left:${NOW + nameW - 4}px" title="ダブルクリックで文字幅に合わせる"></div>`;
     for (let i = 0; i < W; i++){
       const d = new Date(w0.getTime() + i*7*DAY);
       h += `<div class="gh" style="grid-column:${i+3};grid-row:1">` +
@@ -901,6 +909,13 @@ body > header.bar{ flex:0 0 auto; }
     $('gantt').innerHTML = h;
     $('gantt').querySelectorAll('.bar2').forEach(b =>
       b.addEventListener('click', () => openPanel(phases.find(x => x.id === b.dataset.id))));
+    if ($('gnameRz')) $('gnameRz').addEventListener('dblclick', () => {
+      const c = document.createElement('canvas').getContext('2d');
+      c.font = '700 12.5px ' + getComputedStyle(document.body).getPropertyValue('--disp');
+      const widest = Math.max(0, ...phases.map(p => c.measureText(p.name || '').width));
+      manualNameW = Math.max(80, Math.min(420, Math.ceil(widest) + 24));
+      redrawGantt();
+    });
     layoutNotes(W, N);
   }
 
