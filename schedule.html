@@ -885,8 +885,7 @@ body > header.bar{ flex:0 0 auto; }
         const crit = (slack[p.id] !== undefined && slack[p.id] <= 0) ? ' crit' : '';
         h += `<button class="bar2 b-${p.status}${crit}" data-id="${p.id}" ` +
              `title="${esc(p.name)}　${fmtDate(p.start_date)}〜${fmtDate(p.end_date)}" ` +
-             `style="grid-row:${r+2};grid-column:${c1} / ${c2}">` +
-             `${esc(p.name)}<span class="md">${Number(p.planned_mandays)||0}人工</span></button>`;
+             `style="grid-row:${r+2};grid-column:${c1} / ${c2}"></button>`;
       } else {
         h += `<button class="bar2 b-${p.status}" data-id="${p.id}" ` +
              `style="grid-row:${r+2};grid-column:3 / 4;background:transparent;color:var(--sub);border:1px dashed var(--rule)">日程未設定</button>`;
