@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!-- BUILD: organization (会社情報) v20260901A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>会社情報 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  #pdoc{ margin:0 auto; width:100%; max-width:1000px; }
+
+  .docform{
+    background:var(--card); border:1px solid var(--rule); border-radius:2px;
+    display:grid; grid-template-columns:130px minmax(0,1fr);
+  }
+  .docform > .sh{
+    grid-column:1 / -1; background:#E3E6E0; color:var(--ink);
+    font-family:var(--disp); font-weight:700; font-size:11.5px; letter-spacing:.06em;
+    padding:5px 12px; border-bottom:1px solid var(--rule);
+    box-shadow:inset 4px 0 0 var(--safety);
+  }
+  .docform > .k{
+    background:#F1F3EF; padding:5px 9px; font-size:11.5px; font-weight:700;
+    color:var(--sub); border-right:1px solid var(--rule-2);
+    border-bottom:1px solid var(--rule-2); display:flex; align-items:center; line-height:1.3;
+  }
+  .docform > .dv{
+    padding:3px 7px; border-bottom:1px solid var(--rule-2); min-width:0;
+    display:flex; align-items:center; gap:6px;
+  }
+  .docform input[type=text]{ min-height:32px; padding:3px 8px; font-size:13.5px; width:100%; min-width:0; }
+  .docform textarea{ min-height:74px; padding:5px 8px; font-size:13.5px; line-height:1.55; width:100%; }
+
+  .tip{ font-size:12px; color:var(--sub); line-height:1.7; margin:10px 2px 0; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>会社情報</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+ <div id="pdoc">
+  <div id="msg" class="msg"></div>
+
+  <div class="docform">
+    <div class="sh">建設業許可</div>
+    <span class="k">許可番号</span>
+    <span class="dv"><input id="f_lno" type="text" placeholder="福岡県知事許可（特-28）第110125号"></span>
+    <span class="k">許可行政庁</span>
+    <span class="dv"><input id="f_iss" type="text" placeholder="福岡県知事"></span>
+    <span class="k">許可業種</span>
+    <span class="dv"><textarea id="f_types" placeholder="電気工事業、土木工事業、とび土木工事業、鋼構造物工事業、解体工事業 など"></textarea></span>
+
+    <div class="sh">事業内容・取引先情報</div>
+    <span class="k">事業内容</span>
+    <span class="dv"><textarea id="f_biz"></textarea></span>
+    <span class="k">取引銀行</span>
+    <span class="dv"><textarea id="f_bank" placeholder="○○銀行○○支店"></textarea></span>
+  </div>
+
+  <p class="tip">
+    ここは会社（組織）に1つだけ持つ情報です。工事ごとの許認可（現場の建築確認や系統連系承諾など）は、
+    各工事の「工事の編集」画面にある許認可欄に入れてください。
+  </p>
+
+  <div style="height:12px"></div>
+ </div>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="inner"><button class="btn wide" id="save">保存する</button></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isAdmin = (me.role === 'admin');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+  $('dock').hidden = !isAdmin;
+
+  document.querySelectorAll('#pdoc input, #pdoc textarea').forEach(el => el.disabled = !isAdmin);
+
+  async function load(){
+    const { data, error } = await sb.from('organizations')
+      .select('license_no,license_issuer,license_types,business_content,bank_info')
+      .eq('id', me.organization_id).maybeSingle();
+    if (error){
+      showMsg($('msg'),
+        /column .* does not exist|schema cache/i.test(error.message || '')
+          ? 'データベースに必要な項目がまだありません。Supabase の SQL Editor で phase0_org_info.sql を実行してください。'
+          : '読み込めませんでした。' + error.message, 'err');
+      return;
+    }
+    const d = data || {};
+    $('f_lno').value   = d.license_no || '';
+    $('f_iss').value   = d.license_issuer || '';
+    $('f_types').value = d.license_types || '';
+    $('f_biz').value   = d.business_content || '';
+    $('f_bank').value  = d.bank_info || '';
+  }
+
+  $('save').addEventListener('click', async () => {
+    showMsg($('msg'), '');
+    const body = {
+      license_no       : $('f_lno').value.trim() || null,
+      license_issuer   : $('f_iss').value.trim() || null,
+      license_types    : $('f_types').value.trim() || null,
+      business_content : $('f_biz').value.trim() || null,
+      bank_info        : $('f_bank').value.trim() || null
+    };
+    $('save').disabled = true; $('save').textContent = '保存しています…';
+    const { error } = await sb.from('organizations').update(body).eq('id', me.organization_id);
+    $('save').disabled = false; $('save').textContent = '保存する';
+    if (error){
+      showMsg($('msg'), error.code === '42501' ? 'この操作を行う権限がありません。' : '保存できませんでした。' + error.message, 'err');
+      return;
+    }
+    showMsg($('msg'), '保存しました。', 'ok');
+  });
+
+  await load();
+})();
+</script>
+</body>
+</html>
