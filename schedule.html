@@ -909,11 +909,20 @@ body > header.bar{ flex:0 0 auto; }
     $('gantt').innerHTML = h;
     $('gantt').querySelectorAll('.bar2').forEach(b =>
       b.addEventListener('click', () => openPanel(phases.find(x => x.id === b.dataset.id))));
+    // 工程名がセル幅より長い場合は、はみ出す前にフォントを少しずつ縮める
+    $('gantt').querySelectorAll('.gname .gn1').forEach(el => {
+      let size = 12.5;
+      el.style.fontSize = size + 'px';
+      while (el.scrollWidth > el.clientWidth && size > 9){
+        size -= 0.5;
+        el.style.fontSize = size + 'px';
+      }
+    });
     if ($('gnameRz')) $('gnameRz').addEventListener('dblclick', () => {
       const c = document.createElement('canvas').getContext('2d');
       c.font = '700 12.5px ' + getComputedStyle(document.body).getPropertyValue('--disp');
       const widest = Math.max(0, ...phases.map(p => c.measureText(p.name || '').width));
-      manualNameW = Math.max(80, Math.min(420, Math.ceil(widest) + 24));
+      manualNameW = Math.max(80, Math.min(260, Math.ceil(widest) + 24));
       redrawGantt();
     });
     layoutNotes(W, N);
