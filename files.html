@@ -82,6 +82,9 @@
   .big{ width:100%; background:#1B1B1A; display:flex; align-items:center;
         justify-content:center; min-height:200px; max-height:52vh; }
   .big img{ max-width:100%; max-height:52vh; object-fit:contain; display:block; }
+  .big.dxf{ background:#fff; }
+  .big svg{ width:100%; height:52vh; }
+  .big .dxferr{ color:#DDD; font-size:12.5px; padding:20px; text-align:center; }
 </style>
 </head>
 <body>
@@ -228,6 +231,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
@@ -339,6 +343,110 @@
     const { data } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
     if (data?.signedUrl) urlCache[path] = data.signedUrl;
     return data?.signedUrl || null;
+  }
+
+  /* ---- DXF図面をその場でSVGにして見せる（LINE/CIRCLE/ARC/LWPOLYLINE/TEXT/簡易的なDIMENSIONのみ対応） ---- */
+  function dxfEsc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+  function dxfToSvg(dxf){
+    const ents = dxf.entities || [];
+    const allX = [], allY = [];
+    const bump = (x,y) => { allX.push(x); allY.push(y); };
+    const parts = [];
+
+    for (const e of ents){
+      switch (e.type){
+        case 'LINE': {
+          const [a,b] = e.vertices || [];
+          if (!a || !b) break;
+          bump(a.x,a.y); bump(b.x,b.y);
+          parts.push(`<line x1="${a.x}" y1="${-a.y}" x2="${b.x}" y2="${-b.y}"/>`);
+          break;
+        }
+        case 'POINT': {
+          const p = e.position; if (!p) break;
+          bump(p.x,p.y);
+          parts.push(`<circle cx="${p.x}" cy="${-p.y}" r="0.3" fill="currentColor" stroke="none"/>`);
+          break;
+        }
+        case 'CIRCLE': {
+          const c = e.center; if (!c) break;
+          bump(c.x-e.radius,c.y-e.radius); bump(c.x+e.radius,c.y+e.radius);
+          parts.push(`<circle cx="${c.x}" cy="${-c.y}" r="${e.radius}"/>`);
+          break;
+        }
+        case 'ARC': {
+          const c = e.center; if (!c) break;
+          bump(c.x-e.radius,c.y-e.radius); bump(c.x+e.radius,c.y+e.radius);
+          const a0 = e.startAngle, a1 = e.endAngle;
+          const x0 = c.x + e.radius*Math.cos(a0), y0 = c.y + e.radius*Math.sin(a0);
+          const x1 = c.x + e.radius*Math.cos(a1), y1 = c.y + e.radius*Math.sin(a1);
+          let sweep = a1 - a0; if (sweep < 0) sweep += Math.PI*2;
+          const large = sweep > Math.PI ? 1 : 0;
+          parts.push(`<path d="M ${x0} ${-y0} A ${e.radius} ${e.radius} 0 ${large} 0 ${x1} ${-y1}"/>`);
+          break;
+        }
+        case 'LWPOLYLINE': case 'POLYLINE': {
+          const pts = (e.vertices || []).map(v => [v.x, v.y]);
+          if (!pts.length) break;
+          pts.forEach(([x,y]) => bump(x,y));
+          const d = pts.map(([x,y],i) => `${i===0?'M':'L'} ${x} ${-y}`).join(' ') + (e.shape ? ' Z' : '');
+          parts.push(`<path d="${d}"/>`);
+          break;
+        }
+        case 'TEXT': case 'MTEXT': {
+          const p = e.startPoint || e.position; if (!p) break;
+          bump(p.x,p.y);
+          const h = e.textHeight || e.height || 2.5;
+          const txt = dxfEsc((e.text||'').replace(/[{}\\][^;]*;?/g,''));
+          parts.push(`<text x="${p.x}" y="${-p.y}" font-size="${h}" transform="rotate(${-(e.rotation||0)} ${p.x} ${-p.y})">${txt}</text>`);
+          break;
+        }
+        case 'DIMENSION': {
+          if (e.linearOrAngularPoint1 && e.linearOrAngularPoint2){
+            const p1 = e.linearOrAngularPoint1, p2 = e.linearOrAngularPoint2;
+            bump(p1.x,p1.y); bump(p2.x,p2.y);
+            parts.push(`<line x1="${p1.x}" y1="${-p1.y}" x2="${p2.x}" y2="${-p2.y}" stroke-dasharray="1,1"/>`);
+          }
+          if (e.middleOfText){
+            bump(e.middleOfText.x, e.middleOfText.y);
+            parts.push(`<text x="${e.middleOfText.x}" y="${-e.middleOfText.y}" font-size="2.5">${dxfEsc(e.text||'')}</text>`);
+          }
+          break;
+        }
+        default: break; // INSERT・SPLINE・ELLIPSE・3DFACE などは今回は対象外
+      }
+    }
+
+    if (!allX.length) return null;
+    // 迷子の参照点など外れ値に全体表示が引っ張られないよう、上下1%を切って範囲を決める
+    const pct = (arr, p) => { const s = [...arr].sort((a,b)=>a-b); return s[Math.max(0, Math.min(s.length-1, Math.floor(s.length*p)))]; };
+    const minX = pct(allX,0.01), maxX = pct(allX,0.99);
+    const minY = pct(allY,0.01), maxY = pct(allY,0.99);
+    const w = maxX-minX, h = maxY-minY;
+    const pad = Math.max(w,h) * 0.05 || 10;
+    const vb = `${minX-pad} ${-maxY-pad} ${w+pad*2} ${h+pad*2}`;
+    const sw = Math.max(w,h) / 800;
+    return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="${minX-pad}" y="${-maxY-pad}" width="${w+pad*2}" height="${h+pad*2}" fill="#fff"/>
+      <g fill="none" stroke="#16324F" stroke-width="${sw}" color="#16324F" font-family="sans-serif">
+        ${parts.join('')}
+      </g>
+    </svg>`;
+  }
+
+  async function renderDxf(path){
+    const u = await signedUrl(path);
+    if (!u) return '<div class="dxferr">図面を読み込めませんでした。</div>';
+    try {
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const text = new TextDecoder('shift-jis').decode(buf);
+      const dxf = new DxfParser().parseSync(text);
+      const svg = dxfToSvg(dxf);
+      return svg || '<div class="dxferr">この図面には表示できる図形（線・円・文字など）が見つかりませんでした。</div>';
+    } catch (err){
+      return `<div class="dxferr">この図面は表示できませんでした。${dxfEsc(err.message||'')}</div>`;
+    }
   }
 
   function render(){
@@ -625,11 +733,16 @@
     $('f_desc').value    = f.description || '';
     $('bbrows').innerHTML = bbHtml(f);
 
-    // 大きい画像
-    $('big').hidden = true; $('big').innerHTML = '';
+    // 大きい画像・DXF図面
+    $('big').hidden = true; $('big').innerHTML = ''; $('big').classList.remove('dxf');
     if ((f.mime_type || '').startsWith('image/')){
       const u = await signedUrl(f.storage_path);
       if (u){ $('big').innerHTML = `<img src="${u}" alt="">`; $('big').hidden = false; }
+    } else if (/\.dxf$/i.test(f.original_name || '')){
+      $('big').classList.add('dxf');
+      $('big').innerHTML = '<div class="dxferr">図面を読み込んでいます…</div>';
+      $('big').hidden = false;
+      renderDxf(f.storage_path).then(html => { if (editing === f) $('big').innerHTML = html; });
     }
 
     const mb = (Number(f.byte_size)||0) / 1024 / 1024;
