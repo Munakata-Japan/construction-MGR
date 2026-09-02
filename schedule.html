@@ -178,13 +178,27 @@ body > header.bar{ flex:0 0 auto; }
 .onote .bar3{ width:5px; flex:0 0 5px; background:var(--alert); }
 .onote.inr .bar3{ background:var(--ink-2); }
 .onote.done .bar3{ background:var(--ok); }
-.onote .txt{ padding:3px 7px; min-width:0; overflow:hidden; }
+.onote .txt{ padding:3px 7px; min-width:0; }
 .onote .t1{
   display:block; font-family:var(--disp); font-weight:700; font-size:11px;
   line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .onote .t2{ display:block; font-family:var(--mono); font-size:9.5px; color:var(--sub); line-height:1.3; }
 .onote.done .t1{ color:var(--sub); }
+.onote .opartner{
+  display:block; margin-top:1px; font-family:var(--mono); font-size:9.5px;
+  color:var(--ink-2); position:relative; cursor:help; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis;
+}
+.onote .pcard{
+  display:none; position:absolute; left:0; top:100%; margin-top:4px;
+  min-width:180px; max-width:240px; background:var(--card); border:1px solid var(--ink);
+  border-radius:3px; box-shadow:0 4px 12px rgba(22,50,79,.3);
+  padding:7px 10px; font-family:var(--body); font-size:11.5px; line-height:1.6;
+  color:var(--ink); white-space:normal; cursor:default; z-index:30; text-align:left;
+}
+.onote .pcard b{ display:block; font-family:var(--disp); font-size:12.5px; margin-bottom:2px; }
+.onote .opartner:hover .pcard{ display:block; }
 
 /* ---------- 発注の一覧 ---------- */
 .ogrp{ margin-top:12px; }
@@ -616,7 +630,7 @@ body > header.bar{ flex:0 0 auto; }
     const [c, w, p, u, pr] = await Promise.all([
       sb.from('cost_categories').select('id,code,name,cost_group,sort_order').eq('is_active',true).order('sort_order'),
       sb.from('work_types').select('id,cost_category_id,name,sort_order,hint').eq('is_active',true).order('sort_order'),
-      sb.from('partners').select('id,name,tel,address,postal_code').eq('is_active',true).order('name'),
+      sb.from('partners').select('id,name,tel,address,postal_code,email').eq('is_active',true).order('name'),
       sb.from('app_users').select('id,name,role').eq('is_active',true).order('name'),
       sb.from('projects').select('id,project_no,name,start_date,end_date_planned,is_sample,schedule_version,schedule_revised_on,schedule_revised_by').eq('is_active',true).order('project_no',{ascending:false})
     ]);
@@ -1029,11 +1043,18 @@ body > header.bar{ flex:0 0 auto; }
                   (o.status !== 'planned' ? ' done' : '');
       const stat = o.status !== 'planned' ? `　${OSTAT[o.status]}` : '';
       const pt = o.partner_id ? partners.find(x => x.id === o.partner_id) : null;
-      const ptInfo = pt ? `／${pt.name}${pt.tel ? '　電話 ' + pt.tel : ''}${pt.address ? '　' + pt.address : ''}` : '';
-      html += `<button class="${cls}" data-id="${o.id}" title="${esc(o.title)}／${fmtDate(o.due_date)}${esc(ptInfo)}">
+      const partnerHtml = pt ? `<span class="opartner">${esc(pt.name)}
+        <span class="pcard">
+          <b>${esc(pt.name)}</b>
+          ${pt.address ? `<div>${esc(pt.address)}</div>` : ''}
+          ${pt.tel ? `<div>TEL ${esc(pt.tel)}</div>` : ''}
+          ${pt.email ? `<div>${esc(pt.email)}</div>` : ''}
+        </span></span>` : '';
+      html += `<button class="${cls}" data-id="${o.id}" title="${esc(o.title)}／${fmtDate(o.due_date)}">
         <span class="bar3"></span>
         <span class="txt"><span class="t1">${esc(o.title)}</span>
-          <span class="t2">${md(new Date(o.due_date + 'T00:00:00'))}${stat}</span></span>
+          <span class="t2">${md(new Date(o.due_date + 'T00:00:00'))}${stat}</span>
+          ${partnerHtml}</span>
       </button>`;
     });
 
