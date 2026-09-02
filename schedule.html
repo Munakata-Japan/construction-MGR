@@ -131,6 +131,10 @@ body > header.bar{ flex:0 0 auto; }
 }
 .gname-rz:hover{ background:var(--safety); opacity:.5; }
 
+.todaycol{ position:relative; pointer-events:none; z-index:5; }
+.todayline{ position:absolute; top:0; bottom:0; width:0; border-left:2px dashed #E8720C; }
+.bar2.today{ box-shadow:0 0 0 2px #E8720C; }
+
 .bar2{
   z-index:2; align-self:center; height:var(--bh,20px); border-radius:2px; cursor:pointer;
   display:flex; align-items:center; padding:0 6px; gap:5px; margin:0 1px;
@@ -844,6 +848,13 @@ body > header.bar{ flex:0 0 auto; }
     const N  = phases.length;
     const wIdx = n => Math.floor((n2d(n) - w0) / (7*DAY));
 
+    // 本日の位置（縦線と、かかっている帯の強調に使う）
+    const t = new Date();
+    const todayN = d2n(`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`);
+    const todayCol = wIdx(todayN) + 3;
+    const todayInRange = todayCol >= 3 && todayCol <= W + 2;
+    const todayFrac = todayInRange ? ((n2d(todayN) - w0) % (7*DAY)) / (7*DAY) : 0;
+
     // 画面の高さから1行の高さを決める
     const boxH = $('gantt').clientHeight || 480;
     const boxW = $('gantt').clientWidth  || 900;
@@ -873,6 +884,11 @@ body > header.bar{ flex:0 0 auto; }
     // 縦の区切り
     for (let i = 0; i < W; i++)
       h += `<div class="gstripe" style="grid-column:${i+3};grid-row:2 / -1"></div>`;
+    // 本日の縦線
+    if (todayInRange){
+      h += `<div class="todaycol" style="grid-column:${todayCol};grid-row:1 / -1">` +
+           `<div class="todayline" style="left:${(todayFrac*100).toFixed(2)}%"></div></div>`;
+    }
     // 横の区切りと段の色分け
     for (let r = 0; r < N; r++)
       h += `<div class="grule${r % 2 ? ' alt' : ''}" style="grid-column:1 / -1;grid-row:${r+2}"></div>`;
@@ -891,10 +907,11 @@ body > header.bar{ flex:0 0 auto; }
         const c1 = wIdx(d2n(p.start_date)) + 3;
         const c2 = wIdx(d2n(p.end_date)) + 4;
         const crit = (slack[p.id] !== undefined && slack[p.id] <= 0) ? ' crit' : '';
+        const isToday = d2n(p.start_date) <= todayN && todayN <= d2n(p.end_date) ? ' today' : '';
         const barLabel = p.start_date === p.end_date
           ? md(new Date(p.start_date + 'T00:00:00'))
           : `${md(new Date(p.start_date + 'T00:00:00'))}〜${md(new Date(p.end_date + 'T00:00:00'))}`;
-        h += `<button class="bar2 b-${p.status}${crit}" data-id="${p.id}" ` +
+        h += `<button class="bar2 b-${p.status}${crit}${isToday}" data-id="${p.id}" ` +
              `title="${esc(p.name)}　${fmtDate(p.start_date)}〜${fmtDate(p.end_date)}" ` +
              `style="grid-row:${r+2};grid-column:${c1} / ${c2}">${barLabel}</button>`;
       } else {
