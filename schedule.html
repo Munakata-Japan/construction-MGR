@@ -1030,7 +1030,8 @@ body > header.bar{ flex:0 0 auto; }
       if (!col || !row) return;
 
       const ax = col.offsetLeft + col.offsetWidth / 2;
-      const ay = row.offsetTop + row.offsetHeight / 2;
+      // 帯は行の中央に来るので、丸をそこに重ねると帯の文字と被る。行の上端寄りに置く
+      const ay = row.offsetTop + 4;
 
       // 置き場所：覚えていればその位置、無ければ右上へ少しずらす
       const dx = (o.note_dx !== null && o.note_dx !== undefined) ? o.note_dx : 30;
