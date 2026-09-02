@@ -656,6 +656,7 @@ body > header.bar{ flex:0 0 auto; }
   let manualNameW = null;    // 工程欄の幅（px）。null なら自動
   let armedRow = null;       // 長押しで「入れ替え待ち」になっている行番号
   let noteAnchors = {};      // 発注の付箋の引き出し線アンカー（行ドラッグ中に付箋を追従させるため）
+  let suppressBarClick = null; // 帯をつかんで並べ替えた直後、そのクリックで編集画面を開かないようにする
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
@@ -1017,7 +1018,10 @@ body > header.bar{ flex:0 0 auto; }
     h += `</div>`;
     $('gantt').innerHTML = h;
     $('gantt').querySelectorAll('.bar2').forEach(b =>
-      b.addEventListener('click', () => openPanel(phases.find(x => x.id === b.dataset.id))));
+      b.addEventListener('click', () => {
+        if (suppressBarClick === b.dataset.id){ suppressBarClick = null; return; }
+        openPanel(phases.find(x => x.id === b.dataset.id));
+      }));
     // 工程名・帯の日付がセル幅より長い場合は、はみ出す前にフォントを少しずつ縮める
     const shrinkToFit = (el, from, floor) => {
       let size = from;
@@ -1243,7 +1247,7 @@ body > header.bar{ flex:0 0 auto; }
     let pressTimer = null, sx = 0, sy = 0;
     const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
 
-    tbl.querySelectorAll('.gno[data-row], .gname[data-row]').forEach(el => {
+    tbl.querySelectorAll('.gno[data-row], .gname[data-row], .bar2[data-row]').forEach(el => {
       const r = Number(el.dataset.row);
 
       el.addEventListener('pointerdown', e => {
@@ -1282,6 +1286,10 @@ body > header.bar{ flex:0 0 auto; }
 
       // この行に紐づく発注の付箋も一緒に追従させる
       const p = phases[r];
+      if (p){
+        suppressBarClick = p.id; // ドラッグ直後の帯クリックで編集画面を開かせない
+        setTimeout(() => { if (suppressBarClick === p.id) suppressBarClick = null; }, 500);
+      }
       const onotesBox = $('onotes');
       const noteEls = (p ? orders.filter(o => o.phase_id === p.id && o.due_date && o.status !== 'cancelled') : [])
         .map(o => ({ id: o.id, el: onotesBox?.querySelector(`.onote[data-id="${o.id}"]`) }))
