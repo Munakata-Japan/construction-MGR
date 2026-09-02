@@ -187,18 +187,19 @@ body > header.bar{ flex:0 0 auto; }
 .onote.done .t1{ color:var(--sub); }
 .onote .opartner{
   display:block; margin-top:1px; font-family:var(--mono); font-size:9.5px;
-  color:var(--ink-2); position:relative; cursor:help; white-space:nowrap;
+  color:var(--ink-2); cursor:help; white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis;
 }
-.onote .pcard{
-  display:none; position:absolute; left:0; top:100%; margin-top:4px;
-  min-width:180px; max-width:240px; background:var(--card); border:1px solid var(--ink);
+/* position:fixed で .gwrap（overflow:auto）の外へ逃がす。JS でボタンの下に位置決めする */
+.pcard{
+  display:none; position:fixed; min-width:180px; max-width:240px;
+  background:var(--card); border:1px solid var(--ink);
   border-radius:3px; box-shadow:0 4px 12px rgba(22,50,79,.3);
   padding:7px 10px; font-family:var(--body); font-size:11.5px; line-height:1.6;
-  color:var(--ink); white-space:normal; cursor:default; z-index:30; text-align:left;
+  color:var(--ink); white-space:normal; cursor:default; z-index:9999; text-align:left;
 }
-.onote .pcard b{ display:block; font-family:var(--disp); font-size:12.5px; margin-bottom:2px; }
-.onote .opartner:hover .pcard{ display:block; }
+.pcard.show{ display:block; }
+.pcard b{ display:block; font-family:var(--disp); font-size:12.5px; margin-bottom:2px; }
 
 /* ---------- 発注の一覧 ---------- */
 .ogrp{ margin-top:12px; }
@@ -386,10 +387,6 @@ body > header.bar{ flex:0 0 auto; }
       <div class="row">
         <label for="o_partner">発注先</label>
         <div class="fld"><select id="o_partner"></select></div>
-      </div>
-      <div class="row" id="o_partnerinfo" hidden>
-        <label></label>
-        <div class="fld" style="font-size:12.5px;color:var(--sub)"></div>
       </div>
       <div class="row">
         <label for="o_user">担当者</label>
@@ -1044,7 +1041,7 @@ body > header.bar{ flex:0 0 auto; }
       const stat = o.status !== 'planned' ? `　${OSTAT[o.status]}` : '';
       const pt = o.partner_id ? partners.find(x => x.id === o.partner_id) : null;
       const partnerHtml = pt ? `<span class="opartner">${esc(pt.name)}
-        <span class="pcard">
+        <span class="pcard onote-pcard">
           <b>${esc(pt.name)}</b>
           ${pt.address ? `<div>${esc(pt.address)}</div>` : ''}
           ${pt.tel ? `<div>TEL ${esc(pt.tel)}</div>` : ''}
@@ -1058,6 +1055,7 @@ body > header.bar{ flex:0 0 auto; }
       </button>`;
     });
 
+    document.querySelectorAll('body > .onote-pcard').forEach(el => el.remove());
     box.innerHTML = html;
     svg.setAttribute('width', tbl.scrollWidth);
     svg.setAttribute('height', tbl.scrollHeight);
@@ -1068,6 +1066,21 @@ body > header.bar{ flex:0 0 auto; }
       if (!a) return;
       el.style.left = (a.ax + a.dx) + 'px';
       el.style.top  = (a.ay + a.dy) + 'px';
+    });
+
+    // 連絡先カードは .gwrap（overflow:auto）の外（body直下）へ逃がし、
+    // ホバー時に発注先名の真下へ座標を当てて表示する
+    box.querySelectorAll('.opartner').forEach(el => {
+      const card = el.querySelector('.pcard');
+      if (!card) return;
+      document.body.appendChild(card);
+      el.addEventListener('mouseenter', () => {
+        const r = el.getBoundingClientRect();
+        card.style.left = Math.round(r.left) + 'px';
+        card.style.top  = Math.round(r.bottom + 4) + 'px';
+        card.classList.add('show');
+      });
+      el.addEventListener('mouseleave', () => card.classList.remove('show'));
     });
 
     drawLines(anchors);
@@ -1315,17 +1328,6 @@ body > header.bar{ flex:0 0 auto; }
   });
   $('oclose').addEventListener('click', () => $('opanel').classList.remove('open'));
 
-  // 発注先を選ぶと、取引先の住所・電話をその場に出す（取引先画面を開かなくて済むように）
-  function syncPartnerInfo(){
-    const pt = partners.find(x => x.id === $('o_partner').value);
-    const box = $('o_partnerinfo');
-    const line = [pt && pt.tel ? `電話 ${pt.tel}` : '', pt && pt.address ? pt.address : '']
-      .filter(Boolean).join('　／　');
-    box.hidden = !line;
-    box.querySelector('.fld').textContent = line;
-  }
-  $('o_partner').addEventListener('change', syncPartnerInfo);
-
   function openOrderEdit(o){
     oediting = o || null;
     showMsg($('oemsg'), '');
@@ -1342,7 +1344,6 @@ body > header.bar{ flex:0 0 auto; }
     $('o_title').value  = o ? (o.title || '') : '';
     $('o_phase').value  = o ? (o.phase_id || '') : '';
     $('o_partner').value= o ? (o.partner_id || '') : '';
-    syncPartnerInfo();
     $('o_user').value   = o ? (o.assignee_user_id || '') : '';
     $('o_due').value    = o ? (o.due_date || '') : '';
     $('o_note2').value  = o ? (o.due_note || '') : '';
