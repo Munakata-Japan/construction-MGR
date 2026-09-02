@@ -103,8 +103,10 @@
   .drow:hover{ border-color:var(--ink); }
   .drow .fl{ align-self:stretch; }
   .drow .bd{ padding:9px 2px 9px 0; min-width:0; }
-  .drow .t1{ font-family:var(--disp); font-weight:700; font-size:14px; line-height:1.4; }
-  .drow .t2{ font-size:12px; color:var(--sub); font-family:var(--mono); }
+  .drow .t1{ font-family:var(--disp); font-weight:700; font-size:14px; line-height:1.4;
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .drow .t2{ font-size:12px; color:var(--sub); font-family:var(--mono);
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .drow .rt{ padding:9px 12px; font-size:12px; color:var(--sub); white-space:nowrap; }
 
   @media (max-width:760px){
