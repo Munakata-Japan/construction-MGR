@@ -166,16 +166,18 @@
       <span class="k">取引開始</span>
       <span class="dv"><input id="f_start" type="date"></span>
 
-      <div class="sh">建設業許可（協力会社に出すときの確認）</div>
-      <span class="k">許可番号</span>
-      <span class="dv r"><input id="f_lic" type="text" placeholder="福岡県知事許可（般-5）第12345号"></span>
-      <span class="k">許可業種</span>
-      <span class="dv"><input id="f_lkind" type="text" placeholder="土木一式、とび・土工、舗装（読点で区切る）"></span>
+      <div id="licSec" style="display:contents">
+        <div class="sh">建設業許可（協力会社に出すときの確認）</div>
+        <span class="k">許可番号</span>
+        <span class="dv r"><input id="f_lic" type="text" placeholder="福岡県知事許可（般-5）第12345号"></span>
+        <span class="k">許可業種</span>
+        <span class="dv"><input id="f_lkind" type="text" placeholder="土木一式、とび・土工、舗装（読点で区切る）"></span>
 
-      <span class="k">許可の開始</span>
-      <span class="dv r"><input id="f_lst" type="date"></span>
-      <span class="k">許可の期限</span>
-      <span class="dv"><input id="f_led" type="date"></span>
+        <span class="k">許可の開始</span>
+        <span class="dv r"><input id="f_lst" type="date"></span>
+        <span class="k">許可の期限</span>
+        <span class="dv"><input id="f_led" type="date"></span>
+      </div>
 
       <div class="sh">社会保険と振込先</div>
       <span class="k">加入状況</span>
@@ -374,6 +376,12 @@
   });
 
   /* ================= 編集 ================= */
+  // 協力会社でない取引先は建設業許可の入力が要らないので隠す
+  function syncLicSec(){
+    $('licSec').style.display = $('f_sb').checked ? 'contents' : 'none';
+  }
+  $('f_sb').addEventListener('change', syncLicSec);
+
   function openPanel(p){
     editing = p || null;
     showMsg($('pmsg'), '');
@@ -421,6 +429,7 @@
     $('pdock').style.display = canEdit ? '' : 'none';
     $('ctadd').disabled = !canEdit;
     $('del').hidden = !(p && me.role === 'admin');
+    syncLicSec();
 
     $('panel').classList.add('open');
     const w = $('panel').querySelector('.wrap');
