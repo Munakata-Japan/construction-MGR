@@ -133,6 +133,11 @@ body > header.bar{ flex:0 0 auto; }
 
 .todaycol{ position:relative; pointer-events:none; z-index:5; }
 .todayline{ position:absolute; top:0; bottom:0; width:0; border-left:2px dashed #E8720C; }
+.todaylbl{
+  position:absolute; top:2px; left:0; transform:translateX(-50%);
+  background:#E8720C; color:#fff; font-family:var(--mono); font-size:10px;
+  line-height:1.4; padding:0 4px; border-radius:2px; white-space:nowrap; z-index:6;
+}
 .bar2.today{ box-shadow:0 0 0 2px #E8720C; }
 
 .bar2{
@@ -887,7 +892,8 @@ body > header.bar{ flex:0 0 auto; }
     // 本日の縦線
     if (todayInRange){
       h += `<div class="todaycol" style="grid-column:${todayCol};grid-row:1 / -1">` +
-           `<div class="todayline" style="left:${(todayFrac*100).toFixed(2)}%"></div></div>`;
+           `<div class="todayline" style="left:${(todayFrac*100).toFixed(2)}%">` +
+           `<span class="todaylbl">${md(t)}</span></div></div>`;
     }
     // 横の区切りと段の色分け
     for (let r = 0; r < N; r++)
