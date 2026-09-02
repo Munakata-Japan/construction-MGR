@@ -87,6 +87,11 @@
   .big .dxferr{ color:#DDD; font-size:12.5px; padding:20px; text-align:center; }
   .big.pdf{ background:#fff; height:70vh; max-height:70vh; }
   .big iframe{ width:100%; height:100%; border:0; display:block; }
+  .big.office{ background:#fff; height:70vh; max-height:70vh; align-items:stretch; justify-content:stretch; }
+  .big .officebox{ width:100%; height:100%; overflow:auto; padding:14px 18px; box-sizing:border-box;
+                    font-family:var(--body); font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .big .officebox table{ border-collapse:collapse; font-size:12.5px; }
+  .big .officebox table td, .big .officebox table th{ border:1px solid var(--rule); padding:3px 7px; }
 </style>
 </head>
 <body>
@@ -480,6 +485,49 @@
     }
   }
 
+  // Excel・Wordのライブラリも、実際に開くまで読み込まない（サイズが大きいため）
+  const scriptPromises = {};
+  function loadScript(src){
+    if (!scriptPromises[src]){
+      scriptPromises[src] = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+    return scriptPromises[src];
+  }
+
+  async function renderXlsx(path){
+    const u = await signedUrl(path);
+    if (!u) return '<div class="dxferr">読み込めませんでした。</div>';
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const wb = XLSX.read(buf, { type: 'array' });
+      const tabs = wb.SheetNames.map((name, i) =>
+        `<button class="btn ghost sm xsheet" data-i="${i}" style="margin:0 4px 8px 0">${dxfEsc(name)}</button>`).join('');
+      const sheets = wb.SheetNames.map((name, i) =>
+        `<div class="xsheetbody" data-i="${i}"${i>0?' hidden':''}>${XLSX.utils.sheet_to_html(wb.Sheets[name], { header:'', footer:'' })}</div>`).join('');
+      return `<div class="officebox"><div>${tabs}</div>${sheets}</div>`;
+    } catch (err){
+      return `<div class="dxferr">このファイルは表示できませんでした。${dxfEsc(err.message||'')}</div>`;
+    }
+  }
+
+  async function renderDocx(path){
+    const u = await signedUrl(path);
+    if (!u) return '<div class="dxferr">読み込めませんでした。</div>';
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const result = await mammoth.convertToHtml({ arrayBuffer: buf });
+      return `<div class="officebox">${result.value}</div>`;
+    } catch (err){
+      return `<div class="dxferr">このファイルは表示できませんでした。${dxfEsc(err.message||'')}</div>`;
+    }
+  }
+
   function render(){
     const kd = $('fkind').value, ph = $('fphase').value;
     const q  = $('q').value.trim().toLowerCase();
@@ -764,8 +812,8 @@
     $('f_desc').value    = f.description || '';
     $('bbrows').innerHTML = bbHtml(f);
 
-    // 大きい画像・DXF図面・PDF
-    $('big').hidden = true; $('big').innerHTML = ''; $('big').classList.remove('dxf', 'pdf');
+    // 大きい画像・DXF/DWG図面・PDF・Excel・Word
+    $('big').hidden = true; $('big').innerHTML = ''; $('big').classList.remove('dxf', 'pdf', 'office');
     if ((f.mime_type || '').startsWith('image/')){
       const u = await signedUrl(f.storage_path);
       if (u){ $('big').innerHTML = `<img src="${u}" alt="">`; $('big').hidden = false; }
@@ -786,6 +834,23 @@
         $('big').innerHTML = `<iframe src="${esc(u)}" title="${esc(f.original_name||'PDF')}"></iframe>`;
         $('big').hidden = false;
       }
+    } else if (/\.xlsx?$/i.test(f.original_name || '')){
+      $('big').classList.add('office');
+      $('big').innerHTML = '<div class="officebox">読み込んでいます…</div>';
+      $('big').hidden = false;
+      renderXlsx(f.storage_path).then(html => {
+        if (editing !== f) return;
+        $('big').innerHTML = html;
+        const box = $('big');
+        box.querySelectorAll('.xsheet').forEach(btn => btn.addEventListener('click', () => {
+          box.querySelectorAll('.xsheetbody').forEach(b => b.hidden = (b.dataset.i !== btn.dataset.i));
+        }));
+      });
+    } else if (/\.docx$/i.test(f.original_name || '')){
+      $('big').classList.add('office');
+      $('big').innerHTML = '<div class="officebox">読み込んでいます…</div>';
+      $('big').hidden = false;
+      renderDocx(f.storage_path).then(html => { if (editing === f) $('big').innerHTML = html; });
     }
 
     const mb = (Number(f.byte_size)||0) / 1024 / 1024;
