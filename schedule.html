@@ -872,29 +872,36 @@ body > header.bar{ flex:0 0 auto; }
     const colW  = zoomW ? Math.max(20, Math.min(400, zoomW)) : fitW;
     $('z_fit').classList.toggle('on', !zoomW);
 
+    // 各日が週末かどうかを先にまとめて出す（列幅・見出し・区切りの3か所で使う）
+    const days = Array.from({ length: W }, (_, i) => {
+      const d = new Date(w0.getTime() + i*DAY);
+      const dow = d.getDay();
+      return { d, we: (dow === 0 || dow === 6) };
+    });
+
     const NOW = 40;                       // 番号欄の幅
+    const dayCols = days.map(x => {
+      const w = Math.max(10, Math.round(x.we ? colW / 2 : colW));
+      return zoomW ? `${w}px` : `minmax(${w}px, ${x.we ? '0.5fr' : '1fr'})`;
+    }).join(' ');
     let h = `<div class="gtable${dense ? ' dense' : ''}" style="` +
-            `grid-template-columns:${NOW}px ${nameW}px repeat(${W}, ${zoomW ? colW + 'px' : 'minmax(' + colW + 'px, 1fr)'});` +
+            `grid-template-columns:${NOW}px ${nameW}px ${dayCols};` +
             `grid-template-rows:${HEAD}px repeat(${N}, ${rowH}px);--bh:${barH}px">`;
 
     // 見出し（日単位の目盛り。月の最初の日と、週末には印を付ける）
     h += `<div class="gh gno" style="grid-column:1;grid-row:1">No</div>`;
     h += `<div class="gh gname" style="grid-column:2;grid-row:1;left:${NOW}px">工程</div>`;
     h += `<div class="gname-rz" id="gnameRz" style="grid-column:2;grid-row:1 / -1;left:${NOW + nameW - 4}px" title="ダブルクリックで文字幅に合わせる"></div>`;
-    for (let i = 0; i < W; i++){
-      const d = new Date(w0.getTime() + i*DAY);
-      const dow = d.getDay();
-      const we = (dow === 0 || dow === 6) ? ' we' : '';
+    days.forEach((x, i) => {
+      const we = x.we ? ' we' : '';
       h += `<div class="gh${we}" style="grid-column:${i+3};grid-row:1">` +
-           `${d.getDate() === 1 ? (d.getMonth()+1)+'月' : '&nbsp;'}<b>${d.getDate()}</b></div>`;
-    }
+           `${x.d.getDate() === 1 ? (x.d.getMonth()+1)+'月' : '&nbsp;'}<b>${x.d.getDate()}</b></div>`;
+    });
     // 縦の区切り（週末は背景を薄く塗る）
-    for (let i = 0; i < W; i++){
-      const d = new Date(w0.getTime() + i*DAY);
-      const dow = d.getDay();
-      const we = (dow === 0 || dow === 6) ? ' we' : '';
+    days.forEach((x, i) => {
+      const we = x.we ? ' we' : '';
       h += `<div class="gstripe${we}" style="grid-column:${i+3};grid-row:2 / -1"></div>`;
-    }
+    });
     // 本日の縦線
     if (todayInRange){
       h += `<div class="todaycol" style="grid-column:${todayCol};grid-row:1 / -1">` +
