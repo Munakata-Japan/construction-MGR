@@ -655,6 +655,7 @@ body > header.bar{ flex:0 0 auto; }
   let zoomW = null;          // 日の幅（px）。null なら画面に合わせる
   let manualNameW = null;    // 工程欄の幅（px）。null なら自動
   let armedRow = null;       // 長押しで「入れ替え待ち」になっている行番号
+  let noteAnchors = {};      // 発注の付箋の引き出し線アンカー（行ドラッグ中に付箋を追従させるため）
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
@@ -1130,6 +1131,7 @@ body > header.bar{ flex:0 0 auto; }
       el.addEventListener('mouseleave', () => card.classList.remove('show'));
     });
 
+    noteAnchors = anchors;
     drawLines(anchors);
     bindNoteDrag(anchors);
   }
@@ -1278,6 +1280,25 @@ body > header.bar{ flex:0 0 auto; }
       });
       armedRow = null;
 
+      // この行に紐づく発注の付箋も一緒に追従させる
+      const p = phases[r];
+      const onotesBox = $('onotes');
+      const noteEls = (p ? orders.filter(o => o.phase_id === p.id && o.due_date && o.status !== 'cancelled') : [])
+        .map(o => ({ id: o.id, el: onotesBox?.querySelector(`.onote[data-id="${o.id}"]`) }))
+        .filter(x => x.el);
+      const noteBase = {};
+      noteEls.forEach(({ id, el }) => {
+        noteBase[id] = { top: parseFloat(el.style.top) || 0, ay: noteAnchors[id]?.ay ?? 0 };
+      });
+      const applyNoteDy = dy => {
+        if (!noteEls.length) return;
+        noteEls.forEach(({ id, el }) => {
+          el.style.top = (noteBase[id].top + dy) + 'px';
+          if (noteAnchors[id]) noteAnchors[id].ay = noteBase[id].ay + dy;
+        });
+        drawLines(noteAnchors);
+      };
+
       const line = document.createElement('div');
       line.className = 'rdropline';
       tbl.appendChild(line);
@@ -1290,6 +1311,7 @@ body > header.bar{ flex:0 0 auto; }
       const move = ev => {
         const dy = ev.clientY - startY;
         els.forEach(el => { el.style.transform = `translateY(${dy}px)`; });
+        applyNoteDy(dy);
         targetR = Math.max(0, Math.min(N - 1, r + Math.round(dy / rowH)));
         showLine(targetR + (targetR > r ? 1 : 0));
       };
@@ -1306,6 +1328,9 @@ body > header.bar{ flex:0 0 auto; }
             el.style.transform = '';
           });
           setTimeout(() => els.forEach(el => { el.classList.remove('rlift'); el.style.transition = ''; }), 160);
+          noteEls.forEach(({ el }) => { el.style.transition = 'top .15s ease'; });
+          applyNoteDy(0);
+          if (noteEls.length) setTimeout(() => noteEls.forEach(({ el }) => { el.style.transition = ''; }), 160);
           showMsg($('msg'), '');
           return;
         }
@@ -1315,6 +1340,8 @@ body > header.bar{ flex:0 0 auto; }
           el.style.transition = 'transform .18s ease';
           el.style.transform = `translateY(${dyFinal}px)`;
         });
+        noteEls.forEach(({ el }) => { el.style.transition = 'top .18s ease'; });
+        applyNoteDy(dyFinal);
         showMsg($('msg'), '並び順を更新しています…');
         setTimeout(() => { reorderPhase(r, targetR); }, 190);
       };
