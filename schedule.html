@@ -115,7 +115,7 @@ body > header.bar{ flex:0 0 auto; }
 .gname{
   position:sticky; z-index:3; background:var(--card);
   border-right:1px solid var(--rule); border-bottom:1px solid var(--rule-2);
-  padding:2px 10px; min-width:0;
+  padding:2px 10px 2px 18px; min-width:0;
   display:flex; flex-direction:column; justify-content:center;
 }
 .gno.alt, .gname.alt{ background:#F5F7F3; }
@@ -128,6 +128,15 @@ body > header.bar{ flex:0 0 auto; }
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .dense .gname .gn2{ display:none; }
+
+/* この工程に紐づく発注の状態を示す小さな丸印 */
+.gname .odot{
+  position:absolute; left:7px; top:50%; transform:translateY(-50%);
+  width:8px; height:8px; border-radius:50%; cursor:help;
+}
+.gname .odot.od-ok{ background:var(--ok); }
+.gname .odot.od-pending{ background:var(--safety); }
+.gname .odot.od-over{ background:var(--alert); }
 
 .gname-rz{
   position:sticky; z-index:7; width:8px; cursor:col-resize;
@@ -947,9 +956,20 @@ body > header.bar{ flex:0 0 auto; }
       const sub = `${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}`;
       const alt = r % 2 ? ' alt' : '';
 
+      // この工程に紐づく発注の状態をまとめて、行の印にする
+      const opOrders = orders.filter(o => o.phase_id === p.id && o.status !== 'cancelled');
+      let odot = '';
+      if (opOrders.length){
+        const overdue = opOrders.some(o => o.due_date && o.status === 'planned' && d2n(o.due_date) < todayN);
+        const pending = opOrders.some(o => o.status === 'planned');
+        const ocls = overdue ? 'od-over' : (pending ? 'od-pending' : 'od-ok');
+        const otxt = overdue ? '発注：期限超過あり' : (pending ? '発注：未発注あり' : '発注：すべて発注済み');
+        odot = `<span class="odot ${ocls}" title="${otxt}"></span>`;
+      }
+
       h += `<div class="gno${alt}" style="grid-column:1;grid-row:${r+2}">${r+1}</div>`;
       h += `<div class="gname${alt}" style="grid-column:2;grid-row:${r+2};left:${NOW}px" title="${esc(p.name)}／${sub}">` +
-           `<span class="gn1">${esc(p.name)}</span><span class="gn2">${sub}</span></div>`;
+           `${odot}<span class="gn1">${esc(p.name)}</span><span class="gn2">${sub}</span></div>`;
 
       if (p.start_date && p.end_date){
         const c1 = wIdx(d2n(p.start_date)) + 3;
