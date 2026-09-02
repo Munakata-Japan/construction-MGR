@@ -115,7 +115,7 @@ body > header.bar{ flex:0 0 auto; }
 .gname{
   position:sticky; z-index:3; background:var(--card);
   border-right:1px solid var(--rule); border-bottom:1px solid var(--rule-2);
-  padding:2px 10px 2px 18px; min-width:0;
+  padding:2px 10px 2px 22px; min-width:0;
   display:flex; flex-direction:column; justify-content:center;
 }
 .gno.alt, .gname.alt{ background:#F5F7F3; }
@@ -129,14 +129,15 @@ body > header.bar{ flex:0 0 auto; }
 }
 .dense .gname .gn2{ display:none; }
 
-/* この工程に紐づく発注の状態を示す小さな丸印 */
+/* この工程に紐づく発注の状態を示す丸印 */
 .gname .odot{
-  position:absolute; left:7px; top:50%; transform:translateY(-50%);
-  width:8px; height:8px; border-radius:50%; cursor:help;
+  position:absolute; left:6px; top:50%; transform:translateY(-50%);
+  width:12px; height:12px; border-radius:50%; cursor:help;
+  border:1.5px solid var(--card); box-shadow:0 0 0 1px rgba(0,0,0,.25);
 }
 .gname .odot.od-ok{ background:var(--ok); }
 .gname .odot.od-pending{ background:var(--safety); }
-.gname .odot.od-over{ background:var(--alert); }
+.gname .odot.od-over{ background:var(--alert); box-shadow:0 0 0 2px rgba(168,58,44,.35); }
 
 .gname-rz{
   position:sticky; z-index:7; width:8px; cursor:col-resize;
@@ -314,6 +315,9 @@ body > header.bar{ flex:0 0 auto; }
     <span><i style="background:#2F6B4F"></i>完了</span>
     <span><i style="background:#A83A2C"></i>中断</span>
     <span><i style="background:#fff;border:2px solid #111"></i>余裕なし</span>
+    <span><i style="background:var(--ok);border-radius:50%;width:10px;height:10px"></i>発注：すべて済み</span>
+    <span><i style="background:var(--safety);border-radius:50%;width:10px;height:10px"></i>発注：未発注あり</span>
+    <span><i style="background:var(--alert);border-radius:50%;width:10px;height:10px"></i>発注：期限超過</span>
   </div>
 </div>
 
