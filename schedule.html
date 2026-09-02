@@ -1050,7 +1050,7 @@ body > header.bar{ flex:0 0 auto; }
           ${pt.tel ? `<div>TEL ${esc(pt.tel)}</div>` : ''}
           ${pt.email ? `<div>${esc(pt.email)}</div>` : ''}
         </span></span>` : '';
-      html += `<button class="${cls}" data-id="${o.id}" title="${esc(o.title)}／${fmtDate(o.due_date)}">
+      html += `<button class="${cls}" data-id="${o.id}">
         <span class="bar3"></span>
         <span class="txt"><span class="t1">${esc(o.title)}</span>
           <span class="t2">${md(new Date(o.due_date + 'T00:00:00'))}${stat}</span>
