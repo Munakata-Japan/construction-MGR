@@ -656,7 +656,7 @@ body > header.bar{ flex:0 0 auto; }
   let manualNameW = null;    // 工程欄の幅（px）。null なら自動
   let armedRow = null;       // 長押しで「入れ替え待ち」になっている行番号
   let noteAnchors = {};      // 発注の付箋の引き出し線アンカー（行ドラッグ中に付箋を追従させるため）
-  let suppressBarClick = null; // 帯をつかんで並べ替えた直後、そのクリックで編集画面を開かないようにする
+  let suppressBarClickUntil = 0; // 行をドラッグした直後は、離した先の帯へのクリックで編集画面を開かないようにする
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
@@ -1019,7 +1019,7 @@ body > header.bar{ flex:0 0 auto; }
     $('gantt').innerHTML = h;
     $('gantt').querySelectorAll('.bar2').forEach(b =>
       b.addEventListener('click', () => {
-        if (suppressBarClick === b.dataset.id){ suppressBarClick = null; return; }
+        if (Date.now() < suppressBarClickUntil) return;
         openPanel(phases.find(x => x.id === b.dataset.id));
       }));
     // 工程名・帯の日付がセル幅より長い場合は、はみ出す前にフォントを少しずつ縮める
@@ -1286,10 +1286,6 @@ body > header.bar{ flex:0 0 auto; }
 
       // この行に紐づく発注の付箋も一緒に追従させる
       const p = phases[r];
-      if (p){
-        suppressBarClick = p.id; // ドラッグ直後の帯クリックで編集画面を開かせない
-        setTimeout(() => { if (suppressBarClick === p.id) suppressBarClick = null; }, 500);
-      }
       const onotesBox = $('onotes');
       const noteEls = (p ? orders.filter(o => o.phase_id === p.id && o.due_date && o.status !== 'cancelled') : [])
         .map(o => ({ id: o.id, el: onotesBox?.querySelector(`.onote[data-id="${o.id}"]`) }))
@@ -1324,6 +1320,9 @@ body > header.bar{ flex:0 0 auto; }
         showLine(targetR + (targetR > r ? 1 : 0));
       };
       const up = ev => {
+        // 離した先がどの帯であっても、直後のクリックで編集画面を開かせない
+        // （見た目上つかんでいる帯と、実際にマウスが乗っている帯は別要素のため）
+        suppressBarClickUntil = Date.now() + 400;
         document.removeEventListener('pointermove', move);
         document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up);
