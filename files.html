@@ -85,6 +85,8 @@
   .big.dxf{ background:#fff; }
   .big svg{ width:100%; height:52vh; }
   .big .dxferr{ color:#DDD; font-size:12.5px; padding:20px; text-align:center; }
+  .big.pdf{ background:#fff; height:70vh; max-height:70vh; }
+  .big iframe{ width:100%; height:100%; border:0; display:block; }
 </style>
 </head>
 <body>
@@ -733,8 +735,8 @@
     $('f_desc').value    = f.description || '';
     $('bbrows').innerHTML = bbHtml(f);
 
-    // 大きい画像・DXF図面
-    $('big').hidden = true; $('big').innerHTML = ''; $('big').classList.remove('dxf');
+    // 大きい画像・DXF図面・PDF
+    $('big').hidden = true; $('big').innerHTML = ''; $('big').classList.remove('dxf', 'pdf');
     if ((f.mime_type || '').startsWith('image/')){
       const u = await signedUrl(f.storage_path);
       if (u){ $('big').innerHTML = `<img src="${u}" alt="">`; $('big').hidden = false; }
@@ -743,6 +745,13 @@
       $('big').innerHTML = '<div class="dxferr">図面を読み込んでいます…</div>';
       $('big').hidden = false;
       renderDxf(f.storage_path).then(html => { if (editing === f) $('big').innerHTML = html; });
+    } else if (f.mime_type === 'application/pdf' || /\.pdf$/i.test(f.original_name || '')){
+      const u = await signedUrl(f.storage_path);
+      if (u){
+        $('big').classList.add('pdf');
+        $('big').innerHTML = `<iframe src="${esc(u)}" title="${esc(f.original_name||'PDF')}"></iframe>`;
+        $('big').hidden = false;
+      }
     }
 
     const mb = (Number(f.byte_size)||0) / 1024 / 1024;
