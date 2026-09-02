@@ -184,7 +184,7 @@ body > header.bar{ flex:0 0 auto; }
   line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .onote .t2{ display:block; font-family:var(--mono); font-size:9.5px; color:var(--sub); line-height:1.3; }
-.onote.done .t1{ text-decoration:line-through; color:var(--sub); }
+.onote.done .t1{ color:var(--sub); }
 
 /* ---------- 発注の一覧 ---------- */
 .ogrp{ margin-top:12px; }
@@ -1023,10 +1023,11 @@ body > header.bar{ flex:0 0 auto; }
 
       const cls = 'onote' + (o.scope === 'internal' ? ' inr' : '') +
                   (o.status !== 'planned' ? ' done' : '');
+      const stat = o.status !== 'planned' ? `　${OSTAT[o.status]}` : '';
       html += `<button class="${cls}" data-id="${o.id}" title="${esc(o.title)}／${fmtDate(o.due_date)}">
         <span class="bar3"></span>
         <span class="txt"><span class="t1">${esc(o.title)}</span>
-          <span class="t2">${fmtDate(o.due_date).slice(5)}</span></span>
+          <span class="t2">${fmtDate(o.due_date).slice(5)}${stat}</span></span>
       </button>`;
     });
 
