@@ -87,7 +87,7 @@ body > header.bar{ flex:0 0 auto; }
 
 /* ---------- ガント ---------- */
 .gwrap{ overflow:auto; background:var(--card); }
-.gtable{ display:grid; min-height:100%; min-width:100%; }
+.gtable{ display:grid; min-height:100%; min-width:100%; width:max-content; }
 .gh{
   position:sticky; top:0; z-index:4; background:#E3E6E0;
   border-bottom:1px solid var(--rule); border-right:1px solid var(--rule-2);
@@ -225,7 +225,8 @@ body > header.bar{ flex:0 0 auto; }
 .obadge.in{ color:var(--ink-2); }
 .orow .oti{ font-family:var(--disp); font-weight:700; min-width:0;
             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.orow .osub{ font-size:11.5px; color:var(--sub); }
+.orow .osub{ font-size:11.5px; color:var(--sub); min-width:0;
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .orow .odue{ font-family:var(--mono); font-size:12px; }
 .orow .odue.near{ color:var(--alert); font-weight:700; }
 .orow .ost{ font-size:11.5px; color:var(--sub); text-align:right; }
@@ -1029,7 +1030,8 @@ body > header.bar{ flex:0 0 auto; }
       if (!col || !row) return;
 
       const ax = col.offsetLeft + col.offsetWidth / 2;
-      const ay = row.offsetTop + row.offsetHeight / 2;
+      // 帯は行の中央に来るので、丸をそこに重ねると帯の文字と被る。行の上端寄りに置く
+      const ay = row.offsetTop + 4;
 
       // 置き場所：覚えていればその位置、無ければ右上へ少しずらす
       const dx = (o.note_dx !== null && o.note_dx !== undefined) ? o.note_dx : 30;
