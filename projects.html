@@ -84,43 +84,6 @@
   .ovnone{ background:var(--card); border:1px solid var(--rule); border-radius:2px;
            padding:10px 12px; font-size:12.5px; color:#9AA39C; }
 
-  /* 図面：A3横（420×297）の比率で並べる */
-  .dwgs{ display:grid; gap:8px; }
-  .dwgs.sm{ grid-template-columns:repeat(3,1fr); gap:6px; margin-top:6px; }
-  .dwgs.sm .cap{ padding:4px 6px; }
-  .dwgs.sm .cap b{ font-size:11px; }
-  .dwgs.sm .cap span{ display:none; }
-  .dwgs.sm .ext{ font-size:13px !important; }
-  .dwg{
-    background:var(--card); border:1px solid var(--rule); border-radius:2px;
-    padding:0; cursor:pointer; text-align:left; width:100%; overflow:hidden;
-    font-family:var(--body); color:inherit; display:block;
-  }
-  .dwg:hover{ border-color:var(--ink); }
-  .dwg:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
-  .dwg .pv{
-    aspect-ratio:420 / 297;               /* A3 横 */
-    background:#F3F5F1; border-bottom:1px solid var(--rule-2);
-    display:flex; align-items:center; justify-content:center;
-    position:relative; overflow:hidden;
-  }
-  .dwg .pv img{ width:100%; height:100%; object-fit:contain; display:block;
-                position:absolute; inset:0; background:#fff; }
-  .dwg .pv .ext{
-    font-family:var(--mono); font-size:20px; font-weight:500; color:#9AA39C;
-    letter-spacing:.06em;
-  }
-  .dwg .cap{ padding:6px 9px; font-size:11.5px; line-height:1.4; }
-  .dwg .cap b{ display:block; font-family:var(--disp); font-size:12.5px; font-weight:700;
-               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .dwg .cap span{ color:var(--sub); font-family:var(--mono); font-size:10.5px; }
-  .dwgmore{
-    display:block; text-align:center; padding:8px; font-size:12px; color:var(--ink-2);
-    background:var(--card); border:1px dashed var(--rule); border-radius:2px;
-    text-decoration:none;
-  }
-  .dwgmore:hover{ border-color:var(--ink); }
-
   .jump{ display:grid; gap:6px; }
   .jump a{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
@@ -230,14 +193,6 @@
     .jump{ display:none !important; }
     .sheetdoc, .ovpm{ break-inside:avoid; }
 
-    /* 図面は1枚だけ、A3の比率のまま無理のない大きさで */
-    .dwgs.sm{ display:none !important; }
-    .dwgmore{ display:none !important; }
-    .dwgs .dwg{ max-width:132mm; border:1px solid #999 !important; break-inside:avoid; }
-    .dwg .pv{ background:#fff !important; }
-    .dwg .cap{ padding:3pt 5pt !important; }
-    .dwg .cap b{ font-size:9pt; }
-    .dwg .cap span{ font-size:7.5pt; }
     .ovsec > .t{ font-size:9.5pt; padding:1pt 0 2pt 6pt; border-left-width:2pt; }
     .sheetdoc > .sh{ font-size:9pt; padding:2.5pt 8pt !important; }
     .sheetdoc > .k{ font-size:8.5pt; padding:2.5pt 6pt !important; }
@@ -284,7 +239,6 @@
   </header>
   <div id="ovbody"></div>
 </div>
-<input id="docfile" type="file" accept="image/*,.pdf,.dwg,.dxf,.xls,.xlsx,.doc,.docx" multiple hidden>
 
 <!-- ========== 編集 ========== -->
 <div class="panel" id="panel">
@@ -387,7 +341,6 @@
 <script>
 (async function(){
   const $ = id => document.getElementById(id);
-  const BUCKET = 'project-files';
 
   const auth = await requireAuth();
   if (!auth) return;
@@ -558,132 +511,20 @@
        </div>
 
         <div class="ovside">
-          <div class="ovsec">
-            <div class="t">図面<span class="sp"></span>
-              ${canEdit ? '<button class="btn ghost sm noprint" id="docadd" type="button">追加</button>' : ''}
-            </div>
-            <div id="doclist"></div>
-          </div>
           <div class="ovsec noprint"><div class="t">この工事の記録</div>
             <div class="jump">
               <a href="schedule.html?p=${p.id}">工程表 <span class="c">${ph.count ?? 0} 工程</span></a>
               <a href="reports.html?p=${p.id}">日報 <span class="c">${dr.count ?? 0} 件</span></a>
-              <a href="files.html?p=${p.id}">写真・書類 <span class="c">${pf.count ?? 0} 件</span></a>
+              <a href="files.html?p=${p.id}">書類・写真 <span class="c">${pf.count ?? 0} 件</span></a>
             </div>
           </div>
         </div>
       </div>
      </div>`;
 
-    await paintDocs(p.id);
-    if ($('docadd')) $('docadd').onclick = () => $('docfile').click();
-
     $('ovedit').hidden = !canEdit;
     $('ovp').classList.add('open');
   }
-
-  /* ---- 図面 ---- */
-  function extOf(name){
-    const m = /\.([A-Za-z0-9]+)$/.exec(name || '');
-    return m ? m[1].toUpperCase() : 'FILE';
-  }
-
-  async function paintDocs(pid){
-    const box = $('doclist');
-    if (!box) return;
-
-    const { data, error } = await sb.from('project_files')
-      .select('id,file_kind,original_name,title,storage_path,thumb_path,mime_type,created_at')
-      .eq('project_id', pid).eq('is_active', true)
-      .in('file_kind', ['drawing','document','other'])
-      .order('created_at', { ascending:false }).limit(12);
-
-    if (error){ box.innerHTML = `<div class="ovnone">${esc(error.message)}</div>`; return; }
-    if (!data || !data.length){
-      box.innerHTML = `<div class="ovnone">図面が登録されていません${canEdit ? '。上の「追加」から取り込めます。' : '。'}</div>`;
-      return;
-    }
-
-    function tile(f, cls){
-      const nm = f.title || f.original_name || '';
-      return `<button class="dwg" data-p="${esc(f.storage_path)}" title="${esc(nm)}">
-        <span class="pv" data-t="${esc(f.thumb_path || '')}" data-o="${esc(f.storage_path)}" data-m="${esc(f.mime_type||'')}">
-          <span class="ext">${esc(extOf(f.original_name))}</span>
-        </span>
-        <span class="cap"><b>${esc(nm)}</b><span>${fmtDate((f.created_at||'').slice(0,10))}</span></span>
-      </button>`;
-    }
-
-    const head = data[0];
-    const rest = data.slice(1, 4);
-    box.innerHTML =
-      `<div class="dwgs">${tile(head)}</div>` +
-      (rest.length ? `<div class="dwgs sm">${rest.map(f => tile(f)).join('')}</div>` : '') +
-      (data.length > 4
-        ? `<a class="dwgmore noprint" href="files.html?p=${pid}">ほか ${data.length - 4} 件をすべて見る</a>`
-        : '');
-
-    // 画像は縮小版を差し込む
-    box.querySelectorAll('.pv').forEach(async pv => {
-      const path = pv.dataset.t || ((pv.dataset.m || '').startsWith('image/') ? pv.dataset.o : '');
-      if (!path) return;
-      const { data:u } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
-      if (u && u.signedUrl){
-        pv.insertAdjacentHTML('beforeend', `<img src="${u.signedUrl}" alt="" loading="lazy">`);
-        const ex = pv.querySelector('.ext');
-        if (ex) ex.remove();          // 絵が出たら拡張子の文字は不要
-      }
-    });
-
-    box.querySelectorAll('.dwg').forEach(b2 => b2.onclick = async () => {
-      const { data:u } = await sb.storage.from(BUCKET).createSignedUrl(b2.dataset.p, 3600);
-      if (u && u.signedUrl) window.open(u.signedUrl, '_blank');
-    });
-  }
-
-  $('docfile').addEventListener('change', async e => {
-    const list = [...e.target.files];
-    e.target.value = '';
-    if (!list.length || !editing) return;
-
-    showMsg($('msg'), `${list.length}件を取り込んでいます…（PDFは中身を絵にするため少し時間がかかります）`, 'ok');
-    let ok = 0;
-    for (let i = 0; i < list.length; i++){
-      const f = list[i];
-      const nm = f.name.replace(/[^\w.\-]/g, '_').slice(-80);
-      const stamp = `${Date.now()}_${i}`;
-      const base = `${me.organization_id}/${editing.id}`;
-      const path = `${base}/orig/${stamp}_${nm}`;
-      try {
-        const up = await sb.storage.from(BUCKET)
-          .upload(path, f, { contentType: f.type || 'application/octet-stream' });
-        if (up.error) throw up.error;
-
-        // 一覧に出す絵をつくる（画像は縮小、PDFは1ページ目）
-        let thumb = null;
-        const t = await makeThumb(f, 1400, 0.8);
-        if (t){
-          thumb = `${base}/thumb/${stamp}_${nm}.jpg`;
-          const up2 = await sb.storage.from(BUCKET)
-            .upload(thumb, t, { contentType:'image/jpeg' });
-          if (up2.error) thumb = null;
-        }
-
-        const kind = /\.(dwg|dxf|jww|p21|sfc|pdf)$/i.test(f.name) ? 'drawing'
-                   : (f.type.startsWith('image/') ? 'drawing' : 'other');
-        const { error } = await sb.from('project_files').insert({
-          organization_id: me.organization_id, project_id: editing.id,
-          file_kind: kind, purpose: 'submit', storage_path: path, thumb_path: thumb,
-          original_name: f.name, mime_type: f.type || null, byte_size: f.size,
-          uploaded_by: me.id
-        });
-        if (error) throw error;
-        ok++;
-      } catch (err){ console.error(err); }
-    }
-    showMsg($('msg'), `${ok}件を登録しました。`, ok === list.length ? 'ok' : 'err');
-    await paintDocs(editing.id);
-  });
 
   $('ovprint').addEventListener('click', () => window.print());
   $('ovclose').addEventListener('click', () => { $('ovp').classList.remove('open'); editing = null; });
