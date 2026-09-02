@@ -184,7 +184,7 @@ body > header.bar{ flex:0 0 auto; }
   line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .onote .t2{ display:block; font-family:var(--mono); font-size:9.5px; color:var(--sub); line-height:1.3; }
-.onote.done .t1{ text-decoration:line-through; color:var(--sub); }
+.onote.done .t1{ color:var(--sub); }
 
 /* ---------- 発注の一覧 ---------- */
 .ogrp{ margin-top:12px; }
@@ -1002,9 +1002,12 @@ body > header.bar{ flex:0 0 auto; }
 
     let html = '';
     target.forEach((o, i) => {
-      const wi = wIdx2(d2n(o.due_date));
+      // 引き出し線は、紐付けた工程があればその開始日を指す（無ければ発注期限）
+      const ph = o.phase_id ? phases.find(p => p.id === o.phase_id) : null;
+      const anchorDate = (ph && ph.start_date) ? ph.start_date : o.due_date;
+      const wi = wIdx2(d2n(anchorDate));
       if (wi < 0 || wi >= W) return;
-      const ri = o.phase_id ? phases.findIndex(p => p.id === o.phase_id) : -1;
+      const ri = ph ? phases.findIndex(p => p.id === o.phase_id) : -1;
       const col = cols[wi];
       const row = rows[ri >= 0 ? ri : 0];
       if (!col || !row) return;
@@ -1020,10 +1023,11 @@ body > header.bar{ flex:0 0 auto; }
 
       const cls = 'onote' + (o.scope === 'internal' ? ' inr' : '') +
                   (o.status !== 'planned' ? ' done' : '');
+      const stat = o.status !== 'planned' ? `　${OSTAT[o.status]}` : '';
       html += `<button class="${cls}" data-id="${o.id}" title="${esc(o.title)}／${fmtDate(o.due_date)}">
         <span class="bar3"></span>
         <span class="txt"><span class="t1">${esc(o.title)}</span>
-          <span class="t2">${fmtDate(o.due_date).slice(5)}</span></span>
+          <span class="t2">${fmtDate(o.due_date).slice(5)}${stat}</span></span>
       </button>`;
     });
 
