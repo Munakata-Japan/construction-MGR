@@ -148,6 +148,21 @@ body > header.bar{ flex:0 0 auto; }
 }
 .gname-rz:hover{ background:var(--safety); opacity:.5; }
 
+/* 行の並べ替え：長押し→確認→つかんでドラッグ */
+.gtable.editable .gno[data-row],
+.gtable.editable .gname[data-row]{ cursor:grab; }
+.gno.rarmed, .gname.rarmed{ box-shadow:inset 0 0 0 2px var(--safety); }
+.bar2.rarmed{ box-shadow:0 0 0 2px var(--safety); }
+.gno.rlift, .gname.rlift, .bar2.rlift{
+  z-index:9; cursor:grabbing; box-shadow:0 8px 18px rgba(22,50,79,.4), 0 0 0 1.5px var(--safety);
+  will-change:transform;
+}
+.rdropline{
+  position:absolute; left:0; right:0; height:3px; margin-top:-1.5px;
+  background:var(--safety); border-radius:2px; z-index:8; pointer-events:none;
+  box-shadow:0 0 0 1px rgba(0,0,0,.2);
+}
+
 .todaycol{ position:relative; pointer-events:none; z-index:5; }
 .todayline{ position:absolute; top:0; bottom:0; width:0; border-left:2px dashed #E8720C; }
 .todaylbl{
@@ -639,6 +654,8 @@ body > header.bar{ flex:0 0 auto; }
   let oediting = null;
   let zoomW = null;          // 日の幅（px）。null なら画面に合わせる
   let manualNameW = null;    // 工程欄の幅（px）。null なら自動
+  let armedRow = null;       // 長押しで「入れ替え待ち」になっている行番号
+  let noteAnchors = {};      // 発注の付箋の引き出し線アンカー（行ドラッグ中に付箋を追従させるため）
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
@@ -929,7 +946,7 @@ body > header.bar{ flex:0 0 auto; }
       const w = Math.max(10, Math.round(x.we ? colW / 2 : colW));
       return zoomW ? `${w}px` : `minmax(${w}px, ${x.we ? '0.5fr' : '1fr'})`;
     }).join(' ');
-    let h = `<div class="gtable${dense ? ' dense' : ''}" style="` +
+    let h = `<div class="gtable${dense ? ' dense' : ''}${canEdit ? ' editable' : ''}" style="` +
             `grid-template-columns:${NOW}px ${nameW}px ${dayCols};` +
             `grid-template-rows:${HEAD}px repeat(${N}, ${rowH}px);--bh:${barH}px">`;
 
@@ -974,8 +991,8 @@ body > header.bar{ flex:0 0 auto; }
         odot = `<span class="odot ${ocls}" title="${otxt}"></span><span class="odiv"></span>`;
       }
 
-      h += `<div class="gno${alt}" style="grid-column:1;grid-row:${r+2}">${r+1}</div>`;
-      h += `<div class="gname${alt}" style="grid-column:2;grid-row:${r+2};left:${NOW}px" title="${esc(p.name)}／${sub}">` +
+      h += `<div class="gno${alt}" data-row="${r}" style="grid-column:1;grid-row:${r+2}">${r+1}</div>`;
+      h += `<div class="gname${alt}" data-row="${r}" style="grid-column:2;grid-row:${r+2};left:${NOW}px" title="${esc(p.name)}／${sub}">` +
            `${odot}<span class="gn1">${esc(p.name)}</span><span class="gn2">${sub}</span></div>`;
 
       if (p.start_date && p.end_date){
@@ -986,11 +1003,11 @@ body > header.bar{ flex:0 0 auto; }
         const barLabel = p.start_date === p.end_date
           ? md(new Date(p.start_date + 'T00:00:00'))
           : `${md(new Date(p.start_date + 'T00:00:00'))}〜${md(new Date(p.end_date + 'T00:00:00'))}`;
-        h += `<button class="bar2 b-${p.status}${crit}${isToday}" data-id="${p.id}" ` +
+        h += `<button class="bar2 b-${p.status}${crit}${isToday}" data-id="${p.id}" data-row="${r}" ` +
              `title="${esc(p.name)}　${fmtDate(p.start_date)}〜${fmtDate(p.end_date)}" ` +
              `style="grid-row:${r+2};grid-column:${c1} / ${c2}">${barLabel}</button>`;
       } else {
-        h += `<button class="bar2 b-${p.status}" data-id="${p.id}" ` +
+        h += `<button class="bar2 b-${p.status}" data-id="${p.id}" data-row="${r}" ` +
              `style="grid-row:${r+2};grid-column:3 / 4;background:transparent;color:var(--sub);border:1px dashed var(--rule)">日程未設定</button>`;
       }
 
@@ -1019,6 +1036,7 @@ body > header.bar{ flex:0 0 auto; }
       manualNameW = Math.max(80, Math.min(260, Math.ceil(widest) + 24));
       redrawGantt();
     });
+    bindRowDrag(rowH, N, HEAD);
     layoutNotes(W, N);
   }
 
@@ -1113,6 +1131,7 @@ body > header.bar{ flex:0 0 auto; }
       el.addEventListener('mouseleave', () => card.classList.remove('show'));
     });
 
+    noteAnchors = anchors;
     drawLines(anchors);
     bindNoteDrag(anchors);
   }
@@ -1198,6 +1217,162 @@ body > header.bar{ flex:0 0 auto; }
         openOrderEdit(orders.find(x => x.id === el.dataset.id));
       });
     });
+  }
+
+  /* ---- 行の並べ替え：長押し→確認→つかんでドラッグ ---- */
+  function disarmRow(){
+    if (armedRow === null) return;
+    document.querySelectorAll(`[data-row="${armedRow}"]`).forEach(el => el.classList.remove('rarmed'));
+    armedRow = null;
+    showMsg($('msg'), '');
+  }
+  // 腕付け中に行以外を押したら取り消す（再描画のたびに増やさないよう一度だけ登録）
+  document.addEventListener('pointerdown', e => {
+    if (armedRow === null) return;
+    if (e.target.closest(`[data-row="${armedRow}"]`)) return;
+    disarmRow();
+  }, { capture:true });
+
+  function bindRowDrag(rowH, N, HEAD){
+    if (!canEdit) return;
+    const tbl = $('gantt').querySelector('.gtable');
+    if (!tbl) return;
+    armedRow = null;
+
+    const rowEls = r => tbl.querySelectorAll(`[data-row="${r}"]`);
+    let pressTimer = null, sx = 0, sy = 0;
+    const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
+
+    tbl.querySelectorAll('.gno[data-row], .gname[data-row]').forEach(el => {
+      const r = Number(el.dataset.row);
+
+      el.addEventListener('pointerdown', e => {
+        if (e.button > 0) return;
+        if (armedRow === r){ e.preventDefault(); startDrag(e, r); return; }
+        if (armedRow !== null){ disarmRow(); return; }
+
+        sx = e.clientX; sy = e.clientY;
+        pressTimer = setTimeout(() => {
+          pressTimer = null;
+          const p = phases[r];
+          if (!p) return;
+          if (confirm(`「${p.name}」の順番を入れ替えますか？\nOKを押した後、この行をつかんで別の行までドラッグしてください。`)){
+            armedRow = r;
+            rowEls(r).forEach(el2 => el2.classList.add('rarmed'));
+            showMsg($('msg'), `「${p.name}」をつかんで別の行へドラッグしてください。（他の場所を押すと取り消せます）`);
+          }
+        }, 480);
+      });
+      el.addEventListener('pointermove', e => {
+        if (pressTimer === null) return;
+        if (Math.abs(e.clientX - sx) > 6 || Math.abs(e.clientY - sy) > 6) cancelPress();
+      });
+      el.addEventListener('pointerup', cancelPress);
+      el.addEventListener('pointercancel', cancelPress);
+    });
+
+    function startDrag(e, r){
+      const els = [...rowEls(r)];
+      els.forEach(el => {
+        try { el.setPointerCapture(e.pointerId); } catch(err){}
+        el.classList.remove('rarmed');
+        el.classList.add('rlift');
+      });
+      armedRow = null;
+
+      // この行に紐づく発注の付箋も一緒に追従させる
+      const p = phases[r];
+      const onotesBox = $('onotes');
+      const noteEls = (p ? orders.filter(o => o.phase_id === p.id && o.due_date && o.status !== 'cancelled') : [])
+        .map(o => ({ id: o.id, el: onotesBox?.querySelector(`.onote[data-id="${o.id}"]`) }))
+        .filter(x => x.el);
+      const noteBase = {};
+      noteEls.forEach(({ id, el }) => {
+        noteBase[id] = { top: parseFloat(el.style.top) || 0, ay: noteAnchors[id]?.ay ?? 0 };
+      });
+      const applyNoteDy = dy => {
+        if (!noteEls.length) return;
+        noteEls.forEach(({ id, el }) => {
+          el.style.top = (noteBase[id].top + dy) + 'px';
+          if (noteAnchors[id]) noteAnchors[id].ay = noteBase[id].ay + dy;
+        });
+        drawLines(noteAnchors);
+      };
+
+      const line = document.createElement('div');
+      line.className = 'rdropline';
+      tbl.appendChild(line);
+      const showLine = t => { line.style.top = (HEAD + t * rowH) + 'px'; };
+      showLine(r);
+
+      const startY = e.clientY;
+      let targetR = r;
+
+      const move = ev => {
+        const dy = ev.clientY - startY;
+        els.forEach(el => { el.style.transform = `translateY(${dy}px)`; });
+        applyNoteDy(dy);
+        targetR = Math.max(0, Math.min(N - 1, r + Math.round(dy / rowH)));
+        showLine(targetR + (targetR > r ? 1 : 0));
+      };
+      const up = ev => {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+        line.remove();
+        els.forEach(el => { try { el.releasePointerCapture(ev.pointerId); } catch(err){} });
+
+        if (targetR === r){
+          els.forEach(el => {
+            el.style.transition = 'transform .15s ease';
+            el.style.transform = '';
+          });
+          setTimeout(() => els.forEach(el => { el.classList.remove('rlift'); el.style.transition = ''; }), 160);
+          noteEls.forEach(({ el }) => { el.style.transition = 'top .15s ease'; });
+          applyNoteDy(0);
+          if (noteEls.length) setTimeout(() => noteEls.forEach(({ el }) => { el.style.transition = ''; }), 160);
+          showMsg($('msg'), '');
+          return;
+        }
+
+        const dyFinal = (targetR - r) * rowH;
+        els.forEach(el => {
+          el.style.transition = 'transform .18s ease';
+          el.style.transform = `translateY(${dyFinal}px)`;
+        });
+        noteEls.forEach(({ el }) => { el.style.transition = 'top .18s ease'; });
+        applyNoteDy(dyFinal);
+        showMsg($('msg'), '並び順を更新しています…');
+        setTimeout(() => { reorderPhase(r, targetR); }, 190);
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+      document.addEventListener('pointercancel', up);
+    }
+  }
+
+  async function reorderPhase(fromIdx, toIdx){
+    const arr = phases.slice();
+    const [moved] = arr.splice(fromIdx, 1);
+    arr.splice(toIdx, 0, moved);
+
+    const updates = [];
+    arr.forEach((p, i) => {
+      const seq = (i + 1) * 10;
+      if (p.seq !== seq) updates.push({ id: p.id, seq });
+    });
+    if (updates.length){
+      const results = await Promise.all(
+        updates.map(u => sb.from('project_phases').update({ seq: u.seq }).eq('id', u.id))
+      );
+      const failed = results.find(r => r.error);
+      if (failed){
+        showMsg($('msg'), '並び順の更新に失敗しました。' + failed.error.message, 'err');
+        return;
+      }
+    }
+    showMsg($('msg'), '');
+    await loadPhases();
   }
 
   /* ---- ネットワーク：画面に収める ---- */
