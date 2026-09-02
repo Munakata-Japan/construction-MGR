@@ -99,8 +99,10 @@ body > header.bar{ flex:0 0 auto; }
            color:var(--ink); align-items:flex-start; justify-content:center; padding-left:10px; }
 .gh.gno{ z-index:6; font-family:var(--disp); font-weight:700; font-size:11px; color:var(--ink); }
 .gstripe{ border-right:1px solid #E4E7E2; pointer-events:none; z-index:0; }
-.gstripe.we{ background:#EEF0EC; z-index:1; }
-.gh.we{ background:#DBDFD6; }
+.gstripe.sat{ background:#E3EBF3; z-index:1; }
+.gstripe.sun{ background:#F5E6E6; z-index:1; }
+.gh.sat{ background:#CFE0EF; }
+.gh.sun{ background:#EFD5D5; }
 .grule{ border-bottom:1px solid var(--rule-2); pointer-events:none; z-index:0; }
 .grule.alt{ background:#F5F7F3; }
 
@@ -575,6 +577,14 @@ body > header.bar{ flex:0 0 auto; }
   const $ = id => document.getElementById(id);
   const DAY = 86400000;
 
+  // 2026年の祝日（国立天文台の暦要項に基づく）
+  const JP_HOLIDAYS_2026 = new Set([
+    '2026-01-01', '2026-01-12', '2026-02-11', '2026-02-23', '2026-03-20',
+    '2026-04-29', '2026-05-03', '2026-05-04', '2026-05-05', '2026-05-06',
+    '2026-07-20', '2026-08-11', '2026-09-21', '2026-09-22', '2026-09-23',
+    '2026-10-12', '2026-11-03', '2026-11-23'
+  ]);
+
   const PH_STATUS = { not_started:'未着手', in_progress:'着手中', done:'完了', suspended:'中断' };
   const DEP_TYPE  = { FS:'前が終わってから', SS:'同時に開始', FF:'同時に終了', SF:'まれな形' };
 
@@ -872,11 +882,13 @@ body > header.bar{ flex:0 0 auto; }
     const colW  = zoomW ? Math.max(20, Math.min(400, zoomW)) : fitW;
     $('z_fit').classList.toggle('on', !zoomW);
 
-    // 各日が週末かどうかを先にまとめて出す（列幅・見出し・区切りの3か所で使う）
+    // 各日の土日・祝日を先にまとめて出す（列幅・見出し・区切りの3か所で使う）
     const days = Array.from({ length: W }, (_, i) => {
       const d = new Date(w0.getTime() + i*DAY);
       const dow = d.getDay();
-      return { d, we: (dow === 0 || dow === 6) };
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const holiday = JP_HOLIDAYS_2026.has(ds);
+      return { d, sun: (dow === 0 || holiday), sat: (dow === 6 && !holiday), we: (dow === 0 || dow === 6 || holiday) };
     });
 
     const NOW = 40;                       // 番号欄の幅
@@ -888,18 +900,18 @@ body > header.bar{ flex:0 0 auto; }
             `grid-template-columns:${NOW}px ${nameW}px ${dayCols};` +
             `grid-template-rows:${HEAD}px repeat(${N}, ${rowH}px);--bh:${barH}px">`;
 
-    // 見出し（日単位の目盛り。月の最初の日と、週末には印を付ける）
+    // 見出し（日単位の目盛り。月の最初の日と、土曜は青・日曜と祝日は赤の印を付ける）
     h += `<div class="gh gno" style="grid-column:1;grid-row:1">No</div>`;
     h += `<div class="gh gname" style="grid-column:2;grid-row:1;left:${NOW}px">工程</div>`;
     h += `<div class="gname-rz" id="gnameRz" style="grid-column:2;grid-row:1 / -1;left:${NOW + nameW - 4}px" title="ダブルクリックで文字幅に合わせる"></div>`;
     days.forEach((x, i) => {
-      const we = x.we ? ' we' : '';
+      const we = x.sat ? ' sat' : (x.sun ? ' sun' : '');
       h += `<div class="gh${we}" style="grid-column:${i+3};grid-row:1">` +
            `${x.d.getDate() === 1 ? (x.d.getMonth()+1)+'月' : '&nbsp;'}<b>${x.d.getDate()}</b></div>`;
     });
-    // 縦の区切り（週末は背景を薄く塗る）
+    // 縦の区切り（土曜は青、日曜・祝日は赤を薄く塗る）
     days.forEach((x, i) => {
-      const we = x.we ? ' we' : '';
+      const we = x.sat ? ' sat' : (x.sun ? ' sun' : '');
       h += `<div class="gstripe${we}" style="grid-column:${i+3};grid-row:2 / -1"></div>`;
     });
     // 本日の縦線
