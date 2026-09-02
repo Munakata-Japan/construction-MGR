@@ -41,6 +41,13 @@
 
   .act{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
   .ro{ background:#F3F5F1; }
+
+  /* PCの横幅を活かして、縦にだらだら並べず2カラムにまとめる */
+  .fcol-a > .sheet + .sheet{ margin-top:14px; }
+  @media (min-width:860px){
+    #panel .wrap{ max-width:1100px; }
+    .formgrid{ display:grid; grid-template-columns:400px 1fr; gap:16px; align-items:start; }
+  }
 </style>
 </head>
 <body>
@@ -107,63 +114,67 @@
   <div class="wrap">
     <div id="pmsg" class="msg"></div>
 
-    <div class="sheet">
-      <div class="head">現場の状況</div>
-      <div class="row">
-        <label for="f_proj">工事<span class="req">*</span></label>
-        <div class="fld"><select id="f_proj"></select></div>
-      </div>
-      <div class="row">
-        <label for="f_date">日付<span class="req">*</span></label>
-        <div class="fld"><input id="f_date" type="date"></div>
-      </div>
-      <div class="row">
-        <label for="f_weather">天候</label>
-        <div class="fld"><select id="f_weather"></select></div>
-      </div>
-      <div class="row">
-        <label for="f_wk">出た人数</label>
-        <div class="fld"><input id="f_wk" type="number" min="0" step="1" placeholder="0"><span style="font-size:13px;color:var(--sub)">人</span></div>
-      </div>
-      <div class="row">
-        <label for="f_mach">使用した重機</label>
-        <div class="fld"><input id="f_mach" type="text" placeholder="バックホウ0.7×1、ブルドーザ×1 など"></div>
-      </div>
-      <div class="row">
-        <label for="f_mat">搬入した資材</label>
-        <div class="fld"><input id="f_mat" type="text" placeholder="砕石20t、単管50本 など"></div>
-      </div>
-    </div>
+    <div class="formgrid">
+      <div class="fcol-a">
+        <div class="sheet">
+          <div class="head">現場の状況</div>
+          <div class="row">
+            <label for="f_proj">工事<span class="req">*</span></label>
+            <div class="fld"><select id="f_proj"></select></div>
+          </div>
+          <div class="row">
+            <label for="f_date">日付<span class="req">*</span></label>
+            <div class="fld"><input id="f_date" type="date"></div>
+          </div>
+          <div class="row">
+            <label for="f_weather">天候</label>
+            <div class="fld"><select id="f_weather"></select></div>
+          </div>
+          <div class="row">
+            <label for="f_wk">出た人数</label>
+            <div class="fld"><input id="f_wk" type="number" min="0" step="1" placeholder="0"><span style="font-size:13px;color:var(--sub)">人</span></div>
+          </div>
+          <div class="row">
+            <label for="f_mach">使用した重機</label>
+            <div class="fld"><input id="f_mach" type="text" placeholder="バックホウ0.7×1、ブルドーザ×1 など"></div>
+          </div>
+          <div class="row">
+            <label for="f_mat">搬入した資材</label>
+            <div class="fld"><input id="f_mat" type="text" placeholder="砕石20t、単管50本 など"></div>
+          </div>
+        </div>
 
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">やった作業</div>
-      <div class="row" style="grid-template-columns:1fr">
-        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
-          <div id="lines"></div>
-          <button class="btn ghost sm" id="addline" type="button" style="margin-top:6px">＋ 作業を足す</button>
+        <div class="sheet">
+          <div class="head">原価に響くこと</div>
+          <div class="row">
+            <label for="f_up">上がる要因</label>
+            <div class="fld"><textarea id="f_up" placeholder="湧水で排水ポンプを追加、地盤が固く掘削が進まない など"></textarea></div>
+          </div>
+          <div class="row">
+            <label for="f_down">下がる要因</label>
+            <div class="fld"><textarea id="f_down" placeholder="発生土を流用できた、想定より早く進んだ など"></textarea></div>
+          </div>
+          <div class="row">
+            <label for="f_plan">明日の予定</label>
+            <div class="fld"><textarea id="f_plan"></textarea></div>
+          </div>
+          <div class="row">
+            <label for="f_note">特記事項</label>
+            <div class="fld"><textarea id="f_note"></textarea></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">原価に響くこと</div>
-      <div class="row">
-        <label for="f_up">上がる要因</label>
-        <div class="fld"><textarea id="f_up" placeholder="湧水で排水ポンプを追加、地盤が固く掘削が進まない など"></textarea></div>
-      </div>
-      <div class="row">
-        <label for="f_down">下がる要因</label>
-        <div class="fld"><textarea id="f_down" placeholder="発生土を流用できた、想定より早く進んだ など"></textarea></div>
-      </div>
-      <div class="row">
-        <label for="f_plan">明日の予定</label>
-        <div class="fld"><textarea id="f_plan"></textarea></div>
-      </div>
-      <div class="row">
-        <label for="f_note">特記事項</label>
-        <div class="fld"><textarea id="f_note"></textarea></div>
+      <div class="fcol-b">
+        <div class="sheet">
+          <div class="head">やった作業</div>
+          <div class="row" style="grid-template-columns:1fr">
+            <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+              <div id="lines"></div>
+              <button class="btn ghost sm" id="addline" type="button" style="margin-top:6px">＋ 作業を足す</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
