@@ -51,7 +51,8 @@ function showMsg(el, text, kind){
 async function requireAuth(){
   const { data:{ session } } = await sb.auth.getSession();
   if (!session){
-    location.replace('index.html');
+    const back = location.pathname.split('/').pop() + location.search;
+    location.replace('index.html?next=' + encodeURIComponent(back));
     return null;
   }
 
