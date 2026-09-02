@@ -373,6 +373,10 @@ body > header.bar{ flex:0 0 auto; }
         <label for="o_partner">発注先</label>
         <div class="fld"><select id="o_partner"></select></div>
       </div>
+      <div class="row" id="o_partnerinfo" hidden>
+        <label></label>
+        <div class="fld" style="font-size:12.5px;color:var(--sub)"></div>
+      </div>
       <div class="row">
         <label for="o_user">担当者</label>
         <div class="fld"><select id="o_user"></select></div>
@@ -612,7 +616,7 @@ body > header.bar{ flex:0 0 auto; }
     const [c, w, p, u, pr] = await Promise.all([
       sb.from('cost_categories').select('id,code,name,cost_group,sort_order').eq('is_active',true).order('sort_order'),
       sb.from('work_types').select('id,cost_category_id,name,sort_order,hint').eq('is_active',true).order('sort_order'),
-      sb.from('partners').select('id,name').eq('is_active',true).order('name'),
+      sb.from('partners').select('id,name,tel,address,postal_code').eq('is_active',true).order('name'),
       sb.from('app_users').select('id,name,role').eq('is_active',true).order('name'),
       sb.from('projects').select('id,project_no,name,start_date,end_date_planned,is_sample,schedule_version,schedule_revised_on,schedule_revised_by').eq('is_active',true).order('project_no',{ascending:false})
     ]);
@@ -1024,7 +1028,9 @@ body > header.bar{ flex:0 0 auto; }
       const cls = 'onote' + (o.scope === 'internal' ? ' inr' : '') +
                   (o.status !== 'planned' ? ' done' : '');
       const stat = o.status !== 'planned' ? `　${OSTAT[o.status]}` : '';
-      html += `<button class="${cls}" data-id="${o.id}" title="${esc(o.title)}／${fmtDate(o.due_date)}">
+      const pt = o.partner_id ? partners.find(x => x.id === o.partner_id) : null;
+      const ptInfo = pt ? `／${pt.name}${pt.tel ? '　電話 ' + pt.tel : ''}${pt.address ? '　' + pt.address : ''}` : '';
+      html += `<button class="${cls}" data-id="${o.id}" title="${esc(o.title)}／${fmtDate(o.due_date)}${esc(ptInfo)}">
         <span class="bar3"></span>
         <span class="txt"><span class="t1">${esc(o.title)}</span>
           <span class="t2">${md(new Date(o.due_date + 'T00:00:00'))}${stat}</span></span>
@@ -1288,6 +1294,17 @@ body > header.bar{ flex:0 0 auto; }
   });
   $('oclose').addEventListener('click', () => $('opanel').classList.remove('open'));
 
+  // 発注先を選ぶと、取引先の住所・電話をその場に出す（取引先画面を開かなくて済むように）
+  function syncPartnerInfo(){
+    const pt = partners.find(x => x.id === $('o_partner').value);
+    const box = $('o_partnerinfo');
+    const line = [pt && pt.tel ? `電話 ${pt.tel}` : '', pt && pt.address ? pt.address : '']
+      .filter(Boolean).join('　／　');
+    box.hidden = !line;
+    box.querySelector('.fld').textContent = line;
+  }
+  $('o_partner').addEventListener('change', syncPartnerInfo);
+
   function openOrderEdit(o){
     oediting = o || null;
     showMsg($('oemsg'), '');
@@ -1304,6 +1321,7 @@ body > header.bar{ flex:0 0 auto; }
     $('o_title').value  = o ? (o.title || '') : '';
     $('o_phase').value  = o ? (o.phase_id || '') : '';
     $('o_partner').value= o ? (o.partner_id || '') : '';
+    syncPartnerInfo();
     $('o_user').value   = o ? (o.assignee_user_id || '') : '';
     $('o_due').value    = o ? (o.due_date || '') : '';
     $('o_note2').value  = o ? (o.due_note || '') : '';
