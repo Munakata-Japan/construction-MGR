@@ -86,9 +86,12 @@
   const form = document.getElementById('form');
   const go   = document.getElementById('go');
 
+  // ログイン後にどこへ進むか（指定が無ければメニュー一覧）
+  const next = new URL(location.href).searchParams.get('next') || 'mode-select.html';
+
   // 既にログイン済みなら一覧へ
   const { data:{ session } } = await sb.auth.getSession();
-  if (session) { location.replace('mode-select.html'); return; }
+  if (session) { location.replace(next); return; }
 
   form.addEventListener('submit', async function(e){
     e.preventDefault();
@@ -117,7 +120,7 @@
       return;
     }
 
-    location.replace('mode-select.html');
+    location.replace(next);
   });
 })();
 </script>

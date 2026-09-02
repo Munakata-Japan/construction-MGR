@@ -556,9 +556,11 @@
 
   /* ================= 起動 ================= */
   await loadRefs();
-  const q = new URL(location.href).searchParams.get('p');
+  const qs = new URL(location.href).searchParams;
+  const q = qs.get('p');
   if (q && projects.some(x => x.id === q)) $('proj').value = q;
   await loadReports();
+  if (qs.get('new') === '1') openPanel(null);
 })();
 </script>
 </body>
