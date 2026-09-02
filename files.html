@@ -32,7 +32,6 @@
   }
   .card .ph img{ position:absolute; inset:0; width:100%; height:100%;
                  object-fit:cover; display:block; z-index:1; }
-  .card .ph .ic{ font-family:var(--disp); font-size:12px; color:var(--sub); }
   .card .cb{ padding:8px 10px; min-width:0; }
   .card .c1{ font-family:var(--disp); font-weight:700; font-size:13px; line-height:1.4;
              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -42,6 +41,12 @@
     padding:2px 6px; border-radius:2px; background:rgba(22,50,79,.86); color:#fff;
   }
   .pill.int{ background:rgba(122,131,124,.9); }
+
+  .sech{ font-family:var(--disp); font-weight:700; font-size:12.5px; color:var(--sub);
+         margin:16px 0 8px; padding-left:9px; border-left:3px solid var(--safety); }
+  #photosec:first-of-type .sech{ margin-top:0; }
+  .drow .no{ font-family:var(--disp); font-weight:700; font-size:11px; letter-spacing:0; }
+  .drow .body{ display:flex; align-items:center; gap:12px; }
 
   .up{ background:var(--card); border:1px dashed var(--rule); border-radius:2px;
        padding:14px; margin-bottom:14px; }
@@ -134,7 +139,15 @@
   </div>
 
   <p class="count" id="count"></p>
-  <div class="grid" id="grid"></div>
+  <div id="photosec" hidden>
+    <p class="sech">写真</p>
+    <div class="grid" id="grid"></div>
+  </div>
+  <div id="docsec" hidden>
+    <p class="sech">書類</p>
+    <div class="list" id="doclist"></div>
+  </div>
+  <div id="emptymsg"></div>
 </div>
 
 <div class="dock" id="dock" hidden>
@@ -342,25 +355,50 @@
 
     $('count').textContent = projId ? `${rows.length} 件 ／ 全 ${files.length} 件` : '';
 
+    $('photosec').hidden = true; $('docsec').hidden = true;
+    $('grid').innerHTML = ''; $('doclist').innerHTML = ''; $('emptymsg').innerHTML = '';
+
     if (!projId){
-      $('grid').innerHTML = `<div class="empty" style="grid-column:1/-1"><b>工事を選んでください</b>上の欄から工事を選ぶと、その資料が出ます。</div>`;
+      $('emptymsg').innerHTML = `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、その資料が出ます。</div>`;
       return;
     }
     if (!rows.length){
-      $('grid').innerHTML = `<div class="empty" style="grid-column:1/-1"><b>${files.length ? '該当する資料がありません' : 'まだ資料がありません'}</b>${files.length ? '絞り込みの条件を変えてください。' : '下の「写真・書類を追加する」から取り込んでください。'}</div>`;
+      $('emptymsg').innerHTML = `<div class="empty"><b>${files.length ? '該当する資料がありません' : 'まだ資料がありません'}</b>${files.length ? '絞り込みの条件を変えてください。' : '下の「写真・書類を追加する」から取り込んでください。'}</div>`;
       return;
     }
 
-    $('grid').innerHTML = rows.map(f => {
+    const isPhoto = f => f.file_kind === 'photo' || (f.mime_type || '').startsWith('image/');
+    const photos = rows.filter(isPhoto);
+    const docs   = rows.filter(f => !isPhoto(f));
+
+    $('photosec').hidden = !photos.length;
+    $('docsec').hidden   = !docs.length;
+
+    $('grid').innerHTML = photos.map(f => {
       const pm = phases.find(p => p.id === f.phase_id);
       return `<button class="card" data-id="${f.id}">
         <span class="ph" data-p="${esc(f.thumb_path || f.storage_path || '')}" data-m="${esc(f.mime_type||'')}" data-th="${f.thumb_path ? 1 : 0}">
           <span class="pill${f.purpose === 'internal' ? ' int' : ''}">${f.purpose === 'submit' ? '提出用' : '社内'}</span>
-          <span class="ic">${KIND[f.file_kind] || ''}</span>
         </span>
         <span class="cb">
           <span class="c1">${esc(f.title || f.original_name || '（無題）')}</span>
           <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}</span>
+        </span></button>`;
+    }).join('');
+
+    $('doclist').innerHTML = docs.map(f => {
+      const pm = phases.find(p => p.id === f.phase_id);
+      const ext = /\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1]?.toUpperCase() || KIND[f.file_kind] || '';
+      const meta = [f.taken_on ? fmtDate(f.taken_on) : '', pm ? pm.name : '', f.purpose === 'internal' ? '社内' : '提出用']
+        .filter(Boolean).map(esc);
+      return `<button class="item drow" data-id="${f.id}">
+        <span class="flag"></span>
+        <span class="body">
+          <span class="no">${esc(ext)}</span>
+          <span style="min-width:0;flex:1 1 auto">
+            <span class="nm" style="font-size:13.5px;margin:0">${esc(f.title || f.original_name || '（無題）')}</span>
+            <span class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</span>
+          </span>
         </span></button>`;
     }).join('');
 
@@ -372,6 +410,9 @@
         signedUrl(p).then(u => { if (u) box.insertAdjacentHTML('beforeend',
           `<img src="${u}" alt="" loading="lazy">`); });
       }
+    });
+    $('doclist').querySelectorAll('.drow').forEach(c => {
+      c.addEventListener('click', () => openPanel(files.find(x => x.id === c.dataset.id)));
     });
   }
 
@@ -411,7 +452,10 @@
 
   $('add').addEventListener('click', () => {
     $('up').hidden = !$('up').hidden;
-    if (!$('up').hidden) askPosition();
+    if (!$('up').hidden){
+      askPosition();
+      $('up').scrollIntoView({ behavior:'smooth', block:'start' });
+    }
   });
 
   // 選んだファイルを溜める（撮影と選択の両方から足せる）
