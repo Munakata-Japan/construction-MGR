@@ -10,23 +10,48 @@
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <style>
-  .wrap{ max-width:640px; }
-  .headline{ padding-left:14px; border-left:5px solid var(--safety); margin:22px 0 20px; }
-  .headline .kicker{ font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--ink-2); margin:0 0 6px; }
-  .headline h1{ font-family:var(--disp); font-weight:700; font-size:clamp(19px,4.6vw,24px); margin:0 0 6px; line-height:1.4; }
-  .headline p{ margin:0; font-size:13.5px; color:var(--sub); }
+  /* 携帯の1画面にできるだけ収まるよう、共通スタイルより詰めて使う */
+  body > header.bar{ min-height:44px; }
+  body > header.bar .mark{ height:20px; }
+  body > header.bar h1{ font-size:15px; }
+  .wrap{ max-width:640px; padding-top:8px; padding-bottom:30px; }
+  .headline{ padding-left:10px; border-left:4px solid var(--safety); margin:0 0 8px; }
+  .headline .kicker{ font-family:var(--mono); font-size:10px; letter-spacing:.16em; color:var(--ink-2); margin:0 0 2px; }
+  .headline h1{ font-family:var(--disp); font-weight:700; font-size:clamp(16px,4vw,19px); margin:0 0 2px; line-height:1.25; }
+  .headline p{ margin:0; font-size:11.5px; color:var(--sub); line-height:1.35; }
+
+  .sheet .head{ padding:5px 10px; font-size:12.5px; }
+  .row > label{ padding:5px 10px; font-size:11.5px; }
+  .row .fld{ padding:3px 8px; }
+  .sheet input, .sheet select, .sheet textarea{ min-height:36px; }
+  .sheet textarea{ min-height:36px; }
+
+  /* 日付・人数、会社名・記入者を横に並べて行数を減らす */
+  .pairrow{ display:flex; border-bottom:1px solid var(--rule-2); }
+  .pairrow:last-child{ border-bottom:none; }
+  .pf{ flex:1 1 0; min-width:0; padding:5px 10px; }
+  .pf + .pf{ border-left:1px solid var(--rule-2); }
+  .pf label{ display:block; font-size:10.5px; font-weight:700; color:var(--sub); margin-bottom:2px; }
+  .pf .req{ color:var(--alert); margin-left:2px; }
+  .pf input{ min-height:36px; }
+
+  .gap{ height:6px; }
+
   .line{
     background:var(--card); border:1px solid var(--rule); border-radius:2px;
-    padding:12px 14px; margin-bottom:8px;
+    padding:7px 9px; margin-bottom:5px;
   }
-  .line .lh{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
-  .line .lh select{ flex:1 1 auto; width:auto; min-width:0; }
-  .line .lh .md{ flex:0 0 92px; width:92px; }
-  .line textarea{ min-height:56px; margin-top:6px; }
-  .line .lbl{ font-size:12px; color:var(--sub); display:block; margin-top:6px; }
+  .line .lh{ display:flex; gap:6px; align-items:center; margin-bottom:4px; }
+  .line .lh select{ flex:1 1 auto; width:auto; min-width:0; min-height:36px; }
+  .line .lh .md{ flex:0 0 72px; width:72px; min-height:36px; }
+  .line .lh .l_rm{ min-height:36px; padding:0 9px; }
+  .line textarea{ min-height:34px; margin-top:3px; }
+  .line .lbl{ font-size:10.5px; color:var(--sub); display:block; margin-top:3px; }
+  #addline{ min-height:36px; }
+
   .done{ text-align:center; padding:48px 20px; }
   .done b{ display:block; font-family:var(--disp); font-size:20px; margin-bottom:10px; }
-  .foot{ margin:26px 0 0; font-family:var(--mono); font-size:10.5px; color:var(--sub); text-align:center; }
+  .foot{ margin:10px 0 0; font-family:var(--mono); font-size:10px; color:var(--sub); text-align:center; }
 </style>
 </head>
 <body>
@@ -79,36 +104,28 @@
 
     <div class="sheet">
       <div class="head">お名前と日付</div>
-      <div class="row">
-        <label for="f_date">日付<span class="req">*</span></label>
-        <div class="fld"><input id="f_date" type="date" value="${iso(today)}"></div>
+      <div class="pairrow">
+        <div class="pf"><label for="f_date">日付<span class="req">*</span></label><input id="f_date" type="date" value="${iso(today)}"></div>
+        <div class="pf"><label for="f_wk">出た人数</label><input id="f_wk" type="number" min="0" step="1" placeholder="0"></div>
       </div>
-      <div class="row">
-        <label for="f_co">会社名<span class="req">*</span></label>
-        <div class="fld"><input id="f_co" type="text" placeholder="〇〇建設"></div>
-      </div>
-      <div class="row">
-        <label for="f_nm">記入者<span class="req">*</span></label>
-        <div class="fld"><input id="f_nm" type="text" placeholder="山田 太郎"></div>
-      </div>
-      <div class="row">
-        <label for="f_wk">出た人数</label>
-        <div class="fld"><input id="f_wk" type="number" min="0" step="1" placeholder="0"><span style="font-size:13px;color:var(--sub)">人</span></div>
+      <div class="pairrow">
+        <div class="pf"><label for="f_co">会社名<span class="req">*</span></label><input id="f_co" type="text" placeholder="〇〇建設"></div>
+        <div class="pf"><label for="f_nm">記入者<span class="req">*</span></label><input id="f_nm" type="text" placeholder="山田 太郎"></div>
       </div>
     </div>
 
-    <div style="height:16px"></div>
+    <div class="gap"></div>
     <div class="sheet">
       <div class="head">やった作業</div>
       <div class="row" style="grid-template-columns:1fr">
-        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+        <div class="fld" style="flex-direction:column;align-items:stretch;padding:8px 10px">
           <div id="lines"></div>
-          <button class="btn ghost sm" id="addline" type="button" style="margin-top:6px">＋ 作業を足す</button>
+          <button class="btn ghost sm" id="addline" type="button" style="margin-top:4px">＋ 作業を足す</button>
         </div>
       </div>
     </div>
 
-    <div style="height:16px"></div>
+    <div class="gap"></div>
     <div class="sheet">
       <div class="head">その他</div>
       <div class="row">
@@ -117,7 +134,7 @@
       </div>
     </div>
 
-    <div style="height:20px"></div>
+    <div class="gap"></div>
     <button class="btn wide" id="go">この内容で送る</button>
     <p class="foot">v20260723K</p>`;
 
