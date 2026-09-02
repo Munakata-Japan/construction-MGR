@@ -452,7 +452,10 @@
 
   $('add').addEventListener('click', () => {
     $('up').hidden = !$('up').hidden;
-    if (!$('up').hidden) askPosition();
+    if (!$('up').hidden){
+      askPosition();
+      $('up').scrollIntoView({ behavior:'smooth', block:'start' });
+    }
   });
 
   // 選んだファイルを溜める（撮影と選択の両方から足せる）
