@@ -1027,7 +1027,7 @@ body > header.bar{ flex:0 0 auto; }
       html += `<button class="${cls}" data-id="${o.id}" title="${esc(o.title)}／${fmtDate(o.due_date)}">
         <span class="bar3"></span>
         <span class="txt"><span class="t1">${esc(o.title)}</span>
-          <span class="t2">${fmtDate(o.due_date).slice(5)}${stat}</span></span>
+          <span class="t2">${md(new Date(o.due_date + 'T00:00:00'))}${stat}</span></span>
       </button>`;
     });
 
