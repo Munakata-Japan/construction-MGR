@@ -863,7 +863,7 @@ body > header.bar{ flex:0 0 auto; }
     const dense = rowH < 34;
     const barH = Math.max(12, Math.min(20, rowH - 6));
     const nameW = manualNameW || Math.max(120, Math.min(200, Math.floor(boxW * 0.17)));
-    const fitW  = Math.max(26, Math.floor((boxW - nameW - 40) / W));
+    const fitW  = Math.max(58, Math.floor((boxW - nameW - 40) / W));
     const colW  = zoomW ? Math.max(20, Math.min(400, zoomW)) : fitW;
     $('z_fit').classList.toggle('on', !zoomW);
 
@@ -926,15 +926,17 @@ body > header.bar{ flex:0 0 auto; }
     $('gantt').innerHTML = h;
     $('gantt').querySelectorAll('.bar2').forEach(b =>
       b.addEventListener('click', () => openPanel(phases.find(x => x.id === b.dataset.id))));
-    // 工程名がセル幅より長い場合は、はみ出す前にフォントを少しずつ縮める
-    $('gantt').querySelectorAll('.gname .gn1').forEach(el => {
-      let size = 12.5;
+    // 工程名・帯の日付がセル幅より長い場合は、はみ出す前にフォントを少しずつ縮める
+    const shrinkToFit = (el, from, floor) => {
+      let size = from;
       el.style.fontSize = size + 'px';
-      while (el.scrollWidth > el.clientWidth && size > 9){
+      while (el.scrollWidth > el.clientWidth && size > floor){
         size -= 0.5;
         el.style.fontSize = size + 'px';
       }
-    });
+    };
+    $('gantt').querySelectorAll('.gname .gn1').forEach(el => shrinkToFit(el, 12.5, 9));
+    $('gantt').querySelectorAll('.bar2').forEach(el => shrinkToFit(el, 10.5, 8));
     if ($('gnameRz')) $('gnameRz').addEventListener('dblclick', () => {
       const c = document.createElement('canvas').getContext('2d');
       c.font = '700 12.5px ' + getComputedStyle(document.body).getPropertyValue('--disp');
