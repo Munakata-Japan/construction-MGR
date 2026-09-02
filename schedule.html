@@ -99,6 +99,8 @@ body > header.bar{ flex:0 0 auto; }
            color:var(--ink); align-items:flex-start; justify-content:center; padding-left:10px; }
 .gh.gno{ z-index:6; font-family:var(--disp); font-weight:700; font-size:11px; color:var(--ink); }
 .gstripe{ border-right:1px solid #E4E7E2; pointer-events:none; z-index:0; }
+.gstripe.we{ background:#EEF0EC; z-index:1; }
+.gh.we{ background:#DBDFD6; }
 .grule{ border-bottom:1px solid var(--rule-2); pointer-events:none; z-index:0; }
 .grule.alt{ background:#F5F7F3; }
 
@@ -592,7 +594,7 @@ body > header.bar{ flex:0 0 auto; }
   let cats = [], wts = [], partners = [], users = [], projects = [];
   let projId = null, phases = [], deps = [], orders = [], editing = null, view = 'gantt';
   let oediting = null;
-  let zoomW = null;          // 週の幅（px）。null なら画面に合わせる
+  let zoomW = null;          // 日の幅（px）。null なら画面に合わせる
   let manualNameW = null;    // 工程欄の幅（px）。null なら自動
 
   /* ================= 読み込み ================= */
@@ -684,7 +686,6 @@ body > header.bar{ flex:0 0 auto; }
   /* ================= 日付の道具 ================= */
   const d2n = s => s ? Math.round(new Date(s + 'T00:00:00').getTime() / DAY) : null;
   const n2d = n => new Date(n * DAY);
-  function monday(dt){ const d = new Date(dt); const w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); d.setHours(0,0,0,0); return d; }
   const md = dt => `${dt.getMonth()+1}/${dt.getDate()}`;
 
   /* ================= 余裕（クリティカルパス） ================= */
@@ -847,18 +848,17 @@ body > header.bar{ flex:0 0 auto; }
     }
     $('gantt').classList.add('gwrap');
 
-    const w0 = monday(n2d(Math.min(...ds)));
-    const wN = monday(n2d(Math.max(...de)));
-    const W  = Math.floor((wN - w0) / (7*DAY)) + 1;
+    const w0 = n2d(Math.min(...ds));
+    const wN = n2d(Math.max(...de));
+    const W  = Math.round((wN - w0) / DAY) + 1;   // 表示する日数
     const N  = phases.length;
-    const wIdx = n => Math.floor((n2d(n) - w0) / (7*DAY));
+    const wIdx = n => Math.round((n2d(n) - w0) / DAY);
 
     // 本日の位置（縦線と、かかっている帯の強調に使う）
     const t = new Date();
     const todayN = d2n(`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`);
     const todayCol = wIdx(todayN) + 3;
     const todayInRange = todayCol >= 3 && todayCol <= W + 2;
-    const todayFrac = todayInRange ? ((n2d(todayN) - w0) % (7*DAY)) / (7*DAY) : 0;
 
     // 画面の高さから1行の高さを決める
     const boxH = $('gantt').clientHeight || 480;
@@ -868,7 +868,7 @@ body > header.bar{ flex:0 0 auto; }
     const dense = rowH < 34;
     const barH = Math.max(12, Math.min(20, rowH - 6));
     const nameW = manualNameW || Math.max(120, Math.min(200, Math.floor(boxW * 0.17)));
-    const fitW  = Math.max(58, Math.floor((boxW - nameW - 40) / W));
+    const fitW  = Math.max(34, Math.floor((boxW - nameW - 40) / W));
     const colW  = zoomW ? Math.max(20, Math.min(400, zoomW)) : fitW;
     $('z_fit').classList.toggle('on', !zoomW);
 
@@ -877,22 +877,28 @@ body > header.bar{ flex:0 0 auto; }
             `grid-template-columns:${NOW}px ${nameW}px repeat(${W}, ${zoomW ? colW + 'px' : 'minmax(' + colW + 'px, 1fr)'});` +
             `grid-template-rows:${HEAD}px repeat(${N}, ${rowH}px);--bh:${barH}px">`;
 
-    // 見出し
+    // 見出し（日単位の目盛り。月の最初の日と、週末には印を付ける）
     h += `<div class="gh gno" style="grid-column:1;grid-row:1">No</div>`;
     h += `<div class="gh gname" style="grid-column:2;grid-row:1;left:${NOW}px">工程</div>`;
     h += `<div class="gname-rz" id="gnameRz" style="grid-column:2;grid-row:1 / -1;left:${NOW + nameW - 4}px" title="ダブルクリックで文字幅に合わせる"></div>`;
     for (let i = 0; i < W; i++){
-      const d = new Date(w0.getTime() + i*7*DAY);
-      h += `<div class="gh" style="grid-column:${i+3};grid-row:1">` +
-           `${d.getDate() <= 7 ? (d.getMonth()+1)+'月' : '&nbsp;'}<b>${md(d)}</b></div>`;
+      const d = new Date(w0.getTime() + i*DAY);
+      const dow = d.getDay();
+      const we = (dow === 0 || dow === 6) ? ' we' : '';
+      h += `<div class="gh${we}" style="grid-column:${i+3};grid-row:1">` +
+           `${d.getDate() === 1 ? (d.getMonth()+1)+'月' : '&nbsp;'}<b>${d.getDate()}</b></div>`;
     }
-    // 縦の区切り
-    for (let i = 0; i < W; i++)
-      h += `<div class="gstripe" style="grid-column:${i+3};grid-row:2 / -1"></div>`;
+    // 縦の区切り（週末は背景を薄く塗る）
+    for (let i = 0; i < W; i++){
+      const d = new Date(w0.getTime() + i*DAY);
+      const dow = d.getDay();
+      const we = (dow === 0 || dow === 6) ? ' we' : '';
+      h += `<div class="gstripe${we}" style="grid-column:${i+3};grid-row:2 / -1"></div>`;
+    }
     // 本日の縦線
     if (todayInRange){
       h += `<div class="todaycol" style="grid-column:${todayCol};grid-row:1 / -1">` +
-           `<div class="todayline" style="left:${(todayFrac*100).toFixed(2)}%">` +
+           `<div class="todayline" style="left:50%">` +
            `<span class="todaylbl">${md(t)}</span></div></div>`;
     }
     // 横の区切りと段の色分け
@@ -969,8 +975,8 @@ body > header.bar{ flex:0 0 auto; }
     const rows = [...tbl.querySelectorAll('.grule')];
     if (!cols.length || !rows.length) return;
 
-    const w0 = monday(n2d(Math.min(...phases.map(p => d2n(p.start_date)).filter(Boolean))));
-    const wIdx2 = n => Math.floor((n2d(n) - w0) / (7*DAY));
+    const w0 = n2d(Math.min(...phases.map(p => d2n(p.start_date)).filter(Boolean)));
+    const wIdx2 = n => Math.round((n2d(n) - w0) / DAY);
 
     const target = orders.filter(o => o.due_date && o.status !== 'cancelled');
     const anchors = {};
