@@ -45,14 +45,14 @@ body > header.bar{ flex:0 0 auto; }
 
 .warnbtn{
   font-family:var(--body); font-size:13px; font-weight:700; min-height:38px;
-  padding:0 14px; border:1px solid var(--alert); background:#FBF1EF; color:#7A2A20;
+  padding:0 14px; border:1px solid var(--alert); background:#FBF1EF; color:#8C2A1D;
   border-radius:var(--radius-sm); cursor:pointer; white-space:nowrap; box-shadow:var(--shadow-1);
 }
 .warnbtn.on{ background:var(--alert); color:#fff; }
 
 .drop{
   flex:0 0 auto; background:#FBF1EF; border-bottom:1px solid var(--rule);
-  padding:10px 16px; font-size:13px; line-height:1.8; color:#7A2A20;
+  padding:10px 16px; font-size:13px; line-height:1.8; color:#8C2A1D;
   max-height:26vh; overflow-y:auto;
 }
 .drop.guide{ background:var(--card); color:var(--sub); }
@@ -422,9 +422,9 @@ body > header.bar{ flex:0 0 auto; }
   <span class="sp"></span>
   <div class="legend" id="legend" hidden>
     <span><i style="background:#8A938C"></i>未着手</span>
-    <span><i style="background:#D99A00"></i>着手中</span>
-    <span><i style="background:#2F6B4F"></i>完了</span>
-    <span><i style="background:#A83A2C"></i>中断</span>
+    <span><i style="background:#EAA800"></i>着手中</span>
+    <span><i style="background:#238554"></i>完了</span>
+    <span><i style="background:#C53826"></i>中断</span>
     <span><i style="background:#fff;border:2px solid #111"></i>余裕なし</span>
     <span><i style="background:var(--ok);border-radius:50%;width:10px;height:10px"></i>発注：すべて済み</span>
     <span><i style="background:var(--safety);border-radius:50%;width:10px;height:10px"></i>発注：未発注あり</span>
@@ -1359,9 +1359,9 @@ body > header.bar{ flex:0 0 auto; }
         pts = [[a.ax, a.ay], [a.ax, cy], [tx, cy]];
       }
       const d = pts.map(q => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(' ');
-      s2 += `<polyline points="${d}" fill="none" stroke="#A83A2C" stroke-width="1.2" ` +
+      s2 += `<polyline points="${d}" fill="none" stroke="#C53826" stroke-width="1.2" ` +
             `stroke-dasharray="4 3" stroke-linejoin="miter"/>`;
-      s2 += `<circle cx="${a.ax.toFixed(1)}" cy="${a.ay.toFixed(1)}" r="3" fill="#A83A2C"/>`;
+      s2 += `<circle cx="${a.ax.toFixed(1)}" cy="${a.ay.toFixed(1)}" r="3" fill="#C53826"/>`;
     });
     svg.innerHTML = s2;
   }
@@ -1615,7 +1615,7 @@ body > header.bar{ flex:0 0 auto; }
     const VH = PAD*2 + Math.max(...lvs.map(lv => byLv[lv].length))*(BH+GY) - GY;
 
     const FILL = { not_started:'#F2F4F1', in_progress:'#FBF0D4', done:'#EAF2ED', suspended:'#FBEFEC' };
-    const LINE = { not_started:'#8A938C', in_progress:'#D99A00', done:'#2F6B4F', suspended:'#A83A2C' };
+    const LINE = { not_started:'#8A938C', in_progress:'#EAA800', done:'#238554', suspended:'#C53826' };
 
     let s = `<svg viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">`;
     s += `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
@@ -1631,7 +1631,7 @@ body > header.bar{ flex:0 0 auto; }
       s += `<path d="M${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2-3} ${y2}" fill="none" ` +
            `stroke="${crit ? '#111' : '#9AA39C'}" stroke-width="${crit ? 2.2 : 1.4}" marker-end="url(#ah)"/>`;
       if (d.lag_days)
-        s += `<text x="${mx}" y="${(y1+y2)/2 - 5}" text-anchor="middle" font-size="10" fill="#4F5952" font-family="monospace">+${d.lag_days}日</text>`;
+        s += `<text x="${mx}" y="${(y1+y2)/2 - 5}" text-anchor="middle" font-size="10" fill="#55684B" font-family="monospace">+${d.lag_days}日</text>`;
     });
 
     phases.forEach(p => {
@@ -1645,8 +1645,8 @@ body > header.bar{ flex:0 0 auto; }
       s += `<rect x="${q.x}" y="${q.y}" width="${BW}" height="${BH}" rx="3" fill="${FILL[p.status]}" ` +
            `stroke="${crit ? '#111' : LINE[p.status]}" stroke-width="${crit ? 2.4 : 1.2}"/>`;
       s += `<text x="${q.x+10}" y="${q.y+21}" font-size="13" font-weight="700" fill="#16324F" font-family="sans-serif">${esc(nm)}</text>`;
-      s += `<text x="${q.x+10}" y="${q.y+37}" font-size="10.5" fill="#4F5952" font-family="monospace">${esc(per)}</text>`;
-      s += `<text x="${q.x+10}" y="${q.y+51}" font-size="10.5" fill="#4F5952" font-family="sans-serif">${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}</text>`;
+      s += `<text x="${q.x+10}" y="${q.y+37}" font-size="10.5" fill="#55684B" font-family="monospace">${esc(per)}</text>`;
+      s += `<text x="${q.x+10}" y="${q.y+51}" font-size="10.5" fill="#55684B" font-family="sans-serif">${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}</text>`;
       s += `</g>`;
     });
 

@@ -7,15 +7,15 @@
 
 :root{
   --ink:      #16324F;   /* 濃紺  見出し帯・主要文字 */
-  --ink-2:    #2E5C86;   /* 中紺  補助・リンク */
+  --ink-2:    #296399;   /* 中紺  補助・リンク */
   --paper:    #EBEDE8;   /* 背景  わずかに緑みのある紙色 */
   --card:     #FFFFFF;
   --rule:     #C2C7C0;   /* 罫線 */
   --rule-2:   #DDE0DA;   /* 細罫 */
-  --safety:   #D99A00;   /* 標識の黄  強調は原則ここだけ */
-  --alert:    #A83A2C;
-  --ok:       #2F6B4F;
-  --sub:      #4F5952;
+  --safety:   #EAA800;   /* 標識の黄  強調は原則ここだけ */
+  --alert:    #C53826;
+  --ok:       #238554;
+  --sub:      #55684B;
 
   --disp: "BIZ UDPGothic","Noto Sans JP","Hiragino Sans","Yu Gothic UI",sans-serif;
   --body: "Noto Sans JP","Hiragino Sans","Yu Gothic UI",sans-serif;
@@ -298,7 +298,7 @@ select{ appearance:none; background-image:none; }
 .st-started   { color:#9A6E00; } .fl-started   { background:var(--safety); }
 .st-completed { color:var(--ok); }  .fl-completed { background:var(--ok); }
 .st-invoiced  { color:#1F6F7A; } .fl-invoiced  { background:#1F6F7A; }
-.st-paid      { color:#1D4F38; } .fl-paid      { background:#1D4F38; }
+.st-paid      { color:#1C5E3D; } .fl-paid      { background:#1C5E3D; }
 .st-cancelled { color:var(--alert); } .fl-cancelled { background:var(--alert); }
 
 /* ---------- 空・読込 ---------- */
@@ -315,8 +315,8 @@ select{ appearance:none; background-image:none; }
   border:1px solid var(--rule); background:var(--card); margin-bottom:14px;
   box-shadow:var(--shadow-1);
 }
-.msg.err{ border-left:3px solid var(--alert); color:#7A2A20; background:#FBF1EF; }
-.msg.ok { border-left:3px solid var(--ok);   color:#1D4F38; background:#EFF5F1; }
+.msg.err{ border-left:3px solid var(--alert); color:#8C2A1D; background:#FBF1EF; }
+.msg.ok { border-left:3px solid var(--ok);   color:#1C5E3D; background:#EFF5F1; }
 .msg:empty{ display:none; }
 
 /* ---------- 事前登録が必要なドロップダウンの空欄アナウンス ---------- */

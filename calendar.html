@@ -54,7 +54,7 @@
     background:#E3E6E0; font-family:var(--disp); font-weight:700; font-size:11.5px;
     display:flex; align-items:center; justify-content:center; color:var(--sub);
   }
-  .chd.sat{ color:#1F5A8A; } .chd.sun{ color:#A83A2C; }
+  .chd.sat{ color:#1F5A8A; } .chd.sun{ color:#C53826; }
 
   .cell{ background:var(--card); min-width:0; display:flex; flex-direction:column; overflow:hidden; }
   .cell.out{ background:#F5F7F3; }
@@ -65,8 +65,8 @@
   }
   .cday b{ color:var(--ink); font-weight:500; font-size:13px; }
   .cell.out .cday b{ color:#A8B0A9; }
-  .cday .sat{ color:#1F5A8A; } .cday .sun{ color:#A83A2C; }
-  .cday .hol{ font-size:10px; color:#A83A2C; }
+  .cday .sat{ color:#1F5A8A; } .cday .sun{ color:#C53826; }
+  .cday .hol{ font-size:10px; color:#C53826; }
 
   .evs{ flex:1 1 auto; min-height:0; overflow:hidden; padding:0 3px 3px; display:grid; gap:2px; align-content:start; }
   .ev{
@@ -81,11 +81,11 @@
   .ev.k-ph.s-done{ background:var(--ok); }
   .ev.k-ph.s-suspended{ background:var(--alert); }
   .ev.k-ph.crit{ border-color:#111; }
-  .ev.k-ord{ background:#FBF1EF; color:#7A2A20; border-color:var(--alert); }
+  .ev.k-ord{ background:#FBF1EF; color:#8C2A1D; border-color:var(--alert); }
   .ev.k-req{ background:#EEF3F8; color:#1F4463; border-color:var(--ink-2); }
   .ev.done{ opacity:.55; text-decoration:line-through; }
   .ev.k-st{ background:#E6F0F8; color:#16324F; border-color:var(--ink-2); }
-  .ev.k-end{ background:#EFF5F1; color:#1D4F38; border-color:var(--ok); }
+  .ev.k-end{ background:#EFF5F1; color:#1C5E3D; border-color:var(--ok); }
   .evmore{ font-size:10px; color:var(--sub); padding:1px 5px; }
 
   /* ---------- 予定の詳細 ---------- */
@@ -140,12 +140,12 @@
   <span class="sp"></span>
   <div class="legend">
     <span><i style="background:#8A938C"></i>未着手</span>
-    <span><i style="background:#D99A00"></i>着手中</span>
-    <span><i style="background:#2F6B4F"></i>完了</span>
-    <span><i style="background:#FBF1EF;border:1px solid #A83A2C"></i>社外発注</span>
-    <span><i style="background:#EEF3F8;border:1px solid #2E5C86"></i>社内依頼</span>
-    <span><i style="background:#E6F0F8;border:1px solid #2E5C86"></i>着工</span>
-    <span><i style="background:#EFF5F1;border:1px solid #2F6B4F"></i>完成予定</span>
+    <span><i style="background:#EAA800"></i>着手中</span>
+    <span><i style="background:#238554"></i>完了</span>
+    <span><i style="background:#FBF1EF;border:1px solid #C53826"></i>社外発注</span>
+    <span><i style="background:#EEF3F8;border:1px solid #296399"></i>社内依頼</span>
+    <span><i style="background:#E6F0F8;border:1px solid #296399"></i>着工</span>
+    <span><i style="background:#EFF5F1;border:1px solid #238554"></i>完成予定</span>
   </div>
 </div>
 
@@ -359,8 +359,8 @@
     const KIND = { ph:'工程', ord:'社外発注', req:'社内依頼', st:'着工', end:'完成予定' };
     $('dplist').innerHTML = list.length ? list.map(x => {
       const col = x.kind === 'ph'
-        ? ({ not_started:'#8A938C', in_progress:'#D99A00', done:'#2F6B4F', suspended:'#A83A2C' }[x.status] || '#8A938C')
-        : ({ ord:'#A83A2C', req:'#2E5C86', st:'#2E5C86', end:'#2F6B4F' }[x.kind]);
+        ? ({ not_started:'#8A938C', in_progress:'#EAA800', done:'#238554', suspended:'#C53826' }[x.status] || '#8A938C')
+        : ({ ord:'#C53826', req:'#296399', st:'#296399', end:'#238554' }[x.kind]);
       const span = (x.from !== x.to)
         ? `${fmtDate(new Date(x.from*DAY).toISOString().slice(0,10))} 〜 ${fmtDate(new Date(x.to*DAY).toISOString().slice(0,10))}`
         : '';
