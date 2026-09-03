@@ -212,6 +212,11 @@
         <div class="fld"><input id="f_sdate" type="date"></div>
       </div>
       <div class="row">
+        <label for="f_lead">発注リードタイム（日）</label>
+        <div class="fld"><input id="f_lead" type="number" min="0" step="1" placeholder="発注〜納品までの目安日数">
+          <span id="f_deadline" style="font-size:12px;color:var(--sub);margin-left:8px"></span></div>
+      </div>
+      <div class="row">
         <label for="f_status">進み具合</label>
         <div class="fld"><select id="f_status">
           <option value="estimate">見積中</option>
@@ -350,9 +355,10 @@
   /* ================= 表示 ================= */
   function fmt(v){ return v || v === 0 ? fmtMoney(v) : '—'; }
   function addDays(ymd, n){
+    // ローカルの日付要素だけで計算する（toISOStringはUTC変換で日付がずれるため使わない）
     const d = new Date(ymd + 'T00:00:00');
     d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
   // 一覧の狭い列用：2026-08-28 → 26/8/28
   function fmtDateShort(ymd){
@@ -516,6 +522,16 @@
   $('f_contract').addEventListener('input', recalcRemain);
   $('f_paid').addEventListener('input', recalcRemain);
 
+  // 発注期限＝納品予定日−発注リードタイム。工程表のガントの警告と同じ考え方を、
+  // この画面でも参考値として出す（実際のアラート判定は工程表側で行う）
+  function recalcDeadline(){
+    const sdate = $('f_sdate').value, lead = $('f_lead').value;
+    if (!sdate || lead === ''){ $('f_deadline').textContent = ''; return; }
+    $('f_deadline').textContent = `発注期限の目安：${fmtDate(addDays(sdate, -Number(lead)))}`;
+  }
+  $('f_sdate').addEventListener('input', recalcDeadline);
+  $('f_lead').addEventListener('input', recalcDeadline);
+
   function openPanel(x){
     editing = x || null;
     showMsg($('pmsg'), '');
@@ -533,6 +549,7 @@
     $('f_odate').value  = x ? (x.order_date || '') : '';
     $('f_due').value    = x ? (x.due_date || '') : '';
     $('f_sdate').value  = x ? (x.scheduled_delivery_date || '') : '';
+    $('f_lead').value   = x && x.lead_time_days !== null && x.lead_time_days !== undefined ? x.lead_time_days : '';
     $('f_status').value = x ? x.status : 'estimate';
     $('f_ddate').value  = x ? (x.delivered_on || '') : '';
     $('f_dqty').value   = x && x.delivered_qty !== null ? x.delivered_qty : '';
@@ -543,6 +560,7 @@
     $('f_paid').value   = x && x.paid_amount !== null ? x.paid_amount : '';
     recalcAmt();
     recalcRemain();
+    recalcDeadline();
 
     document.querySelectorAll('#panel input, #panel select, #panel textarea')
       .forEach(el => el.disabled = !canEdit);
@@ -577,6 +595,7 @@
       order_date       : $('f_odate').value || null,
       due_date         : $('f_due').value || null,
       scheduled_delivery_date: $('f_sdate').value || null,
+      lead_time_days   : $('f_lead').value === '' ? null : Number($('f_lead').value),
       status           : $('f_status').value,
       delivered_on     : $('f_ddate').value || null,
       delivered_qty    : $('f_dqty').value === '' ? null : Number($('f_dqty').value),
