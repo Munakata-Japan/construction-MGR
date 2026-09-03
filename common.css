@@ -6,7 +6,7 @@
    ============================================================ */
 
 :root{
-  --ink:      #16324F;   /* 濃紺  見出し帯・主要文字 */
+  --ink:      #13385D;   /* 濃紺  見出し帯・主要文字 */
   --ink-2:    #296399;   /* 中紺  補助・リンク */
   --paper:    #EBEDE8;   /* 背景  わずかに緑みのある紙色 */
   --card:     #FFFFFF;
@@ -48,7 +48,7 @@ body{
 
 /* ---------- 見出し帯（工事看板の頭） ---------- */
 .bar{
-  background:linear-gradient(180deg,#1C3B5E,var(--ink) 60%);
+  background:linear-gradient(180deg,#1B4574,var(--ink) 60%);
   color:#EBEDE8;
   padding:0 16px;
   min-height:56px;
@@ -79,14 +79,14 @@ body{
   font-family:var(--body); font-size:15.5px; font-weight:700;
   min-height:var(--tap); padding:0 20px;
   border:1px solid var(--ink); border-radius:var(--radius);
-  background:linear-gradient(180deg,#2A527D,var(--ink) 65%); color:#fff;
+  background:linear-gradient(180deg,#275A91,var(--ink) 65%); color:#fff;
   cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
   gap:8px; line-height:1;
   box-shadow:var(--shadow-2);
   transition:box-shadow .15s ease, transform .15s ease, background .15s ease;
 }
-.btn:hover{ background:linear-gradient(180deg,#33608F,#1E4066 65%); box-shadow:var(--shadow-3); transform:translateY(-1px); }
-.btn:active{ transform:translateY(1px); box-shadow:var(--shadow-1); background:linear-gradient(180deg,var(--ink),#122438 65%); }
+.btn:hover{ background:linear-gradient(180deg,#2E67A3,#1C4778 65%); box-shadow:var(--shadow-3); transform:translateY(-1px); }
+.btn:active{ transform:translateY(1px); box-shadow:var(--shadow-1); background:linear-gradient(180deg,var(--ink),#112A45 65%); }
 .btn:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
 .btn[disabled]{ opacity:.5; cursor:default; transform:none; box-shadow:none; }
 
@@ -101,10 +101,10 @@ body{
 
 /* 見出し帯の中に置くボタン（濃紺の上なので明るい線と文字にする） */
 .btn.barbtn{
-  color:#EBEDE8; border-color:#42627F; background:transparent;
+  color:#EBEDE8; border-color:#3D688F; background:transparent;
   flex:0 0 auto; text-decoration:none; box-shadow:none;
 }
-.btn.barbtn:hover{ background:#22456B; box-shadow:none; transform:none; }
+.btn.barbtn:hover{ background:#204D7E; box-shadow:none; transform:none; }
 .btn.barbtn:active{ box-shadow:none; }
 
 /* ---------- セレクトモード ---------- */
@@ -325,7 +325,7 @@ select{ appearance:none; background-image:none; }
   border-radius:var(--radius-sm); padding:6px 10px; margin-top:6px; line-height:1.6;
   flex:1 0 100%; order:99;
 }
-.emptynote a{ color:#1C3B5E; font-weight:700; }
+.emptynote a{ color:#1B4574; font-weight:700; }
 .emptynote[hidden]{ display:none; }
 
 /* ---------- 画面下部の固定操作 ---------- */
