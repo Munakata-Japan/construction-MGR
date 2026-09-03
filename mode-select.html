@@ -62,6 +62,7 @@
     <div class="hcell"><span class="hlbl">工事</span><span class="hval" id="h_all">–</span></div>
     <div class="hcell"><span class="hlbl">着工中</span><span class="hval" id="h_run">–</span></div>
     <div class="hcell"><span class="hlbl">完工</span><span class="hval" id="h_done">–</span></div>
+    <div class="hcell"><span class="hlbl">ログイン中</span><span class="hval" id="h_online">–</span></div>
     <div class="hcell st">
       <span class="hlbl">保管量</span>
       <span class="hval" id="h_st">–</span>
@@ -225,6 +226,17 @@
       showMsg($('msg'), `保管領域を ${pct.toFixed(0)}% 使っています。`, 'err');
     }
   }
+
+  // ログイン中の人数（直近5分以内に動きがある人を数える）。
+  // この画面を開いている間は定期的に更新する。
+  async function paintOnline(){
+    const { data, error } = await sb.rpc('online_count', { p_minutes: 5 });
+    if (!error && data !== null && data !== undefined){
+      $('h_online').textContent = `${data}人`;
+    }
+  }
+  await paintOnline();
+  setInterval(paintOnline, 30000);
 })();
 </script>
 </body>
