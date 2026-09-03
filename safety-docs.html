@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!-- BUILD: safety-docs (安全書類) v20260903A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>安全書類 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .dlist{ display:grid; gap:10px; margin-top:16px; }
+  .dcard{
+    background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:14px 16px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  }
+  .dcard .no{
+    font-family:var(--mono); font-size:11px; color:#fff; background:var(--ink);
+    border-radius:var(--radius-sm); padding:3px 8px; flex:0 0 auto;
+  }
+  .dcard .body{ flex:1 1 260px; min-width:0; }
+  .dcard .nm{ font-family:var(--disp); font-weight:700; font-size:15.5px; margin:0 0 3px; }
+  .dcard .ds{ font-size:12.5px; color:var(--sub); line-height:1.6; }
+  .dcard .dl{ flex:0 0 auto; text-decoration:none; }
+  .lead{ color:var(--sub); font-size:13.5px; line-height:1.8; margin:14px 0 0; }
+  .lead b{ color:var(--ink); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>安全書類</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+  <div id="msg" class="msg"></div>
+
+  <p class="lead">
+    現場管理で使う安全書類のひな型（PDF）です。<b>協力会社に配布して記入・提出してもらい</b>、
+    元請けとしてまとめて保管してください。ダウンロード後、工事名や協力会社名を入れてお使いいただけます。
+  </p>
+
+  <div class="dlist" id="dlist"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+
+  const DOCS = [
+    { no:'安全書式-1', file:'安全書式-1_新規入場者教育記録簿.pdf',
+      name:'新規入場者教育記録簿',
+      desc:'新しく現場に入る作業員へ実施する安全教育の記録。対象者名簿と教育実施項目のチェック欄付き。' },
+    { no:'安全書式-2', file:'安全書式-2_KY活動記録表.pdf',
+      name:'KY活動記録表（危険予知活動記録表）',
+      desc:'作業開始前に行う危険予知（KY）活動の記録。4ラウンド法の記入欄付き。' },
+    { no:'安全書式-3', file:'安全書式-3_安全朝礼記録簿TBM.pdf',
+      name:'安全朝礼記録簿（TBM）',
+      desc:'毎朝のツールボックスミーティングの記録。本日の作業予定・注意事項・健康状態チェック欄付き。' },
+    { no:'安全書式-4', file:'安全書式-4_安全パトロール点検表.pdf',
+      name:'安全パトロール点検表',
+      desc:'現場代理人等が定期的に行う安全巡視の点検表。10項目の判定・是正欄付き（元請け実施用）。' },
+    { no:'安全書式-5', file:'安全書式-5_ヒヤリハット災害報告書.pdf',
+      name:'ヒヤリハット・災害報告書',
+      desc:'ヒヤリハットや災害が発生した際の報告書。発生状況・原因・対策の記入欄付き。' },
+    { no:'安全書式-6', file:'安全書式-6_作業員名簿.pdf',
+      name:'作業員名簿',
+      desc:'協力会社ごとに作成する作業員の名簿。資格・緊急連絡先・入場日などを記載。' },
+  ];
+
+  $('dlist').innerHTML = DOCS.map(d => `
+    <div class="dcard">
+      <span class="no">${esc(d.no)}</span>
+      <div class="body">
+        <p class="nm">${esc(d.name)}</p>
+        <p class="ds">${esc(d.desc)}</p>
+      </div>
+      <a class="btn sm dl" href="safety-docs/${encodeURIComponent(d.file)}" download>ダウンロード</a>
+    </div>
+  `).join('');
+})();
+</script>
+</body>
+</html>
