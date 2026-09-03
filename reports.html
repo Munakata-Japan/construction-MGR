@@ -75,6 +75,7 @@
     </select>
     <button class="btn ghost sm" id="lkbtn" hidden>外注先へのURL</button>
   </div>
+  <p id="pmgr" hidden style="font-size:12.5px;color:var(--sub);margin:-6px 0 14px"></p>
 
   <div id="msg" class="msg"></div>
 
@@ -226,7 +227,7 @@
   /* ================= 読み込み ================= */
   async function loadRefs(){
     const [pr, u] = await Promise.all([
-      sb.from('projects').select('id,project_no,name').eq('is_active', true)
+      sb.from('projects').select('id,project_no,name,manager_user_id').eq('is_active', true)
         .order('project_no', { ascending:false }),
       sb.from('app_users').select('id,name').eq('is_active', true).order('name')
     ]);
@@ -303,7 +304,13 @@
       b.addEventListener('click', () => openPanel(reports.find(x => x.id === b.dataset.id))));
   }
 
-  $('proj').addEventListener('change', loadReports);
+  function updateProjMgr(){
+    const p = projects.find(x => x.id === $('proj').value);
+    const mgr = p ? users.find(u => u.id === p.manager_user_id) : null;
+    $('pmgr').hidden = !mgr;
+    $('pmgr').textContent = mgr ? `現場責任者：${mgr.name}` : '';
+  }
+  $('proj').addEventListener('change', () => { loadReports(); updateProjMgr(); });
   $('fst').addEventListener('change', render);
 
   /* ================= 明細 ================= */
@@ -566,6 +573,7 @@
   const qs = new URL(location.href).searchParams;
   const q = qs.get('p');
   if (q && projects.some(x => x.id === q)) $('proj').value = q;
+  updateProjMgr();
   await loadReports();
   if (qs.get('new') === '1') openPanel(null);
 })();
