@@ -325,6 +325,8 @@
       ranks.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
     $('f_partner').innerHTML = '<option value="">（未設定）</option>' +
       partners.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    setEmptyNote($('f_partner'), partners.length === 0,
+      '取引先が登録されていません。先に取引先ページから登録してください。', 'partners.html', '取引先ページへ');
     $('f_sup').innerHTML = '<option value="">（未設定）</option>' +
       users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
   }

@@ -750,6 +750,8 @@ body > header.bar{ flex:0 0 auto; }
 
     $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
       projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+    setEmptyNote($('proj'), projects.length === 0,
+      '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
 
     $('f_cat').innerHTML = '<option value="">（未設定）</option>' +
       cats.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
@@ -757,8 +759,12 @@ body > header.bar{ flex:0 0 auto; }
 
     $('f_op').innerHTML = '<option value="">（未設定）</option>' +
       partners.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+    setEmptyNote($('f_op'), partners.length === 0,
+      '取引先が登録されていません。先に取引先ページから登録してください。', 'partners.html', '取引先ページへ');
     $('f_ou').innerHTML = '<option value="">（未設定）</option>' +
       users.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+    setEmptyNote($('f_ou'), users.length === 0,
+      '利用者が登録されていません。先に利用者ページから登録してください。', 'users.html', '利用者ページへ');
 
     const smp = projects.find(x => x.is_sample);
     if (smp){
@@ -1668,10 +1674,16 @@ body > header.bar{ flex:0 0 auto; }
 
     $('o_phase').innerHTML = '<option value="">（工事全体）</option>' +
       phases.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    setEmptyNote($('o_phase'), phases.length === 0,
+      'この工事の工程がまだありません。先に工程表で工程を作成してください。');
     $('o_partner').innerHTML = '<option value="">（未設定）</option>' +
       partners.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    setEmptyNote($('o_partner'), partners.length === 0,
+      '取引先が登録されていません。先に取引先ページから登録してください。', 'partners.html', '取引先ページへ');
     $('o_user').innerHTML = '<option value="">（未設定）</option>' +
       users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
+    setEmptyNote($('o_user'), users.length === 0,
+      '利用者が登録されていません。先に利用者ページから登録してください。', 'users.html', '利用者ページへ');
 
     $('o_scope').value  = o ? o.scope : 'external';
     $('o_title').value  = o ? (o.title || '') : '';

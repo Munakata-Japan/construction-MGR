@@ -274,6 +274,8 @@
     projects = pr.data || []; bbFields = bb.data || [];
     $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
       projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+    setEmptyNote($('proj'), projects.length === 0,
+      '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
   }
 
   async function loadPhases(){
@@ -286,7 +288,11 @@
     const opt = phases.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
     $('fphase').innerHTML  = '<option value="">すべての工程</option>' + opt;
     $('f_phase').innerHTML = '<option value="">（未設定）</option>' + opt;
+    setEmptyNote($('f_phase'), phases.length === 0,
+      'この工事の工程がまだありません。先に工程表で工程を作成してください。', `schedule.html?p=${projId}`, '工程表へ');
     $('u_phase').innerHTML = '<option value="">工程を選ばない</option>' + opt;
+    setEmptyNote($('u_phase'), phases.length === 0,
+      'この工事の工程がまだありません。先に工程表で工程を作成してください。', `schedule.html?p=${projId}`, '工程表へ');
   }
 
   function paintTagHelp(){
