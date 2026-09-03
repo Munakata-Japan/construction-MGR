@@ -120,6 +120,7 @@
     <select id="fphase"><option value="">すべての工程</option></select>
     <input id="q" type="text" placeholder="題名・撮影箇所・測点で絞り込み">
   </div>
+  <p id="pmgr" hidden style="font-size:12.5px;color:var(--sub);margin:-6px 0 12px"></p>
 
   <p class="usage" id="usage"></p>
   <div id="msg" class="msg"></div>
@@ -270,7 +271,7 @@
   /* ================= 読み込み ================= */
   async function loadRefs(){
     const [pr, bb, u] = await Promise.all([
-      sb.from('projects').select('id,project_no,name').eq('is_active', true)
+      sb.from('projects').select('id,project_no,name,manager_user_id').eq('is_active', true)
         .order('project_no', { ascending:false }),
       sb.from('blackboard_fields').select('*').eq('is_active', true).order('sort_order'),
       sb.from('app_users').select('id,name').eq('is_active', true)
@@ -620,6 +621,12 @@
     });
   }
 
+  function updateProjMgr(){
+    const p = projects.find(x => x.id === projId);
+    const mgr = p ? users.find(u => u.id === p.manager_user_id) : null;
+    $('pmgr').hidden = !mgr;
+    $('pmgr').textContent = mgr ? `現場責任者：${mgr.name}` : '';
+  }
   $('proj').addEventListener('change', async () => {
     projId = $('proj').value || null;
     const u = new URL(location.href);
@@ -627,6 +634,7 @@
     history.replaceState(null, '', u);
     $('dock').hidden = !projId;
     $('up').hidden = true;
+    updateProjMgr();
     await loadPhases();
     await loadFiles();
   });
@@ -957,6 +965,7 @@
   await loadRefs();
   const q = new URL(location.href).searchParams.get('p');
   if (q && projects.some(x => x.id === q)){ projId = q; $('proj').value = q; $('dock').hidden = false; }
+  updateProjMgr();
   await loadPhases();
   await loadFiles();
 })();
