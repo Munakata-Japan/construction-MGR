@@ -860,7 +860,7 @@ body > header.bar{ flex:0 0 auto; }
       sb.from('phase_orders').select('*').eq('project_id', projId).eq('is_active', true).order('seq'),
       // 金額は一切取得しない。品名・数量・納期など、納品管理に必要な情報だけ
       sb.from('phase_budget_items')
-        .select('id,phase_id,item_name,quantity,unit,status,scheduled_delivery_date,delivered_on,note')
+        .select('id,phase_id,item_name,quantity,unit,status,scheduled_delivery_date,delivered_on,lead_time_days,note')
         .eq('project_id', projId)
     ]);
     if (a.error){ showMsg($('msg'), '工程を読み込めませんでした。' + a.error.message, 'err'); return; }
@@ -877,6 +877,28 @@ body > header.bar{ flex:0 0 auto; }
     draw();
   }
 
+  // 発注期限＝納品予定日 − 発注リードタイム（日数）。見積中でまだ発注していない項目だけが対象。
+  // 期限の何日前からアラート扱いにするか
+  const ORDER_WARN_DAYS = 7;
+  function todayYMD(){
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  }
+  function addDaysYMD(ymd, n){
+    const dt = n2d(d2n(ymd) + n);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  }
+  function orderDeadlineOf(x){
+    if (!x.scheduled_delivery_date || x.lead_time_days === null || x.lead_time_days === undefined || x.lead_time_days === '')
+      return null;
+    return addDaysYMD(x.scheduled_delivery_date, -Number(x.lead_time_days));
+  }
+  function orderDeadlineRisk(x){
+    if (x.status !== 'estimate') return false;
+    const dl = orderDeadlineOf(x);
+    return !!dl && dl <= addDaysYMD(todayYMD(), ORDER_WARN_DAYS);
+  }
+
   // ある工程に紐づく材料が、着工日までに揃うかどうか（金額は一切見ない）
   // 戻り値: { cls, text } または、紐づく材料が無ければ null
   function materialReadiness(phaseId){
@@ -887,6 +909,8 @@ body > header.bar{ flex:0 0 auto; }
     const isDone = x => x.status === 'delivered' || x.status === 'inspected';
     const notYet = opMats.filter(x => !isDone(x));
     if (!notYet.length) return { cls:'od-ok', text:'材料：すべて納品済み' };
+    if (notYet.some(orderDeadlineRisk))
+      return { cls:'od-over', text:'材料：発注期限が近い、または過ぎている項目があります' };
     const risky = p && p.start_date && notYet.some(x => {
       const dd = x.scheduled_delivery_date || x.delivered_on;
       return dd ? dd > p.start_date : true; // 納期未定も着工に間に合うか分からないのでリスク扱い
@@ -899,6 +923,11 @@ body > header.bar{ flex:0 0 auto; }
   // 材料1件ごとの納品状況（金額は一切見ない）
   function itemReadiness(x, phaseStartDate){
     if (x.status === 'delivered' || x.status === 'inspected') return { cls:'od-ok', text:'納品済み' };
+    if (orderDeadlineRisk(x)){
+      const dl = orderDeadlineOf(x);
+      const overdue = dl < todayYMD();
+      return { cls:'od-over', text:`${overdue ? '発注期限を過ぎています' : '発注期限が近づいています'}（期限 ${fmtDate(dl)}・要発注）` };
+    }
     const dd = x.scheduled_delivery_date || x.delivered_on;
     if (!dd) return { cls:'od-over', text:'納期未定' };
     const late = phaseStartDate && dd > phaseStartDate;
@@ -1170,9 +1199,9 @@ body > header.bar{ flex:0 0 auto; }
         // 材料が着工までに届かない見込みのときだけ、バー自体（名前欄の丸とは別の場所）に赤い縁取りを出す
         const mat = materialReadiness(p.id);
         const matRisk = mat && mat.cls === 'od-over' ? ' mat-risk' : '';
-        const matIcon = matRisk ? '<span class="bar-matwarn" title="材料：着工までに届かない見込みがあります">⚠</span>' : '';
+        const matIcon = matRisk ? `<span class="bar-matwarn" title="${esc(mat.text)}">⚠</span>` : '';
         h += `<button class="bar2 b-${p.status}${crit}${isToday}${matRisk}" data-id="${p.id}" data-row="${r}" ` +
-             `title="${esc(p.name)}　${fmtDate(p.start_date)}〜${fmtDate(p.end_date)}${matRisk ? '　⚠材料：着工までに届かない見込み' : ''}" ` +
+             `title="${esc(p.name)}　${fmtDate(p.start_date)}〜${fmtDate(p.end_date)}${matRisk ? '　⚠' + esc(mat.text) : ''}" ` +
              `style="grid-row:${r+2};grid-column:${c1} / ${c2}">${matIcon}${barLabel}</button>`;
       } else {
         h += `<button class="bar2 b-${p.status}" data-id="${p.id}" data-row="${r}" ` +
