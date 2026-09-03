@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<!-- BUILD: signup (招待からの登録) v20260903A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>ログイン登録 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .stage{
+    min-height:100vh; min-height:100dvh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  .board{ width:100%; max-width:400px; }
+  .title{
+    font-family:var(--disp); font-weight:700;
+    font-size:clamp(21px,5.4vw,26px); line-height:1.4;
+    margin:0 0 6px; letter-spacing:.02em;
+  }
+  .kicker{
+    font-family:var(--mono); font-size:11px; letter-spacing:.2em;
+    color:var(--ink-2); margin:0 0 10px;
+  }
+  .headline{ margin-bottom:22px; padding-left:14px; border-left:5px solid var(--safety); }
+  .headline p{ margin:0; font-size:13.5px; color:var(--sub); }
+  .welcome{ font-size:14px; color:var(--ink); margin:0 0 14px; line-height:1.7; }
+  .welcome b{ font-weight:700; }
+  .board .sheet{ margin-bottom:14px; }
+  .foot{
+    margin-top:20px; font-family:var(--mono); font-size:10.5px;
+    color:var(--sub); letter-spacing:.06em; text-align:center;
+  }
+  .row .fld input{ border:1px solid var(--rule); }
+  .hint{ font-size:12px; color:var(--sub); margin:6px 0 0; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="board">
+
+    <div class="headline">
+      <p class="kicker">CONSTRUCTION MGR</p>
+      <h1 class="title">宗像総合管理システム</h1>
+      <p>ログインの登録</p>
+    </div>
+
+    <div id="msg" class="msg"></div>
+
+    <div id="loading" class="welcome">招待の内容を確認しています…</div>
+
+    <form id="form" autocomplete="on" hidden>
+      <p class="welcome" id="welcome"></p>
+
+      <div class="sheet">
+        <div class="head">メールとパスワードを決める</div>
+
+        <div class="row">
+          <label for="email">メール<span class="req">*</span></label>
+          <div class="fld">
+            <input id="email" type="email" name="email" required
+                   autocomplete="username" inputmode="email"
+                   placeholder="example@example.com">
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="password">パスワード<span class="req">*</span></label>
+          <div class="fld">
+            <input id="password" type="password" name="new-password" required
+                   autocomplete="new-password" minlength="8" placeholder="8文字以上">
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="password2">パスワード（確認）<span class="req">*</span></label>
+          <div class="fld">
+            <input id="password2" type="password" name="new-password2" required
+                   autocomplete="new-password" minlength="8" placeholder="もう一度入力">
+          </div>
+        </div>
+      </div>
+
+      <button id="go" class="btn wide" type="submit">登録する</button>
+      <p class="hint">登録すると、次回からこのメールとパスワードでログインできます。</p>
+    </form>
+
+    <p class="foot">v20260903A</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const msg = $('msg');
+
+  const token = new URL(location.href).searchParams.get('token');
+  if (!token){
+    $('loading').hidden = true;
+    showMsg(msg, 'この画面は招待リンクからのみ開けます。管理者から届いたリンクを確認してください。', 'err');
+    return;
+  }
+
+  const { data: inv, error: invErr } = await sb.rpc('get_invite', { p_token: token });
+  const row = Array.isArray(inv) ? inv[0] : inv;
+  $('loading').hidden = true;
+
+  if (invErr || !row){
+    showMsg(msg, 'この招待リンクは見つかりませんでした。管理者に再発行を依頼してください。', 'err');
+    return;
+  }
+  if (!row.valid){
+    showMsg(msg, 'この招待リンクはすでに使われたか、期限が切れています。管理者に再発行を依頼してください。', 'err');
+    return;
+  }
+
+  $('welcome').innerHTML = `ようこそ、<b>${esc(row.name)}</b>さん（${esc(row.organization_name)}）。<br>ログインに使うメールとパスワードを決めてください。`;
+  $('form').hidden = false;
+
+  $('form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    showMsg(msg, '');
+
+    const email = $('email').value.trim();
+    const password = $('password').value;
+    const password2 = $('password2').value;
+
+    if (!email || !password){
+      showMsg(msg, 'メールとパスワードを入力してください。', 'err'); return;
+    }
+    if (password.length < 8){
+      showMsg(msg, 'パスワードは8文字以上にしてください。', 'err'); return;
+    }
+    if (password !== password2){
+      showMsg(msg, 'パスワード（確認）が一致しません。', 'err'); return;
+    }
+
+    $('go').disabled = true;
+    $('go').textContent = '登録しています…';
+
+    const { data: su, error: suErr } = await sb.auth.signUp({ email, password });
+    if (suErr){
+      $('go').disabled = false; $('go').textContent = '登録する';
+      const m = /already registered|already been registered/i.test(suErr.message)
+        ? 'そのメールはすでに登録されています。ログイン画面からお進みください。'
+        : '登録できませんでした。' + suErr.message;
+      showMsg(msg, m, 'err');
+      return;
+    }
+
+    if (su.session){
+      // メール確認が不要な設定：その場で自分の社員レコードと紐づける
+      const { data: ok } = await sb.rpc('claim_invite', { p_token: token });
+      if (!ok){
+        showMsg(msg, 'アカウントは作成されましたが、招待との紐づけに失敗しました。管理者にご連絡ください。', 'err');
+        $('go').disabled = false; $('go').textContent = '登録する';
+        return;
+      }
+      location.replace('mode-select.html');
+    } else {
+      // メール確認が必要な設定：確認後の初回ログイン時に紐づけられるよう覚えておく
+      try { localStorage.setItem('pending_invite_token', token); } catch (e) {}
+      showMsg(msg, '確認メールを送りました。メール内のリンクを開いてから、ログイン画面でログインしてください。', 'ok');
+      $('form').hidden = true;
+    }
+  });
+})();
+</script>
+</body>
+</html>

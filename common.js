@@ -75,7 +75,7 @@ async function requireAuth(){
     return null;
   }
 
-  const { data:me, error } = await sb
+  let { data:me, error } = await sb
     .from('app_users')
     .select('id, name, role, organization_id, employee_type, department')
     .eq('auth_user_id', session.user.id)
@@ -85,6 +85,25 @@ async function requireAuth(){
     alert('利用者情報を読み込めませんでした。\n' + error.message);
     return null;
   }
+
+  // メール確認が必要な設定のときは、招待からの登録直後はまだ紐づいていない。
+  // 確認後の初回ログインでここに来るので、覚えておいた招待トークンで紐づけ直す。
+  if (!me){
+    let pending = null;
+    try { pending = localStorage.getItem('pending_invite_token'); } catch (e) {}
+    if (pending){
+      const { data: ok } = await sb.rpc('claim_invite', { p_token: pending });
+      try { localStorage.removeItem('pending_invite_token'); } catch (e) {}
+      if (ok){
+        ({ data:me, error } = await sb
+          .from('app_users')
+          .select('id, name, role, organization_id, employee_type, department')
+          .eq('auth_user_id', session.user.id)
+          .maybeSingle());
+      }
+    }
+  }
+
   if (!me){
     alert('このアカウントはまだ会社に登録されていません。\n管理者に利用者の追加を依頼してください。');
     await sb.auth.signOut();
@@ -342,7 +361,7 @@ async function signOut(){
 ------------------------------------------ */
 (function insertBack(){
   const here = location.pathname.split('/').pop() || 'index.html';
-  if (/^(index|mode-select|report-entry)\.html$/.test(here)) return;
+  if (/^(index|mode-select|report-entry|signup)\.html$/.test(here)) return;
 
   function put(){
     const bar = document.querySelector('.bar');
