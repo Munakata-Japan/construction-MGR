@@ -13,6 +13,14 @@
   /* このページは横に長い表を扱うため、共通の960pxより広く使う */
   .wrap{ max-width:1440px; }
 
+  /* ページ自体はスクロールさせず、表の中だけをスクロールさせる（二重スクロール防止） */
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
+  #gtable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
   .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
   .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:44px; flex:0 1 auto; }
   .ctl .sp{ flex:1 1 0; }
@@ -27,7 +35,7 @@
   .sumcard .v.neg{ color:var(--alert); }
 
   .gtable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-           box-shadow:var(--shadow-1); overflow:auto; max-height:65vh; }
+           box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
   .ghead, .grow{
     display:grid; align-items:start; gap:6px; min-width:860px;
     grid-template-columns:1.8fr 90px 110px 110px 110px 110px 110px 80px;
@@ -44,6 +52,7 @@
   }
   .grow:hover{ background:#F5F7F3; }
   .grow .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+  .ghead .num{ text-align:right; }
   .grow .nm{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-weight:700; }
   .grow .no{ font-family:var(--mono); font-size:11px; color:var(--ink-2); display:block; }
   .profit.neg{ color:var(--alert); font-weight:700; }
@@ -56,6 +65,12 @@
   .gfoot .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
 
   @media (max-width:820px){
+    /* 狭い画面ではカード表示になるため、通常のページスクロールに戻す */
+    body{ height:auto; overflow:visible; display:block; }
+    .wrap{ flex:none; height:auto; overflow:visible; display:block; }
+    #gtable{ display:block; }
+    .gtable{ flex:none; max-height:none; overflow:visible; }
+
     .ghead, .gfoot{ display:none; }
     .grow{ grid-template-columns:1fr; min-width:0; padding:10px 12px; gap:2px; }
     .grow .num{ text-align:left; }
@@ -171,8 +186,8 @@
     }
 
     let h = `<div class="gtable"><div class="ghead">
-      <span>工事</span><span>状態</span><span>受注金額</span><span>材料費</span>
-      <span>労務・外注費</span><span>原価合計</span><span>粗利益</span><span>粗利率</span>
+      <span>工事</span><span>状態</span><span class="num">受注金額</span><span class="num">材料費</span>
+      <span class="num">労務・外注費</span><span class="num">原価合計</span><span class="num">粗利益</span><span class="num">粗利率</span>
     </div>`;
     rows.forEach(p => {
       const g = costByProject[p.id] || { material:0, labor:0 };

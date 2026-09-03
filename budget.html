@@ -13,6 +13,14 @@
   /* このページは横に長い表を扱うため、共通の960pxより広く使う */
   .wrap{ max-width:1440px; }
 
+  /* ページ自体はスクロールさせず、表の中だけをスクロールさせる（二重スクロール防止） */
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
+  #btable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
   .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
   .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:44px; flex:0 1 auto; }
   .ctl .sp{ flex:1 1 0; }
@@ -28,7 +36,7 @@
   .sumcard .v2{ font-family:var(--mono); font-size:11.5px; color:var(--sub); margin-top:3px; }
 
   .btable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-           box-shadow:var(--shadow-1); overflow:auto; max-height:65vh; }
+           box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
   .bhead, .brow{
     display:grid; align-items:start; gap:6px; min-width:1000px;
     grid-template-columns:52px 2.4fr 0.9fr 80px 70px 96px 96px 96px 96px 96px 64px;
@@ -45,6 +53,7 @@
   }
   .brow:hover{ background:#F5F7F3; }
   .brow .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+  .bhead .num{ text-align:right; }
   .brow .nm{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-weight:700; }
   .brow .sub{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-size:11px; color:var(--sub); }
   .cat{ font-size:10.5px; font-weight:700; padding:2px 6px; border-radius:var(--radius-sm); text-align:center; }
@@ -59,6 +68,12 @@
   .stag{ font-size:10.5px; color:var(--sub); white-space:nowrap; }
 
   @media (max-width:820px){
+    /* 狭い画面ではカード表示になるため、通常のページスクロールに戻す */
+    body{ height:auto; overflow:visible; display:block; }
+    .wrap{ flex:none; height:auto; overflow:visible; display:block; }
+    #btable{ display:block; }
+    .btable{ flex:none; max-height:none; overflow:visible; }
+
     .bhead{ display:none; }
     .brow{ grid-template-columns:1fr; min-width:0; padding:10px 12px; gap:2px; }
     .brow .num, .brow .sub{ text-align:left; }
@@ -356,8 +371,8 @@
     const ptmap = Object.fromEntries(partners.map(p => [p.id, p.name]));
 
     let h = `<div class="btable"><div class="bhead">
-      <span>区分</span><span>項目</span><span>工程／見積先</span><span>数量</span><span>単価</span>
-      <span>金額</span><span>予算</span><span>決定額</span><span>差額</span><span>状態</span><span>品質</span>
+      <span>区分</span><span>項目</span><span>工程／見積先</span><span class="num">数量</span><span class="num">単価</span>
+      <span class="num">金額</span><span class="num">予算</span><span class="num">決定額</span><span class="num">差額</span><span>状態</span><span>品質</span>
     </div>`;
     rows.forEach(x => {
       const diff = (x.budget_amount ?? null) !== null && (x.contract_amount ?? null) !== null
