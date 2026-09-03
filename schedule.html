@@ -140,16 +140,19 @@ body > header.bar{ flex:0 0 auto; }
 .dense .gname .gn2{ display:none; }
 
 /* この工程に紐づく発注の状態を示す丸印 */
-.gname .odot{
+.gname .odots{
   position:absolute; left:6px; top:50%; transform:translateY(-50%);
-  width:12px; height:12px; border-radius:50%; cursor:help;
+  display:flex; align-items:center; gap:3px; height:16px;
+}
+.gname .odot{
+  width:12px; height:12px; border-radius:50%; cursor:help; flex:0 0 auto;
   border:1.5px solid var(--card); box-shadow:0 0 0 1px rgba(0,0,0,.25);
 }
 .gname .odot.od-ok{ background:var(--ok); }
 .gname .odot.od-pending{ background:var(--safety); }
 .gname .odot.od-over{ background:var(--alert); box-shadow:0 0 0 2px rgba(168,58,44,.35); }
 .gname .odiv{
-  position:absolute; left:20px; top:15%; bottom:15%; width:1px; background:var(--rule);
+  width:1px; align-self:stretch; background:var(--rule); margin:1px 0;
 }
 
 .gname-rz{
@@ -288,6 +291,23 @@ body > header.bar{ flex:0 0 auto; }
 
 .hold{ height:100%; display:flex; align-items:center; justify-content:center; padding:24px; }
 .hold .empty{ max-width:420px; }
+
+/* ---------- 発注の商材明細 ---------- */
+.oitable{ border:1px solid var(--rule); border-radius:2px; overflow-x:auto; }
+.oith, .oirow{
+  display:grid; grid-template-columns:1.3fr 56px 46px 84px 90px 1fr 42px;
+  gap:6px; align-items:center; padding:5px 8px; min-width:560px;
+}
+.oith{ background:#F1F3EF; font-size:10.5px; color:var(--sub); font-weight:700; white-space:nowrap; }
+.oirow{ border-top:1px solid var(--rule-2); }
+.oirow input{ min-height:34px; padding:4px 6px; font-size:13px; }
+.oirow .oi_qty, .oirow .oi_price{ font-family:var(--mono); text-align:right; }
+.oi_amt{ font-family:var(--mono); font-size:12.5px; text-align:right; white-space:nowrap; }
+.oi_rm{ min-height:30px; padding:0 6px; font-size:11px; white-space:nowrap; }
+.oitotal{
+  text-align:right; font-family:var(--mono); font-weight:700; font-size:14.5px;
+  margin-top:8px; padding-top:8px; border-top:1px solid var(--rule);
+}
 
 /* ---------- ネットワーク ---------- */
 .nwrap{ display:flex; align-items:center; justify-content:center; padding:14px; background:var(--card); }
@@ -446,6 +466,23 @@ body > header.bar{ flex:0 0 auto; }
       <div class="row">
         <label for="o_user">担当者</label>
         <div class="fld"><select id="o_user"></select></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">商材明細</div>
+      <div class="row" style="grid-template-columns:1fr">
+        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+          <div class="oitable">
+            <div class="oith">
+              <span>品名・規格</span><span>数量</span><span>単位</span><span>単価</span><span>金額</span><span>備考</span><span></span>
+            </div>
+            <div id="oilines"></div>
+          </div>
+          <button class="btn ghost sm" id="oiaddline" type="button" style="margin-top:6px">＋ 明細を足す</button>
+          <div class="oitotal" id="oitotal">合計　¥0</div>
+        </div>
       </div>
     </div>
 
@@ -1011,7 +1048,7 @@ body > header.bar{ flex:0 0 auto; }
         const pending = opOrders.some(o => o.status === 'planned');
         const ocls = overdue ? 'od-over' : (pending ? 'od-pending' : 'od-ok');
         const otxt = overdue ? '発注：期限超過あり' : (pending ? '発注：未発注あり' : '発注：すべて発注済み');
-        odot = `<span class="odot ${ocls}" title="${otxt}"></span><span class="odiv"></span>`;
+        odot = `<span class="odots"><span class="odot ${ocls}" title="${otxt}"></span><span class="odiv"></span></span>`;
       }
 
       h += `<div class="gno${alt}" data-row="${r}" style="grid-column:1;grid-row:${r+2}">${r+1}</div>`;
@@ -1506,6 +1543,7 @@ body > header.bar{ flex:0 0 auto; }
     if (ptmap[o.partner_id]) sub.push(esc(ptmap[o.partner_id]));
     if (umap[o.assignee_user_id]) sub.push('担当 ' + esc(umap[o.assignee_user_id]));
     if (o.lead_days) sub.push(`届くまで${o.lead_days}日`);
+    if (o.total_amount) sub.push(fmtMoney(o.total_amount));
 
     return `<button class="orow" data-id="${o.id}">
       <span class="obadge ${o.scope === 'external' ? 'ex' : 'in'}">${o.scope === 'external' ? '社外' : '社内'}</span>
@@ -1562,10 +1600,71 @@ body > header.bar{ flex:0 0 auto; }
   });
   $('oclose').addEventListener('click', () => $('opanel').classList.remove('open'));
 
-  function openOrderEdit(o){
+  /* ---- 発注の商材明細（品名・数量・単価・金額） ---- */
+  function oiLineHtml(v){
+    const qty = v && v.quantity !== null && v.quantity !== undefined ? v.quantity : '';
+    const price = v && v.unit_price !== null && v.unit_price !== undefined ? v.unit_price : '';
+    return `<div class="oirow">
+      <input class="oi_name" type="text" placeholder="品名・規格" value="${v ? esc(v.item_name || '') : ''}">
+      <input class="oi_qty" type="number" step="any" placeholder="数量" value="${qty}">
+      <input class="oi_unit" type="text" placeholder="単位" value="${v ? esc(v.unit || '') : ''}">
+      <input class="oi_price" type="number" step="any" placeholder="単価" value="${price}">
+      <span class="oi_amt">${fmtMoney(0)}</span>
+      <input class="oi_note" type="text" placeholder="メーカー・備考" value="${v ? esc(v.note || '') : ''}">
+      <button class="btn ghost sm oi_rm" type="button">削除</button>
+    </div>`;
+  }
+  function bindOiRows(){
+    $('oilines').querySelectorAll('.oi_rm').forEach(b => {
+      b.onclick = () => { b.closest('.oirow').remove(); recalcOiTotal(); };
+    });
+    recalcOiTotal();
+  }
+  function recalcOiTotal(){
+    let total = 0;
+    $('oilines').querySelectorAll('.oirow').forEach(row => {
+      const qty = Number(row.querySelector('.oi_qty').value) || 0;
+      const price = Number(row.querySelector('.oi_price').value) || 0;
+      const amt = Math.round(qty * price);
+      row.querySelector('.oi_amt').textContent = fmtMoney(amt);
+      total += amt;
+    });
+    $('oitotal').textContent = `合計　${fmtMoney(total)}`;
+    return total;
+  }
+  function paintOiLines(items){
+    $('oilines').innerHTML = (items && items.length ? items : [null]).map(oiLineHtml).join('');
+    bindOiRows();
+  }
+  $('oilines').addEventListener('input', e => {
+    if (e.target.classList.contains('oi_qty') || e.target.classList.contains('oi_price')) recalcOiTotal();
+  });
+  $('oiaddline').addEventListener('click', () => {
+    $('oilines').insertAdjacentHTML('beforeend', oiLineHtml(null));
+    bindOiRows();
+  });
+  function collectOiLines(){
+    return [...$('oilines').querySelectorAll('.oirow')].map((el, i) => ({
+      item_name : el.querySelector('.oi_name').value.trim(),
+      quantity  : el.querySelector('.oi_qty').value === '' ? null : Number(el.querySelector('.oi_qty').value),
+      unit      : el.querySelector('.oi_unit').value.trim() || null,
+      unit_price: el.querySelector('.oi_price').value === '' ? null : Number(el.querySelector('.oi_price').value),
+      note      : el.querySelector('.oi_note').value.trim() || null,
+      seq       : (i + 1) * 10
+    })).filter(x => x.item_name || x.quantity || x.unit_price || x.note);
+  }
+
+  async function openOrderEdit(o){
     oediting = o || null;
     showMsg($('oemsg'), '');
     $('oettl').textContent = o ? '発注・依頼' : '発注・依頼の追加';
+
+    paintOiLines([]);
+    if (o){
+      const { data } = await sb.from('phase_order_items')
+        .select('*').eq('phase_order_id', o.id).order('seq');
+      paintOiLines(data || []);
+    }
 
     $('o_phase').innerHTML = '<option value="">（工事全体）</option>' +
       phases.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
@@ -1623,11 +1722,26 @@ body > header.bar{ flex:0 0 auto; }
       note            : $('o_note').value.trim() || null
     };
     if (!oediting) body.seq = (orders.length ? Math.max(...orders.map(o => o.seq||0)) : 0) + 10;
+    body.total_amount = recalcOiTotal();
 
     $('osave').disabled = true; $('osave').textContent = '保存しています…';
-    let error;
-    if (oediting) ({ error } = await sb.from('phase_orders').update(body).eq('id', oediting.id));
-    else          ({ error } = await sb.from('phase_orders').insert(body));
+    let error, orderId = oediting?.id;
+    if (oediting){
+      ({ error } = await sb.from('phase_orders').update(body).eq('id', oediting.id));
+    } else {
+      const r = await sb.from('phase_orders').insert(body).select('id').single();
+      error = r.error; orderId = r.data?.id;
+    }
+
+    if (!error && orderId){
+      await sb.from('phase_order_items').delete().eq('phase_order_id', orderId);
+      const rows = collectOiLines().map(x => ({ ...x, organization_id: me.organization_id, phase_order_id: orderId }));
+      if (rows.length){
+        const r2 = await sb.from('phase_order_items').insert(rows);
+        if (r2.error) error = r2.error;
+      }
+    }
+
     $('osave').disabled = false; $('osave').textContent = '保存する';
 
     if (error){

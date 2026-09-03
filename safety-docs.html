@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<!-- BUILD: safety-docs (安全書類) v20260903A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>安全書類 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .dlist{ display:grid; gap:10px; margin-top:16px; }
+  .dcard{
+    background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:14px 16px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  }
+  .dcard .no{
+    font-family:var(--mono); font-size:11px; color:#fff; background:var(--ink);
+    border-radius:var(--radius-sm); padding:3px 8px; flex:0 0 auto;
+  }
+  .dcard .body{ flex:1 1 260px; min-width:0; }
+  .dcard .nm{ font-family:var(--disp); font-weight:700; font-size:15.5px; margin:0 0 3px; }
+  .dcard .ds{ font-size:12.5px; color:var(--sub); line-height:1.6; }
+  .dcard .dl{ flex:0 0 auto; text-decoration:none; }
+  .lead{ color:var(--sub); font-size:13.5px; line-height:1.8; margin:14px 0 0; }
+  .lead b{ color:var(--ink); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>安全書類</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+  <div id="msg" class="msg"></div>
+
+  <p class="lead">
+    現場管理で使う安全書類のひな型（PDF）です。<b>協力会社に配布して記入・提出してもらい</b>、
+    元請けとしてまとめて保管してください。ダウンロード後、工事名や協力会社名を入れてお使いいただけます。
+  </p>
+
+  <div id="dlist"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+
+  const GROUPS = [
+    { title:'現場管理・安全書類', gph:'協力会社提出用', items:[
+      { no:'安全書式-1', file:'安全書式-1_新規入場者教育記録簿.pdf',
+        name:'新規入場者教育記録簿',
+        desc:'新しく現場に入る作業員へ実施する安全教育の記録。対象者名簿と教育実施項目のチェック欄付き。' },
+      { no:'安全書式-2', file:'安全書式-2_KY活動記録表.pdf',
+        name:'KY活動記録表（危険予知活動記録表）',
+        desc:'作業開始前に行う危険予知（KY）活動の記録。4ラウンド法の記入欄付き。' },
+      { no:'安全書式-3', file:'安全書式-3_安全朝礼記録簿TBM.pdf',
+        name:'安全朝礼記録簿（TBM）',
+        desc:'毎朝のツールボックスミーティングの記録。本日の作業予定・注意事項・健康状態チェック欄付き。' },
+      { no:'安全書式-4', file:'安全書式-4_安全パトロール点検表.pdf',
+        name:'安全パトロール点検表',
+        desc:'現場代理人等が定期的に行う安全巡視の点検表。10項目の判定・是正欄付き（元請け実施用）。' },
+      { no:'安全書式-5', file:'安全書式-5_ヒヤリハット災害報告書.pdf',
+        name:'ヒヤリハット・災害報告書',
+        desc:'ヒヤリハットや災害が発生した際の報告書。発生状況・原因・対策の記入欄付き。' },
+      { no:'安全書式-6', file:'安全書式-6_作業員名簿.pdf',
+        name:'作業員名簿',
+        desc:'協力会社ごとに作成する作業員の名簿。資格・緊急連絡先・入場日などを記載。' },
+    ]},
+    { title:'一人親方用', gph:'個人事業主の職人が提出', items:[
+      { no:'安全書式-7', file:'安全書式-7_一人親方提出書類チェックリスト.pdf',
+        name:'一人親方 提出書類チェックリスト',
+        desc:'一人親方が提出すべき書類一式が揃っているかを確認する表紙。元請け側の受入チェックにも使えます。' },
+      { no:'安全書式-8', file:'安全書式-8_請負契約書.pdf',
+        name:'請負契約書（一人親方用）',
+        desc:'雇用契約ではなく請負契約であることを明確にする契約書のひな型。工期・請負代金・安全衛生条項付き。' },
+      { no:'安全書式-9', file:'安全書式-9_作業計画書.pdf',
+        name:'作業計画書（危険を伴う作業）',
+        desc:'墜落・崩壊・感電など危険を伴う作業の手順・使用機械・防止措置をまとめる計画書。' },
+      { no:'安全書式-10', file:'安全書式-10_災害防止協議会参加同意書.pdf',
+        name:'災害防止協議会 参加同意書',
+        desc:'現場の災害防止協議会（安全衛生協議会）のルール遵守・参加への同意を確認する書類。' },
+      { no:'安全書式-11', file:'安全書式-11_工具持込機械点検記録表.pdf',
+        name:'工具・持込機械等点検記録表',
+        desc:'一人親方が現場に持ち込む工具・機械の使用前点検を記録する表。' },
+      { no:'安全書式-12', file:'安全書式-12_労災保険特別加入申告書.pdf',
+        name:'労災保険（特別加入）加入状況申告書',
+        desc:'一人親方は通常の労災保険が適用されないため、特別加入団体名・加入番号・有効期間を申告する書類（証明書の写しを添付）。' },
+    ]},
+  ];
+
+  $('dlist').innerHTML = GROUPS.map(g => `
+    <div class="grp"><h2>${esc(g.title)}</h2><span class="gph">${esc(g.gph)}</span></div>
+    <div class="dlist">
+      ${g.items.map(d => `
+        <div class="dcard">
+          <span class="no">${esc(d.no)}</span>
+          <div class="body">
+            <p class="nm">${esc(d.name)}</p>
+            <p class="ds">${esc(d.desc)}</p>
+          </div>
+          <a class="btn sm dl" href="safety-docs/${encodeURIComponent(d.file)}" download>ダウンロード</a>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+})();
+</script>
+</body>
+</html>
