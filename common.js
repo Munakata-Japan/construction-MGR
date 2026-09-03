@@ -110,7 +110,27 @@ async function requireAuth(){
     location.replace('index.html');
     return null;
   }
+  startPresence();
   return { session, me };
+}
+
+/* ---------- ログイン中の人数のための在席打刻 ----------
+   画面を開いて操作している間だけ、一定間隔で本人の最終アクセス
+   時刻を記録する。画面を見ていない間（タブが背面・スマホ画面オフ）は
+   打刻を止めるので、操作をやめて数分たつと自動的に「ログイン中」から外れる。
+------------------------------------------------------------------ */
+let _presenceTimer = null;
+function startPresence(){
+  const beat = () => {
+    if (document.visibilityState === 'hidden') return;
+    sb.rpc('touch_presence').then(() => {}, () => {});
+  };
+  beat();
+  if (_presenceTimer) clearInterval(_presenceTimer);
+  _presenceTimer = setInterval(beat, 60000);   // 1分ごと
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') beat();
+  });
 }
 
 /* ---------- 見出し帯に利用者を表示 ---------- */
