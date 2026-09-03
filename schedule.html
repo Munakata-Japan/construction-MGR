@@ -65,7 +65,7 @@ body > header.bar{ flex:0 0 auto; }
 /* ---------- 表題欄 ---------- */
 .tblock{
   flex:0 0 auto; display:flex; align-items:center; gap:18px; flex-wrap:wrap;
-  padding:6px 14px; background:linear-gradient(180deg,#1C3B5E,var(--ink) 70%); color:#DCE4EC;
+  padding:6px 14px; background:linear-gradient(180deg,#1B4574,var(--ink) 70%); color:#DCE4EC;
   font-size:12.5px; line-height:1.5;
   box-shadow:0 2px 6px rgba(22,50,79,.2); position:relative; z-index:1;
 }
@@ -74,10 +74,10 @@ body > header.bar{ flex:0 0 auto; }
 .tblock .sp{ flex:1 1 0; }
 .tblock button{
   font-family:var(--body); font-size:12px; font-weight:700; min-height:30px;
-  padding:0 12px; border:1px solid #42627F; background:transparent; color:#EBEDE8;
+  padding:0 12px; border:1px solid #3D688F; background:transparent; color:#EBEDE8;
   border-radius:var(--radius-sm); cursor:pointer; white-space:nowrap;
 }
-.tblock button:hover{ background:#22456B; }
+.tblock button:hover{ background:#204D7E; }
 .tblock button.go{ background:var(--safety); border-color:var(--safety); color:#3B2A00; }
 
 .revrow{ display:flex; gap:14px; padding:3px 0; border-bottom:1px solid var(--rule-2); font-size:12.5px; }
@@ -1619,7 +1619,7 @@ body > header.bar{ flex:0 0 auto; }
 
     let s = `<svg viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">`;
     s += `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M0 0 L10 5 L0 10 z" fill="#16324F"/></marker></defs>`;
+            <path d="M0 0 L10 5 L0 10 z" fill="#13385D"/></marker></defs>`;
 
     deps.forEach(d => {
       const a = pos[d.from_phase_id], b = pos[d.to_phase_id];
@@ -1644,7 +1644,7 @@ body > header.bar{ flex:0 0 auto; }
       s += `<g class="nbox" data-id="${p.id}" tabindex="0"><title>${esc(p.name)}</title>`;
       s += `<rect x="${q.x}" y="${q.y}" width="${BW}" height="${BH}" rx="3" fill="${FILL[p.status]}" ` +
            `stroke="${crit ? '#111' : LINE[p.status]}" stroke-width="${crit ? 2.4 : 1.2}"/>`;
-      s += `<text x="${q.x+10}" y="${q.y+21}" font-size="13" font-weight="700" fill="#16324F" font-family="sans-serif">${esc(nm)}</text>`;
+      s += `<text x="${q.x+10}" y="${q.y+21}" font-size="13" font-weight="700" fill="#13385D" font-family="sans-serif">${esc(nm)}</text>`;
       s += `<text x="${q.x+10}" y="${q.y+37}" font-size="10.5" fill="#55684B" font-family="monospace">${esc(per)}</text>`;
       s += `<text x="${q.x+10}" y="${q.y+51}" font-size="10.5" fill="#55684B" font-family="sans-serif">${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}</text>`;
       s += `</g>`;
