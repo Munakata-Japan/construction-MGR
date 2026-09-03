@@ -154,6 +154,43 @@ body > header.bar{ flex:0 0 auto; }
 .gname .odiv{
   width:1px; align-self:stretch; background:var(--rule); margin:1px 0;
 }
+/* 発注・依頼の編集パネル：発注先の欄に、その工程の材料が揃っているかを添える */
+.matnote{
+  display:inline-flex; align-items:center; gap:6px; flex-basis:100%; order:99;
+  font-size:12px; color:var(--sub); background:#F1F3EF; border:1px solid var(--rule);
+  border-radius:var(--radius-sm); padding:5px 10px; line-height:1.5;
+  cursor:pointer; font-family:var(--body); text-align:left;
+}
+.matnote:hover{ background:#E9ECE4; }
+.matnote i{ width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+.matnote.od-ok i{ background:var(--ok); }
+.matnote.od-pending i{ background:var(--safety); }
+.matnote.od-over i{ background:var(--alert); }
+.matnote .chev{ margin-left:auto; color:var(--sub); font-size:10px; }
+
+.matlist{
+  flex-basis:100%; order:100; border:1px solid var(--rule); border-top:none;
+  border-radius:0 0 var(--radius-sm) var(--radius-sm); overflow:hidden; margin-top:-1px;
+}
+.matitem{
+  display:block; width:100%; text-align:left; border:none; border-top:1px solid var(--rule-2);
+  background:var(--card); padding:7px 10px; cursor:pointer; font-family:var(--body);
+}
+.matitem:first-child{ border-top:none; }
+.matitem:hover{ background:#F5F7F3; }
+.matitem .mi-head{ display:flex; align-items:center; gap:6px; }
+.matitem .mi-head i{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+.matitem .mi-head.od-ok i{ background:var(--ok); }
+.matitem .mi-head.od-pending i{ background:var(--safety); }
+.matitem .mi-head.od-over i{ background:var(--alert); }
+.matitem .mi-name{ font-size:12.5px; font-weight:700; flex:1 1 auto; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.matitem .mi-stat{ font-size:11px; color:var(--sub); white-space:nowrap; }
+.matitem .mi-detail{
+  display:none; margin-top:6px; padding-top:6px; border-top:1px dashed var(--rule-2);
+  font-size:11.5px; color:var(--sub); line-height:1.7;
+}
+.matitem.open .mi-detail{ display:block; }
 
 .gname-rz{
   position:sticky; z-index:7; width:8px; cursor:col-resize;
@@ -472,7 +509,11 @@ body > header.bar{ flex:0 0 auto; }
       </div>
       <div class="row">
         <label for="o_partner">発注先</label>
-        <div class="fld"><select id="o_partner"></select></div>
+        <div class="fld">
+          <select id="o_partner"></select>
+          <button type="button" id="o_matnote" class="matnote" hidden></button>
+          <div id="o_matlist" class="matlist" hidden></div>
+        </div>
       </div>
       <div class="row">
         <label for="o_user">担当者</label>
@@ -806,8 +847,10 @@ body > header.bar{ flex:0 0 auto; }
       sb.from('project_phases').select('*').eq('project_id', projId).eq('is_active', true).order('seq'),
       sb.from('phase_dependencies').select('*').eq('project_id', projId),
       sb.from('phase_orders').select('*').eq('project_id', projId).eq('is_active', true).order('seq'),
-      // 金額は一切取得しない。納期に間に合うかどうかの判定にしか使わない
-      sb.from('phase_budget_items').select('phase_id,status,scheduled_delivery_date,delivered_on').eq('project_id', projId)
+      // 金額は一切取得しない。品名・数量・納期など、納品管理に必要な情報だけ
+      sb.from('phase_budget_items')
+        .select('id,phase_id,item_name,quantity,unit,status,scheduled_delivery_date,delivered_on,note')
+        .eq('project_id', projId)
     ]);
     if (a.error){ showMsg($('msg'), '工程を読み込めませんでした。' + a.error.message, 'err'); return; }
     if (c.error){
@@ -821,6 +864,34 @@ body > header.bar{ flex:0 0 auto; }
     orders = c.data || [];
     materials = m.data || [];
     draw();
+  }
+
+  // ある工程に紐づく材料が、着工日までに揃うかどうか（金額は一切見ない）
+  // 戻り値: { cls, text } または、紐づく材料が無ければ null
+  function materialReadiness(phaseId){
+    if (!phaseId) return null;
+    const p = phases.find(x => x.id === phaseId);
+    const opMats = materials.filter(x => x.phase_id === phaseId && x.status !== 'cancelled');
+    if (!opMats.length) return null;
+    const isDone = x => x.status === 'delivered' || x.status === 'inspected';
+    const notYet = opMats.filter(x => !isDone(x));
+    if (!notYet.length) return { cls:'od-ok', text:'材料：すべて納品済み' };
+    const risky = p && p.start_date && notYet.some(x => {
+      const dd = x.scheduled_delivery_date || x.delivered_on;
+      return dd ? dd > p.start_date : true; // 納期未定も着工に間に合うか分からないのでリスク扱い
+    });
+    return risky
+      ? { cls:'od-over', text:'材料：着工までに届かない見込みがあります' }
+      : { cls:'od-pending', text:'材料：未納品あり（着工までに届く見込み）' };
+  }
+
+  // 材料1件ごとの納品状況（金額は一切見ない）
+  function itemReadiness(x, phaseStartDate){
+    if (x.status === 'delivered' || x.status === 'inspected') return { cls:'od-ok', text:'納品済み' };
+    const dd = x.scheduled_delivery_date || x.delivered_on;
+    if (!dd) return { cls:'od-over', text:'納期未定' };
+    const late = phaseStartDate && dd > phaseStartDate;
+    return { cls: late ? 'od-over' : 'od-pending', text: `納品予定 ${fmtDate(dd)}${late ? '（着工に間に合わない）' : ''}` };
   }
 
   /* ================= 日付の道具 ================= */
@@ -1072,22 +1143,9 @@ body > header.bar{ flex:0 0 auto; }
       }
 
       // この工程に必要な材料が、着工日までに納品されるかどうかの印（金額は一切見ない）
-      const opMats = materials.filter(x => x.phase_id === p.id && x.status !== 'cancelled');
-      if (opMats.length){
-        const isDone = x => x.status === 'delivered' || x.status === 'inspected';
-        const notYet = opMats.filter(x => !isDone(x));
-        let mcls, mtxt;
-        if (!notYet.length){
-          mcls = 'od-ok'; mtxt = '材料：すべて納品済み';
-        } else {
-          const risky = p.start_date && notYet.some(x => {
-            const dd = x.scheduled_delivery_date || x.delivered_on;
-            return dd ? dd > p.start_date : true; // 納期未定も着工に間に合うか分からないのでリスク扱い
-          });
-          mcls = risky ? 'od-over' : 'od-pending';
-          mtxt = risky ? '材料：着工までに届かない見込みがあります' : '材料：未納品あり（着工までに届く見込み）';
-        }
-        odot += `<span class="odot ${mcls}" title="${mtxt}"></span>`;
+      const mat = materialReadiness(p.id);
+      if (mat){
+        odot += `<span class="odot ${mat.cls}" title="${mat.text}"></span>`;
       }
       if (odot) odot = `<span class="odots">${odot}<span class="odiv"></span></span>`;
 
@@ -1764,6 +1822,7 @@ body > header.bar{ flex:0 0 auto; }
     $('o_scope').value  = o ? o.scope : 'external';
     $('o_title').value  = o ? (o.title || '') : '';
     $('o_phase').value  = o ? (o.phase_id || '') : '';
+    updateMatNote();
     $('o_partner').value= o ? (o.partner_id || '') : '';
     $('o_user').value   = o ? (o.assignee_user_id || '') : '';
     $('o_due').value    = o ? (o.due_date || '') : '';
@@ -1784,6 +1843,49 @@ body > header.bar{ flex:0 0 auto; }
     const w = $('oedit').querySelector('.wrap');
     if (w) w.scrollTop = 0;
   }
+  // 発注先の欄に、その工程の材料が揃っているかを添える（工程を変えたらすぐ更新）
+  function updateMatNote(){
+    const note = $('o_matnote'), list = $('o_matlist');
+    list.hidden = true; list.innerHTML = '';           // 工程が変わったら一覧は畳む
+    const mat = materialReadiness($('o_phase').value);
+    if (!mat){ note.hidden = true; return; }
+    note.className = 'matnote ' + mat.cls;
+    note.innerHTML = `<i></i>${esc(mat.text)}<span class="chev">▾</span>`;
+    note.hidden = false;
+  }
+  $('o_phase').addEventListener('change', updateMatNote);
+
+  // バッジをクリック → 紐づく材料を一覧表示。行をクリック → その材料の詳細を開閉
+  $('o_matnote').addEventListener('click', () => {
+    const list = $('o_matlist');
+    if (!list.hidden){ list.hidden = true; return; }
+
+    const phaseId = $('o_phase').value;
+    const p = phases.find(x => x.id === phaseId);
+    const items = materials.filter(x => x.phase_id === phaseId && x.status !== 'cancelled');
+
+    list.innerHTML = items.map(x => {
+      const r = itemReadiness(x, p && p.start_date);
+      const sub = [x.quantity != null ? `${x.quantity}${x.unit ? esc(x.unit) : ''}` : null, x.note].filter(Boolean).join(' ・ ');
+      return `<div class="matitem" data-id="${x.id}">
+        <div class="mi-head ${r.cls}"><i></i>
+          <span class="mi-name">${esc(x.item_name || '（名称未設定）')}</span>
+          <span class="mi-stat">${esc(r.text)}</span>
+        </div>
+        <div class="mi-detail">
+          ${sub ? `${esc(sub)}<br>` : ''}
+          ${x.delivered_on ? `届いた日：${fmtDate(x.delivered_on)}` : (x.scheduled_delivery_date ? `納品予定日：${fmtDate(x.scheduled_delivery_date)}` : '納品予定日：未定')}
+        </div>
+      </div>`;
+    }).join('') || '<div class="matitem">紐づく材料がありません</div>';
+
+    list.hidden = false;
+  });
+  $('o_matlist').addEventListener('click', e => {
+    const item = e.target.closest('.matitem');
+    if (item) item.classList.toggle('open');
+  });
+
   $('oadd').addEventListener('click', () => openOrderEdit(null));
   $('oeclose').addEventListener('click', () => $('oedit').classList.remove('open'));
 
