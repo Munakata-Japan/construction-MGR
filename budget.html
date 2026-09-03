@@ -72,10 +72,10 @@
   .qtag.pending{ background:#EDEFEA; color:var(--sub); }
   .qtag.pass{ background:#E6F2EB; color:var(--ok); }
   .qtag.fail{ background:#FBF1EF; color:var(--alert); }
-  .dtag{ font-size:11px; font-family:var(--mono); white-space:nowrap; color:var(--ink-2); }
-  .dtag.none{ color:var(--sub); }
-  .dtag.soon{ color:#B5690A; font-weight:700; }
-  .dtag.over{ color:var(--alert); font-weight:700; }
+  .dtag{ font-size:11px; font-family:var(--mono); white-space:nowrap; color:var(--ink); font-weight:700; }
+  .dtag.none{ color:var(--alert); }
+  .dtag.planned{ color:var(--ok); }
+  .dtag.actual{ color:var(--ink); }
   .dwarn{ color:var(--alert); font-weight:700; margin-right:2px; }
   .brow.conflict{ background:#FBF1EF; }
   .brow.conflict:hover{ background:#F8E4DF; }
@@ -304,6 +304,8 @@
     $('proj').innerHTML = '<option value="">工事を選んでください</option>' + opt;
     $('f_estp').innerHTML = '<option value="">（未設定）</option>' +
       partners.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    setEmptyNote($('f_estp'), partners.length === 0,
+      '取引先が登録されていません。先に取引先ページから登録してください。', 'partners.html', '取引先ページへ');
   }
 
   async function loadPhases(){
@@ -314,6 +316,8 @@
     const opt = phases.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
     $('fphase').innerHTML = '<option value="">すべての工程</option>' + opt;
     $('f_phase').innerHTML = '<option value="">（工事全体）</option>' + opt;
+    setEmptyNote($('f_phase'), phases.length === 0,
+      'この工事の工程がまだありません。先に工程表から工程を作成してください。', `schedule.html?p=${projId}`, '工程表へ');
   }
 
   async function loadItems(){
@@ -404,8 +408,10 @@
       ...phases.map(p => p.id).filter(id => byPhase.has(id)),
       ...(byPhase.has('__none__') ? ['__none__'] : [])
     ];
+    // 納品予定日が未入力でも、実際に届いた日（届いた日）が分かっていればそちらを表示に使う
+    const deliveryDateOf = x => x.scheduled_delivery_date || x.delivered_on || null;
     const sortByDelivery = arr => [...arr].sort((a, b) => {
-      const da = a.scheduled_delivery_date, db = b.scheduled_delivery_date;
+      const da = deliveryDateOf(a), db = deliveryDateOf(b);
       if (!da && !db) return 0;
       if (!da) return 1;
       if (!db) return -1;
@@ -416,7 +422,7 @@
     // 着工日に間に合うか：納品予定日が着工日より後 → 遅延。納品予定日が未定で着工日が目前 → 未定リスク
     function checkConflict(x, phase){
       if (!phase || !phase.start_date || isDone(x)) return null;
-      const dd = x.scheduled_delivery_date;
+      const dd = deliveryDateOf(x);
       if (dd && dd > phase.start_date) return { kind:'late', text:`工程開始（${fmtDate(phase.start_date)}）に間に合いません` };
       if (!dd && phase.start_date <= addDays(today, 14)) return { kind:'unknown', text:`工程開始（${fmtDate(phase.start_date)}）が近いのに納品予定日が未定です` };
       return null;
@@ -437,8 +443,9 @@
         const diff = (x.budget_amount ?? null) !== null && (x.contract_amount ?? null) !== null
           ? Number(x.budget_amount) - Number(x.contract_amount) : null;
         const sub = [ptmap[x.estimate_partner_id], x.note].filter(Boolean).join(' ・ ');
-        const dd = x.scheduled_delivery_date;
-        const dcls = !dd ? 'none' : (!isDone(x) && dd < today ? 'over' : (!isDone(x) && dd <= addDays(today, 7) ? 'soon' : ''));
+        const dd = deliveryDateOf(x);
+        const isActual = !x.scheduled_delivery_date && !!x.delivered_on;
+        const dcls = !dd ? 'none' : (isActual ? 'actual' : 'planned');
         const conflict = checkConflict(x, phase);
         h += `<button class="brow${conflict ? ' conflict' : ''}" data-id="${x.id}">
           <span class="cat ${x.category}">${x.category === 'material' ? '材' : '工'}</span>
@@ -450,7 +457,7 @@
           <span class="num">${fmt(x.budget_amount)}</span>
           <span class="num">${fmt(x.contract_amount)}</span>
           <span class="num${diff === null ? '' : (diff < 0 ? ' diff over' : ' diff under')}">${diff === null ? '—' : fmtMoney(diff)}</span>
-          <span class="dtag ${dcls}" title="${conflict ? esc(conflict.text) : ''}">${conflict ? '<span class="dwarn">⚠</span>' : ''}${dd ? fmtDate(dd) : '未定'}</span>
+          <span class="dtag ${dcls}" title="${conflict ? esc(conflict.text) : (isActual ? '実際に届いた日' : '')}">${conflict ? '<span class="dwarn">⚠</span>' : ''}${dd ? fmtDate(dd) : '未定'}</span>
           <span class="stag">${STATN[x.status]}</span>
           <span class="qtag ${x.quality_status}">${QN[x.quality_status]}</span>
         </button>`;
