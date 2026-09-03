@@ -184,6 +184,10 @@
     <div class="sheet">
       <div class="head">この資料について</div>
       <div class="row">
+        <label>アップロード</label>
+        <div class="fld"><span id="p_uploader" style="font-size:13.5px;color:var(--sub)"></span></div>
+      </div>
+      <div class="row">
         <label for="f_title">題名</label>
         <div class="fld"><input id="f_title" type="text" placeholder="南側盛土 施工状況 など"></div>
       </div>
@@ -260,21 +264,22 @@
   paintBar(me, await loadOrgName(me.organization_id));
   $('out').addEventListener('click', signOut);
 
-  let projects = [], phases = [], bbFields = [], files = [], editing = null;
+  let projects = [], phases = [], bbFields = [], files = [], users = [], editing = null;
   let projId = null, urlCache = {};
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
-    const [pr, bb] = await Promise.all([
+    const [pr, bb, u] = await Promise.all([
       sb.from('projects').select('id,project_no,name').eq('is_active', true)
         .order('project_no', { ascending:false }),
-      sb.from('blackboard_fields').select('*').eq('is_active', true).order('sort_order')
+      sb.from('blackboard_fields').select('*').eq('is_active', true).order('sort_order'),
+      sb.from('app_users').select('id,name').eq('is_active', true)
     ]);
     if (pr.error || bb.error){
       showMsg($('msg'), '読み込めませんでした。' + ((pr.error||bb.error).message||''), 'err');
       return;
     }
-    projects = pr.data || []; bbFields = bb.data || [];
+    projects = pr.data || []; bbFields = bb.data || []; users = u.data || [];
     $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
       projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
     setEmptyNote($('proj'), projects.length === 0,
@@ -573,20 +578,22 @@
 
     $('grid').innerHTML = photos.map(f => {
       const pm = phases.find(p => p.id === f.phase_id);
+      const um = users.find(u => u.id === f.uploaded_by);
       return `<button class="card" data-id="${f.id}">
         <span class="ph" data-p="${esc(f.thumb_path || f.storage_path || '')}" data-m="${esc(f.mime_type||'')}" data-th="${f.thumb_path ? 1 : 0}">
           <span class="pill${f.purpose === 'internal' ? ' int' : ''}">${f.purpose === 'submit' ? '提出用' : '社内'}</span>
         </span>
         <span class="cb">
           <span class="c1">${esc(f.title || f.original_name || '（無題）')}</span>
-          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}</span>
+          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}${um ? ' ・ ' + esc(um.name) : ''}</span>
         </span></button>`;
     }).join('');
 
     $('doclist').innerHTML = docs.map(f => {
       const pm = phases.find(p => p.id === f.phase_id);
+      const um = users.find(u => u.id === f.uploaded_by);
       const ext = /\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1]?.toUpperCase() || KIND[f.file_kind] || '';
-      const meta = [f.taken_on ? fmtDate(f.taken_on) : '', pm ? pm.name : '', f.purpose === 'internal' ? '社内' : '提出用']
+      const meta = [f.taken_on ? fmtDate(f.taken_on) : '', pm ? pm.name : '', um ? um.name : '', f.purpose === 'internal' ? '社内' : '提出用']
         .filter(Boolean).map(esc);
       return `<button class="item drow" data-id="${f.id}">
         <span class="flag"></span>
@@ -813,6 +820,8 @@
 
     const canEd = isMgr || f.uploaded_by === me.id;
     $('ptitle').textContent = KIND[f.file_kind] || '資料';
+    const uploader = users.find(u => u.id === f.uploaded_by);
+    $('p_uploader').textContent = uploader ? uploader.name : '（不明）';
     $('f_title').value   = f.title || '';
     $('f_kind').value    = f.file_kind;
     $('f_purpose').value = f.purpose;
