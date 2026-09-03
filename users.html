@@ -172,6 +172,8 @@
       <span class="k">在籍</span>
       <span class="dv"><label class="chk"><input id="f_act" type="checkbox" checked>在籍中</label></span>
 
+      <div class="full"><label class="chk"><input id="f_dev" type="checkbox">開発者アカウント（利用者一覧では本名の代わりに「開発者」と表示し、最下部に固定します。デモで社員に本名を見せないため）</label></div>
+
       <div class="sh">社内・社外</div>
       <span class="k">区分</span>
       <span class="dv r"><label class="chk"><input id="f_ext" type="checkbox">社外の人（協力会社など）</label></span>
@@ -284,6 +286,9 @@
   const EMP  = { employee:'社員', craftsman:'職人', subcontractor:'外注' };
   const DEPT = { site:'現場', info:'情報部', exec:'経営', other:'その他' };
 
+  // 開発者アカウントは、一覧や選択肢では本名を伏せて「開発者」と表示する
+  const dispName = u => (u && u.is_developer) ? '開発者' : (u ? (u.name || '') : '');
+
   let users = [], ranks = [], partners = [], rates = {}, editing = null;
 
   /* ---- 金額の桁区切り ---- */
@@ -337,7 +342,7 @@
     setEmptyNote($('f_partner'), partners.length === 0,
       '取引先が登録されていません。先に取引先ページから登録してください。', 'partners.html', '取引先ページへ');
     $('f_sup').innerHTML = '<option value="">（未設定）</option>' +
-      users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
+      users.map(u => `<option value="${u.id}">${esc(dispName(u))}</option>`).join('');
   }
 
   /* ================= 一覧 ================= */
@@ -354,6 +359,8 @@
       if (!q) return true;
       return (u.name||'').toLowerCase().includes(q);
     }).sort((a,b) => {
+      // 開発者アカウントは常に一番下
+      if (!!a.is_developer !== !!b.is_developer) return a.is_developer ? 1 : -1;
       const ra = rmap[a.job_rank_id]?.rank_order ?? 999;
       const rb = rmap[b.job_rank_id]?.rank_order ?? 999;
       return ra - rb || (a.name||'').localeCompare(b.name||'', 'ja');
@@ -376,10 +383,10 @@
       if (!u.is_active) kbs.push('<span class="kb nl">退職・停止</span>');
 
       const meta = [];
-      if (u.title) meta.push(esc(u.title));
+      if (u.title && !u.is_developer) meta.push(esc(u.title));
       if (DEPT[u.department]) meta.push(DEPT[u.department]);
       if (EMP[u.employee_type]) meta.push(EMP[u.employee_type]);
-      if (u.email) meta.push(esc(u.email));
+      if (u.email && !u.is_developer) meta.push(esc(u.email));
 
       const lim = u.approve_unlimited
         ? `<span class="lim">決裁 上限なし</span>`
@@ -388,7 +395,7 @@
       return `<button class="item" data-id="${u.id}" style="${u.is_active ? '' : 'opacity:.6'}">
         <span class="flag ${u.role === 'admin' ? 'fl-cancelled' : (u.role === 'manager' ? 'fl-started' : 'fl-estimate')}"></span>
         <span class="body">
-          <span class="nm">${esc(u.name)}</span>
+          <span class="nm">${esc(dispName(u))}</span>
           <span class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</span>
           <span class="kbs">${kbs.join('')}</span>
         </span>
@@ -459,6 +466,7 @@
     $('f_tel').value   = g('tel','');
     $('f_hired').value = g('hired_on','') || '';
     $('f_act').checked = u ? !!u.is_active : true;
+    $('f_dev').checked = !!g('is_developer', false);
     $('f_ext').checked = !!g('is_external', false);
     $('f_partner').value = g('partner_id','') || '';
     $('f_emp').value   = g('employee_type','employee');
@@ -500,7 +508,7 @@
     // 上長の候補から自分自身を外す
     $('f_sup').innerHTML = '<option value="">（未設定）</option>' +
       users.filter(x => !u || x.id !== u.id)
-           .map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+           .map(x => `<option value="${x.id}">${esc(dispName(x))}</option>`).join('');
     $('f_sup').value = g('supervisor_user_id','') || '';
 
     document.querySelectorAll('#panel input, #panel select, #panel textarea')
@@ -610,6 +618,7 @@
       tel             : $('f_tel').value.trim() || null,
       hired_on        : $('f_hired').value || null,
       is_active       : $('f_act').checked,
+      is_developer    : $('f_dev').checked,
       is_external     : $('f_ext').checked,
       partner_id      : $('f_partner').value || null,
       employee_type   : $('f_emp').value,
