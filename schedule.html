@@ -124,7 +124,7 @@ body > header.bar{ flex:0 0 auto; }
 .gname{
   position:sticky; z-index:3; background:var(--card);
   border-right:1px solid var(--rule); border-bottom:1px solid var(--rule-2);
-  padding:2px 10px 2px 26px; min-width:0;
+  padding:2px 10px 2px 40px; min-width:0;
   display:flex; flex-direction:column; justify-content:center;
   box-shadow:2px 0 5px rgba(22,50,79,.08);
 }
@@ -386,6 +386,9 @@ body > header.bar{ flex:0 0 auto; }
     <span><i style="background:var(--ok);border-radius:50%;width:10px;height:10px"></i>発注：すべて済み</span>
     <span><i style="background:var(--safety);border-radius:50%;width:10px;height:10px"></i>発注：未発注あり</span>
     <span><i style="background:var(--alert);border-radius:50%;width:10px;height:10px"></i>発注：期限超過</span>
+    <span><i style="background:var(--ok);border-radius:50%;width:10px;height:10px"></i>材料：すべて納品済み</span>
+    <span><i style="background:var(--safety);border-radius:50%;width:10px;height:10px"></i>材料：未納品（余裕あり）</span>
+    <span><i style="background:var(--alert);border-radius:50%;width:10px;height:10px"></i>材料：着工に間に合わない</span>
   </div>
 </div>
 
@@ -717,7 +720,7 @@ body > header.bar{ flex:0 0 auto; }
     $('f_status').insertAdjacentHTML('beforeend', `<option value="${k}">${v}</option>`);
 
   let cats = [], wts = [], partners = [], users = [], projects = [];
-  let projId = null, phases = [], deps = [], orders = [], editing = null, view = 'gantt';
+  let projId = null, phases = [], deps = [], orders = [], materials = [], editing = null, view = 'gantt';
   let oediting = null;
   let zoomW = null;          // 日の幅（px）。null なら画面に合わせる
   let manualNameW = null;    // 工程欄の幅（px）。null なら自動
@@ -798,11 +801,13 @@ body > header.bar{ flex:0 0 auto; }
   }
 
   async function loadPhases(){
-    if (!projId){ phases = []; deps = []; orders = []; draw(); return; }
-    const [a, b, c] = await Promise.all([
+    if (!projId){ phases = []; deps = []; orders = []; materials = []; draw(); return; }
+    const [a, b, c, m] = await Promise.all([
       sb.from('project_phases').select('*').eq('project_id', projId).eq('is_active', true).order('seq'),
       sb.from('phase_dependencies').select('*').eq('project_id', projId),
-      sb.from('phase_orders').select('*').eq('project_id', projId).eq('is_active', true).order('seq')
+      sb.from('phase_orders').select('*').eq('project_id', projId).eq('is_active', true).order('seq'),
+      // 金額は一切取得しない。納期に間に合うかどうかの判定にしか使わない
+      sb.from('phase_budget_items').select('phase_id,status,scheduled_delivery_date,delivered_on').eq('project_id', projId)
     ]);
     if (a.error){ showMsg($('msg'), '工程を読み込めませんでした。' + a.error.message, 'err'); return; }
     if (c.error){
@@ -814,6 +819,7 @@ body > header.bar{ flex:0 0 auto; }
     phases = a.data || [];
     deps   = b.data || [];
     orders = c.data || [];
+    materials = m.data || [];
     draw();
   }
 
@@ -1062,8 +1068,28 @@ body > header.bar{ flex:0 0 auto; }
         const pending = opOrders.some(o => o.status === 'planned');
         const ocls = overdue ? 'od-over' : (pending ? 'od-pending' : 'od-ok');
         const otxt = overdue ? '発注：期限超過あり' : (pending ? '発注：未発注あり' : '発注：すべて発注済み');
-        odot = `<span class="odots"><span class="odot ${ocls}" title="${otxt}"></span><span class="odiv"></span></span>`;
+        odot += `<span class="odot ${ocls}" title="${otxt}"></span>`;
       }
+
+      // この工程に必要な材料が、着工日までに納品されるかどうかの印（金額は一切見ない）
+      const opMats = materials.filter(x => x.phase_id === p.id && x.status !== 'cancelled');
+      if (opMats.length){
+        const isDone = x => x.status === 'delivered' || x.status === 'inspected';
+        const notYet = opMats.filter(x => !isDone(x));
+        let mcls, mtxt;
+        if (!notYet.length){
+          mcls = 'od-ok'; mtxt = '材料：すべて納品済み';
+        } else {
+          const risky = p.start_date && notYet.some(x => {
+            const dd = x.scheduled_delivery_date || x.delivered_on;
+            return dd ? dd > p.start_date : true; // 納期未定も着工に間に合うか分からないのでリスク扱い
+          });
+          mcls = risky ? 'od-over' : 'od-pending';
+          mtxt = risky ? '材料：着工までに届かない見込みがあります' : '材料：未納品あり（着工までに届く見込み）';
+        }
+        odot += `<span class="odot ${mcls}" title="${mtxt}"></span>`;
+      }
+      if (odot) odot = `<span class="odots">${odot}<span class="odiv"></span></span>`;
 
       h += `<div class="gno${alt}" data-row="${r}" style="grid-column:1;grid-row:${r+2}">${r+1}</div>`;
       h += `<div class="gname${alt}" data-row="${r}" style="grid-column:2;grid-row:${r+2};left:${NOW}px" title="${esc(p.name)}／${sub}">` +
