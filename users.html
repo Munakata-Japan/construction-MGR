@@ -231,6 +231,7 @@
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
           <span id="uidst" style="font-size:13px;color:var(--sub)"></span>
           <button class="btn ghost sm" id="inviteBtn" type="button" hidden>招待リンクを発行する</button>
+          <button class="btn ghost sm" id="inviteCancel" type="button" hidden>この招待を取り消す</button>
         </div>
         <div id="invitebox" hidden style="margin-bottom:8px">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -476,6 +477,7 @@
     $('f_ratet').value = rt ? rt.rate_type : 'daily';
 
     $('invitebox').hidden = true;
+    $('inviteCancel').hidden = true;
     if (u && u.auth_user_id){
       $('uidst').textContent = 'ログインできます';
       $('inviteBtn').hidden = true;
@@ -484,6 +486,7 @@
       $('uidst').textContent = '招待リンク発行済み・本人の登録待ち';
       $('inviteBtn').hidden = !isAdmin;
       $('inviteBtn').textContent = '招待リンクを再発行する';
+      $('inviteCancel').hidden = !isAdmin;
       $('inviteHint').textContent = '';
     } else {
       $('uidst').textContent = 'ログインなし';
@@ -534,12 +537,17 @@
     $('inviteBtn').disabled = true;
     const token = crypto.randomUUID();
     const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { error } = await sb.from('app_users')
+    const { data, error } = await sb.from('app_users')
       .update({ invite_token: token, invite_expires_at: expires })
-      .eq('id', editing.id);
+      .eq('id', editing.id)
+      .select('id');
     $('inviteBtn').disabled = false;
     if (error){
       showMsg($('pmsg'), '招待リンクを発行できませんでした。' + error.message, 'err');
+      return;
+    }
+    if (!data || !data.length){
+      showMsg($('pmsg'), '招待リンクを発行できませんでした。この操作を行う権限がないようです。経営者権限のアカウントでログインし直してください。', 'err');
       return;
     }
     editing.invite_token = token;
@@ -549,6 +557,31 @@
     $('invitebox').hidden = false;
     $('uidst').textContent = '招待リンク発行済み・本人の登録待ち';
     $('inviteBtn').textContent = '招待リンクを再発行する';
+    $('inviteCancel').hidden = false;
+  });
+  $('inviteCancel').addEventListener('click', async () => {
+    if (!editing || !confirm('この招待を取り消します。発行済みのリンクは使えなくなります。よろしいですか。')) return;
+    $('inviteCancel').disabled = true;
+    const { data, error } = await sb.from('app_users')
+      .update({ invite_token: null, invite_expires_at: null })
+      .eq('id', editing.id)
+      .select('id');
+    $('inviteCancel').disabled = false;
+    if (error){
+      showMsg($('pmsg'), '招待を取り消せませんでした。' + error.message, 'err');
+      return;
+    }
+    if (!data || !data.length){
+      showMsg($('pmsg'), '招待を取り消せませんでした。この操作を行う権限がないようです。経営者権限のアカウントでログインし直してください。', 'err');
+      return;
+    }
+    editing.invite_token = null;
+    editing.invite_expires_at = null;
+    $('invitebox').hidden = true;
+    $('inviteCancel').hidden = true;
+    $('uidst').textContent = 'ログインなし';
+    $('inviteBtn').textContent = '招待リンクを発行する';
+    showMsg($('pmsg'), '招待を取り消しました。', 'ok');
   });
   $('inviteCopy').addEventListener('click', async () => {
     try {
