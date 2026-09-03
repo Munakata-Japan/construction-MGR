@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<!-- BUILD: budget (実行予算) v20260903A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>実行予算 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:44px; flex:0 1 auto; }
+  .ctl .sp{ flex:1 1 0; }
+
+  .sumgrid{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); margin-bottom:18px; }
+  .sumcard{
+    background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:12px 14px;
+  }
+  .sumcard .t{ font-size:11.5px; color:var(--sub); margin-bottom:6px; }
+  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:19px; color:var(--ink); }
+  .sumcard .v.over{ color:var(--alert); }
+  .sumcard .v2{ font-family:var(--mono); font-size:11.5px; color:var(--sub); margin-top:3px; }
+
+  .btable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+           box-shadow:var(--shadow-1); overflow-x:auto; }
+  .bhead, .brow{
+    display:grid; align-items:center; gap:6px; min-width:900px;
+    grid-template-columns:52px 1.4fr 1fr 90px 70px 96px 96px 96px 96px 96px 64px;
+    padding:8px 10px;
+  }
+  .bhead{ background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub); white-space:nowrap; }
+  .brow{
+    border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
+    font-size:12.5px; text-align:left; width:100%; font-family:var(--body); color:inherit;
+  }
+  .brow:hover{ background:#F5F7F3; }
+  .brow .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+  .brow .nm{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }
+  .brow .sub{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--sub); }
+  .cat{ font-size:10.5px; font-weight:700; padding:2px 6px; border-radius:var(--radius-sm); text-align:center; }
+  .cat.material{ background:#E3EBF3; color:var(--ink-2); }
+  .cat.labor{ background:#FBF1EF; color:#7A2A20; }
+  .diff.over{ color:var(--alert); font-weight:700; }
+  .diff.under{ color:var(--ok); }
+  .qtag{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:var(--radius-sm); white-space:nowrap; }
+  .qtag.pending{ background:#EDEFEA; color:var(--sub); }
+  .qtag.pass{ background:#E6F2EB; color:var(--ok); }
+  .qtag.fail{ background:#FBF1EF; color:var(--alert); }
+  .stag{ font-size:10.5px; color:var(--sub); white-space:nowrap; }
+
+  @media (max-width:820px){
+    .bhead{ display:none; }
+    .brow{ grid-template-columns:1fr; min-width:0; padding:10px 12px; gap:2px; }
+    .brow .num, .brow .sub{ text-align:left; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>実行予算</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+  <div class="ctl">
+    <select id="proj"><option value="">工事を選んでください</option></select>
+    <select id="fphase"><option value="">すべての工程</option></select>
+    <select id="fcat">
+      <option value="">材工すべて</option>
+      <option value="material">材料費のみ</option>
+      <option value="labor">外注・労務費のみ</option>
+    </select>
+    <span class="sp"></span>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div class="sumgrid" id="sumgrid" hidden></div>
+
+  <p class="count" id="count"></p>
+  <div id="btable"></div>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="inner"><button class="btn wide" id="add">項目を追加する</button></div>
+</div>
+
+<!-- ========== 項目の詳細 ========== -->
+<div class="panel" id="panel">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1 id="ptitle">材工項目</h1>
+    <button class="btn ghost sm barbtn" id="close">閉じる</button>
+  </header>
+
+  <div class="wrap">
+    <div id="pmsg" class="msg"></div>
+
+    <div class="sheet">
+      <div class="head">項目</div>
+      <div class="row">
+        <label for="f_cat">区分<span class="req">*</span></label>
+        <div class="fld"><select id="f_cat">
+          <option value="material">材料費</option>
+          <option value="labor">外注・労務費</option>
+        </select></div>
+      </div>
+      <div class="row">
+        <label for="f_name">内容<span class="req">*</span></label>
+        <div class="fld"><input id="f_name" type="text" placeholder="6KVCVT100SQ ケーブル など"></div>
+      </div>
+      <div class="row">
+        <label for="f_phase">関わる工程</label>
+        <div class="fld"><select id="f_phase"></select></div>
+      </div>
+      <div class="row">
+        <label for="f_estp">見積先</label>
+        <div class="fld"><select id="f_estp"></select></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">金額</div>
+      <div class="row">
+        <label for="f_qty">数量</label>
+        <div class="fld"><input id="f_qty" type="number" step="any" placeholder="0"><input id="f_unit" type="text" placeholder="単位" style="max-width:100px;margin-left:8px"></div>
+      </div>
+      <div class="row">
+        <label for="f_price">単価</label>
+        <div class="fld"><input id="f_price" type="number" step="any" placeholder="0"></div>
+      </div>
+      <div class="row">
+        <label>金額（単価×数量）</label>
+        <div class="fld"><span id="f_amt" style="font-family:var(--mono);font-weight:700">¥0</span></div>
+      </div>
+      <div class="row">
+        <label for="f_budget">会社予算</label>
+        <div class="fld"><input id="f_budget" type="number" step="any" placeholder="0"></div>
+      </div>
+      <div class="row">
+        <label for="f_contract">請負金額（決定額）</label>
+        <div class="fld"><input id="f_contract" type="number" step="any" placeholder="0"></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">発注・納期</div>
+      <div class="row">
+        <label for="f_odate">発注日</label>
+        <div class="fld"><input id="f_odate" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="f_due">納期</label>
+        <div class="fld"><input id="f_due" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="f_sdate">納品予定日（作業開始日）</label>
+        <div class="fld"><input id="f_sdate" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="f_status">進み具合</label>
+        <div class="fld"><select id="f_status">
+          <option value="estimate">見積中</option>
+          <option value="ordered">発注済み</option>
+          <option value="delivered">納品済み</option>
+          <option value="inspected">検査完了</option>
+          <option value="cancelled">中止</option>
+        </select></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">納品検査</div>
+      <div class="row">
+        <label for="f_ddate">届いた日</label>
+        <div class="fld"><input id="f_ddate" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="f_dqty">入数</label>
+        <div class="fld"><input id="f_dqty" type="number" step="any" placeholder="0"></div>
+      </div>
+      <div class="row">
+        <label for="f_qstat">品質判定</label>
+        <div class="fld"><select id="f_qstat">
+          <option value="pending">未検査</option>
+          <option value="pass">良</option>
+          <option value="fail">否</option>
+        </select></div>
+      </div>
+      <div class="row">
+        <label for="f_qnote">品質の備考</label>
+        <div class="fld"><textarea id="f_qnote" placeholder="数量不足、外観キズ など"></textarea></div>
+      </div>
+      <div class="row">
+        <label for="f_note">備考</label>
+        <div class="fld"><textarea id="f_note"></textarea></div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <button class="btn danger" id="del" hidden>この項目を削除する</button>
+  </div>
+
+  <div class="dock" id="pdock">
+    <div class="inner">
+      <button class="btn ghost" id="cancel" style="flex:0 0 auto">やめる</button>
+      <button class="btn wide" id="save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const CATN  = { material:'材料費', labor:'外注・労務費' };
+  const STATN = { estimate:'見積中', ordered:'発注済み', delivered:'納品済み', inspected:'検査完了', cancelled:'中止' };
+  const QN    = { pending:'未検査', pass:'良', fail:'否' };
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const canEdit = (me.role === 'admin' || me.role === 'manager');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+
+  let projects = [], phases = [], partners = [], items = [], editing = null, projId = null;
+
+  async function loadRefs(){
+    const [pr, pt] = await Promise.all([
+      sb.from('projects').select('id,project_no,name').eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('partners').select('id,name').eq('is_active', true).order('name')
+    ]);
+    projects = pr.data || [];
+    partners = pt.data || [];
+    const opt = projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+    $('proj').innerHTML = '<option value="">工事を選んでください</option>' + opt;
+    $('f_estp').innerHTML = '<option value="">（未設定）</option>' +
+      partners.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  }
+
+  async function loadPhases(){
+    if (!projId){ phases = []; return; }
+    const { data } = await sb.from('project_phases')
+      .select('id,name').eq('project_id', projId).eq('is_active', true).order('seq');
+    phases = data || [];
+    const opt = phases.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    $('fphase').innerHTML = '<option value="">すべての工程</option>' + opt;
+    $('f_phase').innerHTML = '<option value="">（工事全体）</option>' + opt;
+  }
+
+  async function loadItems(){
+    if (!projId){ items = []; render(); return; }
+    const { data, error } = await sb.from('phase_budget_items')
+      .select('*').eq('project_id', projId).order('seq');
+    if (error){
+      showMsg($('msg'),
+        /relation .* does not exist|schema cache/i.test(error.message || '')
+          ? 'データベースに実行予算の表がまだありません。Supabase の SQL Editor で phase3_budget.sql を実行してください。'
+          : '読み込めませんでした。' + error.message, 'err');
+      items = [];
+    } else {
+      items = data || [];
+    }
+    render();
+  }
+
+  /* ================= 表示 ================= */
+  function fmt(v){ return v || v === 0 ? fmtMoney(v) : '—'; }
+
+  function render(){
+    $('dock').hidden = !(canEdit && projId);
+    if (!projId){
+      $('sumgrid').hidden = true;
+      $('count').textContent = '';
+      $('btable').innerHTML = `<div class="hold" style="height:200px"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと実行予算が出ます。</div></div>`;
+      return;
+    }
+
+    const fp = $('fphase').value, fc = $('fcat').value;
+    const rows = items.filter(x => (!fp || x.phase_id === fp) && (!fc || x.category === fc));
+
+    // 集計
+    const sum = (arr, key) => arr.reduce((s, x) => s + (Number(x[key]) || 0), 0);
+    const groups = ['material', 'labor'];
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML = groups.map(g => {
+      const arr = rows.filter(x => x.category === g);
+      const budget = sum(arr, 'budget_amount');
+      const contract = sum(arr, 'contract_amount');
+      const diff = budget - contract;
+      return `<div class="sumcard">
+        <div class="t">${CATN[g]}　予算 ／ 決定額</div>
+        <div class="v">${fmtMoney(contract)}</div>
+        <div class="v2">予算 ${fmtMoney(budget)}　${diff >= 0
+          ? `<span style="color:var(--ok)">▲余り ${fmtMoney(diff)}</span>`
+          : `<span style="color:var(--alert)">▼超過 ${fmtMoney(-diff)}</span>`}</div>
+      </div>`;
+    }).join('') + (() => {
+      const budget = sum(rows, 'budget_amount'), contract = sum(rows, 'contract_amount');
+      const diff = budget - contract;
+      return `<div class="sumcard">
+        <div class="t">工事全体　予算 ／ 決定額</div>
+        <div class="v${diff < 0 ? ' over' : ''}">${fmtMoney(contract)}</div>
+        <div class="v2">予算 ${fmtMoney(budget)}　${diff >= 0
+          ? `<span style="color:var(--ok)">▲余り ${fmtMoney(diff)}</span>`
+          : `<span style="color:var(--alert)">▼超過 ${fmtMoney(-diff)}</span>`}</div>
+      </div>`;
+    })();
+
+    $('count').textContent = `${rows.length} 件 ／ 全 ${items.length} 件`;
+
+    if (!rows.length){
+      $('btable').innerHTML = `<div class="empty"><b>まだ項目がありません</b>${canEdit ? '下の「項目を追加する」から始めてください。' : ''}</div>`;
+      return;
+    }
+
+    const pmap = Object.fromEntries(phases.map(p => [p.id, p.name]));
+    const ptmap = Object.fromEntries(partners.map(p => [p.id, p.name]));
+
+    let h = `<div class="btable"><div class="bhead">
+      <span>区分</span><span>項目</span><span>工程／見積先</span><span>数量</span><span>単価</span>
+      <span>金額</span><span>予算</span><span>決定額</span><span>差額</span><span>状態</span><span>品質</span>
+    </div>`;
+    rows.forEach(x => {
+      const diff = (x.budget_amount ?? null) !== null && (x.contract_amount ?? null) !== null
+        ? Number(x.budget_amount) - Number(x.contract_amount) : null;
+      const sub = [pmap[x.phase_id], ptmap[x.estimate_partner_id]].filter(Boolean).join(' ・ ');
+      h += `<button class="brow" data-id="${x.id}">
+        <span class="cat ${x.category}">${x.category === 'material' ? '材' : '工'}</span>
+        <span class="nm" title="${esc(x.item_name)}">${esc(x.item_name)}</span>
+        <span class="sub">${esc(sub || '—')}</span>
+        <span class="num">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</span>
+        <span class="num">${fmt(x.unit_price)}</span>
+        <span class="num">${fmt(x.amount)}</span>
+        <span class="num">${fmt(x.budget_amount)}</span>
+        <span class="num">${fmt(x.contract_amount)}</span>
+        <span class="num${diff === null ? '' : (diff < 0 ? ' diff over' : ' diff under')}">${diff === null ? '—' : fmtMoney(diff)}</span>
+        <span class="stag">${STATN[x.status]}</span>
+        <span class="qtag ${x.quality_status}">${QN[x.quality_status]}</span>
+      </button>`;
+    });
+    h += `</div>`;
+    $('btable').innerHTML = h;
+    $('btable').querySelectorAll('.brow').forEach(b =>
+      b.addEventListener('click', () => openPanel(items.find(x => x.id === b.dataset.id))));
+  }
+
+  $('fphase').addEventListener('change', render);
+  $('fcat').addEventListener('change', render);
+
+  $('proj').addEventListener('change', async () => {
+    projId = $('proj').value || null;
+    await loadPhases();
+    await loadItems();
+  });
+
+  /* ================= 詳細 ================= */
+  function recalcAmt(){
+    const qty = Number($('f_qty').value) || 0;
+    const price = Number($('f_price').value) || 0;
+    $('f_amt').textContent = fmtMoney(Math.round(qty * price));
+  }
+  $('f_qty').addEventListener('input', recalcAmt);
+  $('f_price').addEventListener('input', recalcAmt);
+
+  function openPanel(x){
+    editing = x || null;
+    showMsg($('pmsg'), '');
+    $('ptitle').textContent = x ? '材工項目' : '材工項目を追加';
+
+    $('f_cat').value    = x ? x.category : 'material';
+    $('f_name').value   = x ? (x.item_name || '') : '';
+    $('f_phase').value  = x ? (x.phase_id || '') : '';
+    $('f_estp').value   = x ? (x.estimate_partner_id || '') : '';
+    $('f_qty').value    = x && x.quantity !== null ? x.quantity : '';
+    $('f_unit').value   = x ? (x.unit || '') : '';
+    $('f_price').value  = x && x.unit_price !== null ? x.unit_price : '';
+    $('f_budget').value = x && x.budget_amount !== null ? x.budget_amount : '';
+    $('f_contract').value = x && x.contract_amount !== null ? x.contract_amount : '';
+    $('f_odate').value  = x ? (x.order_date || '') : '';
+    $('f_due').value    = x ? (x.due_date || '') : '';
+    $('f_sdate').value  = x ? (x.scheduled_delivery_date || '') : '';
+    $('f_status').value = x ? x.status : 'estimate';
+    $('f_ddate').value  = x ? (x.delivered_on || '') : '';
+    $('f_dqty').value   = x && x.delivered_qty !== null ? x.delivered_qty : '';
+    $('f_qstat').value  = x ? x.quality_status : 'pending';
+    $('f_qnote').value  = x ? (x.quality_note || '') : '';
+    $('f_note').value   = x ? (x.note || '') : '';
+    recalcAmt();
+
+    document.querySelectorAll('#panel input, #panel select, #panel textarea')
+      .forEach(el => el.disabled = !canEdit);
+    $('pdock').style.display = canEdit ? '' : 'none';
+    $('del').hidden = !(x && canEdit);
+
+    $('panel').classList.add('open');
+    window.scrollTo(0,0);
+  }
+  function closePanel(){ $('panel').classList.remove('open'); editing = null; }
+  $('add').addEventListener('click', () => openPanel(null));
+  $('close').addEventListener('click', closePanel);
+  $('cancel').addEventListener('click', closePanel);
+
+  $('save').addEventListener('click', async () => {
+    showMsg($('pmsg'), '');
+    const nm = $('f_name').value.trim();
+    if (!nm){ showMsg($('pmsg'), '内容を入れてください。', 'err'); $('f_name').focus(); return; }
+
+    const body = {
+      organization_id : me.organization_id,
+      project_id       : projId,
+      phase_id         : $('f_phase').value || null,
+      category         : $('f_cat').value,
+      item_name        : nm,
+      estimate_partner_id: $('f_estp').value || null,
+      quantity         : $('f_qty').value === '' ? null : Number($('f_qty').value),
+      unit             : $('f_unit').value.trim() || null,
+      unit_price       : $('f_price').value === '' ? null : Number($('f_price').value),
+      budget_amount    : $('f_budget').value === '' ? null : Number($('f_budget').value),
+      contract_amount  : $('f_contract').value === '' ? null : Number($('f_contract').value),
+      order_date       : $('f_odate').value || null,
+      due_date         : $('f_due').value || null,
+      scheduled_delivery_date: $('f_sdate').value || null,
+      status           : $('f_status').value,
+      delivered_on     : $('f_ddate').value || null,
+      delivered_qty    : $('f_dqty').value === '' ? null : Number($('f_dqty').value),
+      quality_status   : $('f_qstat').value,
+      quality_note     : $('f_qnote').value.trim() || null,
+      note             : $('f_note').value.trim() || null
+    };
+    if (!editing){
+      body.seq = (items.length ? Math.max(...items.map(x => x.seq || 0)) : 0) + 10;
+      body.created_by = me.id;
+    }
+
+    $('save').disabled = true; $('save').textContent = '保存しています…';
+    let error;
+    if (editing) ({ error } = await sb.from('phase_budget_items').update(body).eq('id', editing.id));
+    else         ({ error } = await sb.from('phase_budget_items').insert(body));
+    $('save').disabled = false; $('save').textContent = '保存する';
+
+    if (error){
+      showMsg($('pmsg'), error.code === '42501'
+        ? 'この操作を行う権限がありません。' : '保存できませんでした。' + error.message, 'err');
+      return;
+    }
+    closePanel();
+    await loadItems();
+    showMsg($('msg'), '保存しました。', 'ok');
+  });
+
+  $('del').addEventListener('click', async () => {
+    if (!editing) return;
+    if (!confirm(`「${editing.item_name}」を削除します。取り消せません。`)) return;
+    const { error } = await sb.from('phase_budget_items').delete().eq('id', editing.id);
+    if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
+    closePanel();
+    await loadItems();
+    showMsg($('msg'), '削除しました。', 'ok');
+  });
+
+  /* ================= 起動 ================= */
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)){
+    $('proj').value = q;
+    projId = q;
+    await loadPhases();
+    await loadItems();
+  } else {
+    render();
+  }
+})();
+</script>
+</body>
+</html>
