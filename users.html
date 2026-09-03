@@ -229,14 +229,19 @@
       <div class="sh">ログイン</div>
       <div class="full">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-          <input id="f_uid" type="text" placeholder="ログイン用のUID（Supabaseで作ったもの）"
-                 style="flex:1 1 320px;min-width:0;min-height:32px;padding:3px 8px;font-size:13px;font-family:var(--mono)">
-          <span id="uidst" style="font-size:12px;color:var(--sub)"></span>
+          <span id="uidst" style="font-size:13px;color:var(--sub)"></span>
+          <button class="btn ghost sm" id="inviteBtn" type="button" hidden>招待リンクを発行する</button>
         </div>
-        <p class="tip">
-          ログインさせる場合は、先に Supabase の Authentication → Users でアカウントを作り、
-          そこに出る <b>UID</b> をここに貼ってください。<br>
-          ログインしない人（日報や勤怠の記録にだけ出てくる職人など）は、空のままで登録できます。
+        <div id="invitebox" hidden style="margin-bottom:8px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="inviteUrl" type="text" readonly
+                   style="flex:1 1 320px;min-width:0;min-height:32px;padding:3px 8px;font-size:12.5px;font-family:var(--mono)">
+            <button class="btn ghost sm" id="inviteCopy" type="button">コピー</button>
+          </div>
+          <p class="tip" style="margin-top:6px">このリンクを本人に送ってください。開いて自分でメール・パスワードを設定すると、自動的にこの利用者としてログインできるようになります（7日間有効）。</p>
+        </div>
+        <p class="tip" id="inviteHint">
+          ログインしない人（日報や勤怠の記録にだけ出てくる職人など）は、招待リンクを発行しないままで登録できます。
         </p>
       </div>
 
@@ -464,14 +469,30 @@
     $('f_unl').checked = !!g('approve_unlimited', false);
     setMoney($('f_lim'), g('approve_limit',''));
     $('f_lim').disabled = $('f_unl').checked;
-    $('f_uid').value   = g('auth_user_id','') || '';
     $('f_note').value  = g('note','');
 
     const rt = u ? rates[u.id] : null;
     setMoney($('f_rate'), rt ? rt.amount : '');
     $('f_ratet').value = rt ? rt.rate_type : 'daily';
 
-    $('uidst').textContent = (u && u.auth_user_id) ? 'ログインできます' : 'ログインなし';
+    $('invitebox').hidden = true;
+    if (u && u.auth_user_id){
+      $('uidst').textContent = 'ログインできます';
+      $('inviteBtn').hidden = true;
+      $('inviteHint').textContent = '';
+    } else if (u && u.invite_token){
+      $('uidst').textContent = '招待リンク発行済み・本人の登録待ち';
+      $('inviteBtn').hidden = !isAdmin;
+      $('inviteBtn').textContent = '招待リンクを再発行する';
+      $('inviteHint').textContent = '';
+    } else {
+      $('uidst').textContent = 'ログインなし';
+      $('inviteBtn').hidden = !isAdmin || !u;   // 新規登録の保存前は発行できない
+      $('inviteBtn').textContent = '招待リンクを発行する';
+      $('inviteHint').textContent = u
+        ? 'ログインしない人（日報や勤怠の記録にだけ出てくる職人など）は、招待リンクを発行しないままで構いません。'
+        : '招待リンクは、この利用者を一度保存してから発行できます。';
+    }
 
     // 上長の候補から自分自身を外す
     $('f_sup').innerHTML = '<option value="">（未設定）</option>' +
@@ -507,17 +528,43 @@
   $('close').addEventListener('click', tryClose);
   $('add').addEventListener('click', () => openPanel(null));
 
+  /* ================= 招待リンク ================= */
+  $('inviteBtn').addEventListener('click', async () => {
+    if (!editing) return;
+    $('inviteBtn').disabled = true;
+    const token = crypto.randomUUID();
+    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { error } = await sb.from('app_users')
+      .update({ invite_token: token, invite_expires_at: expires })
+      .eq('id', editing.id);
+    $('inviteBtn').disabled = false;
+    if (error){
+      showMsg($('pmsg'), '招待リンクを発行できませんでした。' + error.message, 'err');
+      return;
+    }
+    editing.invite_token = token;
+    editing.invite_expires_at = expires;
+    const url = `${location.origin}${location.pathname.replace(/users\.html$/, 'signup.html')}?token=${token}`;
+    $('inviteUrl').value = url;
+    $('invitebox').hidden = false;
+    $('uidst').textContent = '招待リンク発行済み・本人の登録待ち';
+    $('inviteBtn').textContent = '招待リンクを再発行する';
+  });
+  $('inviteCopy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText($('inviteUrl').value);
+      showMsg($('pmsg'), 'リンクをコピーしました。', 'ok');
+    } catch (e){
+      $('inviteUrl').select();
+    }
+  });
+
   /* ================= 保存 ================= */
   $('save').addEventListener('click', async () => {
     showMsg($('pmsg'), '');
     const nm = $('f_name').value.trim();
     if (!nm){ showMsg($('pmsg'), '氏名を入れてください。', 'err'); $('f_name').focus(); return; }
 
-    const uid = $('f_uid').value.trim();
-    if (uid && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){
-      showMsg($('pmsg'), 'UIDの形式が正しくありません。Supabase の Authentication → Users からそのまま写してください。', 'err');
-      return;
-    }
     if ($('f_ext').checked && !$('f_partner').value){
       showMsg($('pmsg'), '社外の人は所属先を選んでください。', 'err'); return;
     }
@@ -541,7 +588,6 @@
       approve_unlimited: $('f_unl').checked,
       approve_limit   : $('f_unl').checked ? null
                         : (digits($('f_lim')) === '' ? null : Number(digits($('f_lim')))),
-      auth_user_id    : uid || null,
       note            : $('f_note').value.trim() || null
     };
 
@@ -571,7 +617,7 @@
     $('save').disabled = false; $('save').textContent = '保存する';
     if (error){
       showMsg($('pmsg'),
-        error.code === '23505' ? 'そのUIDは既に別の利用者に使われています。'
+        error.code === '23505' ? '社員番号などが既に別の利用者に使われています。'
         : error.code === '42501' ? 'この操作を行う権限がありません。'
         : '保存できませんでした。' + error.message, 'err');
       return;
