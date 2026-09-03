@@ -537,12 +537,17 @@
     $('inviteBtn').disabled = true;
     const token = crypto.randomUUID();
     const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { error } = await sb.from('app_users')
+    const { data, error } = await sb.from('app_users')
       .update({ invite_token: token, invite_expires_at: expires })
-      .eq('id', editing.id);
+      .eq('id', editing.id)
+      .select('id');
     $('inviteBtn').disabled = false;
     if (error){
       showMsg($('pmsg'), '招待リンクを発行できませんでした。' + error.message, 'err');
+      return;
+    }
+    if (!data || !data.length){
+      showMsg($('pmsg'), '招待リンクを発行できませんでした。この操作を行う権限がないようです。経営者権限のアカウントでログインし直してください。', 'err');
       return;
     }
     editing.invite_token = token;
@@ -557,12 +562,17 @@
   $('inviteCancel').addEventListener('click', async () => {
     if (!editing || !confirm('この招待を取り消します。発行済みのリンクは使えなくなります。よろしいですか。')) return;
     $('inviteCancel').disabled = true;
-    const { error } = await sb.from('app_users')
+    const { data, error } = await sb.from('app_users')
       .update({ invite_token: null, invite_expires_at: null })
-      .eq('id', editing.id);
+      .eq('id', editing.id)
+      .select('id');
     $('inviteCancel').disabled = false;
     if (error){
       showMsg($('pmsg'), '招待を取り消せませんでした。' + error.message, 'err');
+      return;
+    }
+    if (!data || !data.length){
+      showMsg($('pmsg'), '招待を取り消せませんでした。この操作を行う権限がないようです。経営者権限のアカウントでログインし直してください。', 'err');
       return;
     }
     editing.invite_token = null;
