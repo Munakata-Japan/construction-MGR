@@ -295,15 +295,23 @@ body > header.bar{ flex:0 0 auto; }
 /* ---------- 発注の商材明細 ---------- */
 .oitable{ border:1px solid var(--rule); border-radius:2px; overflow-x:auto; }
 .oith, .oirow{
-  display:grid; grid-template-columns:1.3fr 56px 46px 84px 90px 1fr 42px;
-  gap:6px; align-items:center; padding:5px 8px; min-width:560px;
+  display:grid; grid-template-columns:22px 1.3fr 56px 46px 84px 90px 1fr 42px;
+  gap:6px; align-items:center; padding:5px 8px; min-width:580px;
 }
 .oith{ background:#F1F3EF; font-size:10.5px; color:var(--sub); font-weight:700; white-space:nowrap; }
-.oirow{ border-top:1px solid var(--rule-2); }
+.oirow{ border-top:1px solid var(--rule-2); background:var(--card); }
 .oirow input{ min-height:34px; padding:4px 6px; font-size:13px; }
 .oirow .oi_qty, .oirow .oi_price{ font-family:var(--mono); text-align:right; }
 .oi_amt{ font-family:var(--mono); font-size:12.5px; text-align:right; white-space:nowrap; }
 .oi_rm{ min-height:30px; padding:0 6px; font-size:11px; white-space:nowrap; }
+.oi_drag{
+  cursor:grab; color:var(--sub); font-size:15px; text-align:center; user-select:none;
+  touch-action:none; padding:4px 0;
+}
+.oirow.oi_lift{
+  box-shadow:var(--shadow-2); position:relative; z-index:5; background:var(--card);
+  border-top:1px solid var(--rule);
+}
 .oitotal{
   text-align:right; font-family:var(--mono); font-weight:700; font-size:14.5px;
   margin-top:8px; padding-top:8px; border-top:1px solid var(--rule);
@@ -476,7 +484,7 @@ body > header.bar{ flex:0 0 auto; }
         <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
           <div class="oitable">
             <div class="oith">
-              <span>品名・規格</span><span>数量</span><span>単位</span><span>単価</span><span>金額</span><span>備考</span><span></span>
+              <span></span><span>品名・規格</span><span>数量</span><span>単位</span><span>単価</span><span>金額</span><span>備考</span><span></span>
             </div>
             <div id="oilines"></div>
           </div>
@@ -1611,6 +1619,7 @@ body > header.bar{ flex:0 0 auto; }
     const qty = v && v.quantity !== null && v.quantity !== undefined ? v.quantity : '';
     const price = v && v.unit_price !== null && v.unit_price !== undefined ? v.unit_price : '';
     return `<div class="oirow">
+      <span class="oi_drag" title="ドラッグで並び替え">⠿</span>
       <input class="oi_name" type="text" placeholder="品名・規格" value="${v ? esc(v.item_name || '') : ''}">
       <input class="oi_qty" type="number" step="any" placeholder="数量" value="${qty}">
       <input class="oi_unit" type="text" placeholder="単位" value="${v ? esc(v.unit || '') : ''}">
@@ -1624,7 +1633,48 @@ body > header.bar{ flex:0 0 auto; }
     $('oilines').querySelectorAll('.oi_rm').forEach(b => {
       b.onclick = () => { b.closest('.oirow').remove(); recalcOiTotal(); };
     });
+    bindOiDrag();
     recalcOiTotal();
+  }
+
+  /* ---- 明細行のドラッグ並び替え（工程表の行入れ替えと同様の操作感） ---- */
+  function bindOiDrag(){
+    $('oilines').querySelectorAll('.oi_drag').forEach(handle => {
+      if (handle.dataset.bound) return;
+      handle.dataset.bound = '1';
+      handle.addEventListener('pointerdown', e => {
+        const row = handle.closest('.oirow');
+        const list = $('oilines');
+        const rows = () => [...list.querySelectorAll('.oirow')];
+        handle.setPointerCapture(e.pointerId);
+        row.classList.add('oi_lift');
+
+        const onMove = ev => {
+          const y = ev.clientY;
+          for (const other of rows()){
+            if (other === row) continue;
+            const r = other.getBoundingClientRect();
+            const mid = r.top + r.height / 2;
+            if (y < mid && other.previousElementSibling !== row){
+              list.insertBefore(row, other);
+              break;
+            }
+            if (y >= mid && other.nextElementSibling !== row){
+              list.insertBefore(row, other.nextElementSibling);
+              break;
+            }
+          }
+        };
+        const onUp = ev => {
+          handle.releasePointerCapture(e.pointerId);
+          row.classList.remove('oi_lift');
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    });
   }
   function recalcOiTotal(){
     let total = 0;
