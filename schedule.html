@@ -124,7 +124,7 @@ body > header.bar{ flex:0 0 auto; }
 .gname{
   position:sticky; z-index:3; background:var(--card);
   border-right:1px solid var(--rule); border-bottom:1px solid var(--rule-2);
-  padding:2px 10px 2px 40px; min-width:0;
+  padding:2px 10px 2px 26px; min-width:0;
   display:flex; flex-direction:column; justify-content:center;
   box-shadow:2px 0 5px rgba(22,50,79,.08);
 }
@@ -139,21 +139,18 @@ body > header.bar{ flex:0 0 auto; }
 }
 .dense .gname .gn2{ display:none; }
 
-/* この工程に紐づく発注・実行予算の状態を示す丸印（発注＝odot、予算＝bdot） */
+/* この工程に紐づく発注の状態を示す丸印 */
 .gname .odots{
   position:absolute; left:6px; top:50%; transform:translateY(-50%);
   display:flex; align-items:center; gap:3px; height:16px;
 }
-.gname .odot, .gname .bdot{
+.gname .odot{
   width:12px; height:12px; border-radius:50%; cursor:help; flex:0 0 auto;
   border:1.5px solid var(--card); box-shadow:0 0 0 1px rgba(0,0,0,.25);
 }
 .gname .odot.od-ok{ background:var(--ok); }
 .gname .odot.od-pending{ background:var(--safety); }
 .gname .odot.od-over{ background:var(--alert); box-shadow:0 0 0 2px rgba(168,58,44,.35); }
-.gname .bdot.bd-ok{ background:var(--ink-2); }
-.gname .bdot.bd-over{ background:var(--alert); box-shadow:0 0 0 2px rgba(168,58,44,.35); }
-.gname .bdot.bd-none{ background:var(--rule); }
 .gname .odiv{
   width:1px; align-self:stretch; background:var(--rule); margin:1px 0;
 }
@@ -369,7 +366,6 @@ body > header.bar{ flex:0 0 auto; }
   </div>
   <button class="btn ghost sm" id="notebtn">付箋</button>
   <button class="btn ghost sm" id="ordbtn">発注</button>
-  <a class="btn ghost sm" id="budgetbtn" href="budget.html" hidden>実行予算</a>
   <button class="warnbtn" id="alertbtn" hidden></button>
   <button class="btn ghost sm" id="guidebtn" hidden>見方</button>
   <span class="sp"></span>
@@ -382,8 +378,6 @@ body > header.bar{ flex:0 0 auto; }
     <span><i style="background:var(--ok);border-radius:50%;width:10px;height:10px"></i>発注：すべて済み</span>
     <span><i style="background:var(--safety);border-radius:50%;width:10px;height:10px"></i>発注：未発注あり</span>
     <span><i style="background:var(--alert);border-radius:50%;width:10px;height:10px"></i>発注：期限超過</span>
-    <span><i style="background:var(--ink-2);border-radius:50%;width:10px;height:10px"></i>予算：範囲内</span>
-    <span><i style="background:var(--alert);border-radius:50%;width:10px;height:10px"></i>予算：超過</span>
   </div>
 </div>
 
@@ -715,7 +709,7 @@ body > header.bar{ flex:0 0 auto; }
     $('f_status').insertAdjacentHTML('beforeend', `<option value="${k}">${v}</option>`);
 
   let cats = [], wts = [], partners = [], users = [], projects = [];
-  let projId = null, phases = [], deps = [], orders = [], budgetItems = [], editing = null, view = 'gantt';
+  let projId = null, phases = [], deps = [], orders = [], editing = null, view = 'gantt';
   let oediting = null;
   let zoomW = null;          // 日の幅（px）。null なら画面に合わせる
   let manualNameW = null;    // 工程欄の幅（px）。null なら自動
@@ -790,12 +784,11 @@ body > header.bar{ flex:0 0 auto; }
   }
 
   async function loadPhases(){
-    if (!projId){ phases = []; deps = []; orders = []; budgetItems = []; draw(); return; }
-    const [a, b, c, d] = await Promise.all([
+    if (!projId){ phases = []; deps = []; orders = []; draw(); return; }
+    const [a, b, c] = await Promise.all([
       sb.from('project_phases').select('*').eq('project_id', projId).eq('is_active', true).order('seq'),
       sb.from('phase_dependencies').select('*').eq('project_id', projId),
-      sb.from('phase_orders').select('*').eq('project_id', projId).eq('is_active', true).order('seq'),
-      sb.from('phase_budget_items').select('phase_id,category,budget_amount,contract_amount,amount').eq('project_id', projId)
+      sb.from('phase_orders').select('*').eq('project_id', projId).eq('is_active', true).order('seq')
     ]);
     if (a.error){ showMsg($('msg'), '工程を読み込めませんでした。' + a.error.message, 'err'); return; }
     if (c.error){
@@ -807,7 +800,6 @@ body > header.bar{ flex:0 0 auto; }
     phases = a.data || [];
     deps   = b.data || [];
     orders = c.data || [];
-    budgetItems = d.data || [];   // 実行予算の表がまだ無い環境もあるため、d.error は静かに無視する
     draw();
   }
 
@@ -874,8 +866,6 @@ body > header.bar{ flex:0 0 auto; }
     $('legend').hidden = !has;
     $('guidebtn').hidden = !(has && view === 'net');
     $('dock').hidden = !(canEdit && projId);
-    $('budgetbtn').hidden = !projId;
-    if (projId) $('budgetbtn').href = 'budget.html?p=' + projId;
 
     drawTitle();
     drawAlert();
@@ -1050,27 +1040,16 @@ body > header.bar{ flex:0 0 auto; }
       const sub = `${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}`;
       const alt = r % 2 ? ' alt' : '';
 
-      // この工程に紐づく発注・実行予算の状態をまとめて、行の印にする
+      // この工程に紐づく発注の状態をまとめて、行の印にする
       const opOrders = orders.filter(o => o.phase_id === p.id && o.status !== 'cancelled');
-      const bItems = budgetItems.filter(x => x.phase_id === p.id);
-      let dots = '';
+      let odot = '';
       if (opOrders.length){
         const overdue = opOrders.some(o => o.due_date && o.status === 'planned' && d2n(o.due_date) < todayN);
         const pending = opOrders.some(o => o.status === 'planned');
         const ocls = overdue ? 'od-over' : (pending ? 'od-pending' : 'od-ok');
         const otxt = overdue ? '発注：期限超過あり' : (pending ? '発注：未発注あり' : '発注：すべて発注済み');
-        dots += `<span class="odot ${ocls}" title="${otxt}"></span>`;
+        odot = `<span class="odots"><span class="odot ${ocls}" title="${otxt}"></span><span class="odiv"></span></span>`;
       }
-      if (bItems.length){
-        const budget = bItems.reduce((s, x) => s + (Number(x.budget_amount) || 0), 0);
-        const actual = bItems.reduce((s, x) => s + (Number(x.contract_amount ?? x.amount) || 0), 0);
-        const over = budget > 0 && actual > budget;
-        const bcls = budget > 0 ? (over ? 'bd-over' : 'bd-ok') : 'bd-none';
-        const btxt = `実行予算：${budget > 0 ? fmtMoney(budget) : '未設定'}　決定額：${fmtMoney(actual)}` +
-                     (over ? '（予算超過）' : '');
-        dots += `<span class="bdot ${bcls}" title="${esc(btxt)}"></span>`;
-      }
-      const odot = dots ? `<span class="odots">${dots}<span class="odiv"></span></span>` : '';
 
       h += `<div class="gno${alt}" data-row="${r}" style="grid-column:1;grid-row:${r+2}">${r+1}</div>`;
       h += `<div class="gname${alt}" data-row="${r}" style="grid-column:2;grid-row:${r+2};left:${NOW}px" title="${esc(p.name)}／${sub}">` +
