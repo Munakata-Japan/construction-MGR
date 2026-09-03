@@ -236,7 +236,11 @@
     const opt = projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
     $('proj').innerHTML   = '<option value="">すべての工事</option>' + opt;
     $('f_proj').innerHTML = '<option value="">選んでください</option>' + opt;
+    setEmptyNote($('f_proj'), projects.length === 0,
+      '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
     $('lk_proj').innerHTML = opt;
+    setEmptyNote($('lk_proj'), projects.length === 0,
+      '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
   }
 
   async function loadPhases(projId){

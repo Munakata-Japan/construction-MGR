@@ -220,7 +220,8 @@ a.mode:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
   border-right:1px solid var(--rule-2);
 }
 .row > label .req{ color:var(--alert); margin-left:4px; }
-.row .fld{ padding:6px 10px; display:flex; align-items:center; gap:8px; min-width:0; }
+.row .fld{ padding:6px 10px; display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
+.row .fld > .emptynote{ flex-basis:100%; order:99; margin-top:2px; }
 
 input[type=text], input[type=email], input[type=password],
 input[type=number], input[type=date], select, textarea{
@@ -317,6 +318,15 @@ select{ appearance:none; background-image:none; }
 .msg.err{ border-left:3px solid var(--alert); color:#7A2A20; background:#FBF1EF; }
 .msg.ok { border-left:3px solid var(--ok);   color:#1D4F38; background:#EFF5F1; }
 .msg:empty{ display:none; }
+
+/* ---------- 事前登録が必要なドロップダウンの空欄アナウンス ---------- */
+.emptynote{
+  font-size:12.5px; color:#9A5A16; background:#FBF3E7; border:1px solid #EED9B8;
+  border-radius:var(--radius-sm); padding:6px 10px; margin-top:6px; line-height:1.6;
+  flex:1 0 100%; order:99;
+}
+.emptynote a{ color:#1C3B5E; font-weight:700; }
+.emptynote[hidden]{ display:none; }
 
 /* ---------- 画面下部の固定操作 ---------- */
 .dock{

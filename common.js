@@ -44,6 +44,25 @@ function showMsg(el, text, kind){
   if (text) el.scrollIntoView({ block:'nearest' });
 }
 
+/* ---------- 事前登録が必要なドロップダウンの空欄アナウンス ----------
+   取引先・工程・利用者などのマスタが1件も無いまま選択肢が空の
+   セレクトを黙って出すと、登録し忘れなのか本当に無いのか分からない。
+   セレクトの直後に注意書きを出し、必要ならページへの導線も添える。
+------------------------------------------------------------------ */
+function setEmptyNote(selectEl, isEmpty, text, href, linkLabel){
+  if (!selectEl) return;
+  let note = selectEl.nextElementSibling;
+  if (!note || !note.classList || !note.classList.contains('emptynote')){
+    note = document.createElement('div');
+    note.className = 'emptynote';
+    selectEl.insertAdjacentElement('afterend', note);
+  }
+  note.innerHTML = href
+    ? `${esc(text)}　<a href="${esc(href)}">${esc(linkLabel || 'こちらから登録')}</a>`
+    : esc(text);
+  note.hidden = !isEmpty;
+}
+
 /* ---------- ログイン確認 ----------
    ログインしていなければログイン画面へ戻す。
    戻り値: { session, me }  me は app_users の1行
