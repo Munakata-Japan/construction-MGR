@@ -246,6 +246,9 @@ body > header.bar{ flex:0 0 auto; }
 .b-done       { background-color:var(--ok); }
 .b-suspended  { background-color:var(--alert); }
 .bar2.crit{ border-color:#111; box-shadow:0 0 0 1.5px rgba(0,0,0,.2), 0 2px 4px rgba(22,50,79,.25), 0 1px 2px rgba(22,50,79,.18); }
+/* 材料が着工までに届かない見込みのときだけ、バー自体を赤く縁取る（名前欄の発注の丸とは別の見た目・別の場所） */
+.bar2.mat-risk{ box-shadow:0 0 0 2px var(--alert), 0 2px 4px rgba(22,50,79,.25), 0 1px 2px rgba(22,50,79,.18); }
+.bar-matwarn{ margin-right:3px; }
 
 /* ---------- 発注の付箋（図面の注記のように置く） ---------- */
 .gtable{ position:relative; }
@@ -1161,9 +1164,13 @@ body > header.bar{ flex:0 0 auto; }
         const barLabel = p.start_date === p.end_date
           ? md(new Date(p.start_date + 'T00:00:00'))
           : `${md(new Date(p.start_date + 'T00:00:00'))}〜${md(new Date(p.end_date + 'T00:00:00'))}`;
-        h += `<button class="bar2 b-${p.status}${crit}${isToday}" data-id="${p.id}" data-row="${r}" ` +
-             `title="${esc(p.name)}　${fmtDate(p.start_date)}〜${fmtDate(p.end_date)}" ` +
-             `style="grid-row:${r+2};grid-column:${c1} / ${c2}">${barLabel}</button>`;
+        // 材料が着工までに届かない見込みのときだけ、バー自体（名前欄の丸とは別の場所）に赤い縁取りを出す
+        const mat = materialReadiness(p.id);
+        const matRisk = mat && mat.cls === 'od-over' ? ' mat-risk' : '';
+        const matIcon = matRisk ? '<span class="bar-matwarn" title="材料：着工までに届かない見込みがあります">⚠</span>' : '';
+        h += `<button class="bar2 b-${p.status}${crit}${isToday}${matRisk}" data-id="${p.id}" data-row="${r}" ` +
+             `title="${esc(p.name)}　${fmtDate(p.start_date)}〜${fmtDate(p.end_date)}${matRisk ? '　⚠材料：着工までに届かない見込み' : ''}" ` +
+             `style="grid-row:${r+2};grid-column:${c1} / ${c2}">${matIcon}${barLabel}</button>`;
       } else {
         h += `<button class="bar2 b-${p.status}" data-id="${p.id}" data-row="${r}" ` +
              `style="grid-row:${r+2};grid-column:3 / 4;background:transparent;color:var(--sub);border:1px dashed var(--rule)">日程未設定</button>`;
