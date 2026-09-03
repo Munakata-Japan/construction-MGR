@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<!-- BUILD: order-alerts (材料発注アラート) v20260904A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>材料発注アラート ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  /* 横に長い表を扱うため、共通の960pxより広く使う */
+  .wrap{ max-width:1440px; }
+
+  /* ページ自体はスクロールさせず、表の中だけをスクロールさせる（二重スクロール防止） */
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:10px; }
+  .lead, .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
+  #atable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
+  .lead{ color:var(--sub); font-size:12.5px; line-height:1.6; margin:0 0 10px; }
+
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .ctl select{ width:auto; min-width:150px; max-width:340px; min-height:38px; flex:0 1 auto; }
+  .ctl .sp{ flex:1 1 0; }
+
+  .sumgrid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); margin-bottom:10px; }
+  .sumcard{
+    background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:8px 12px;
+  }
+  .sumcard .t{ font-size:11px; color:var(--sub); margin-bottom:3px; }
+  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:19px; color:var(--ink); }
+  .sumcard.red .v{ color:var(--alert); }
+  .sumcard.amber .v{ color:#8A6200; }
+
+  .atable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+           box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
+  .ahead, .arow{
+    display:grid; align-items:start; gap:8px; min-width:1000px;
+    grid-template-columns:1.5fr 1.3fr 1.8fr 96px 96px 74px 168px;
+  }
+  .ahead{
+    position:sticky; top:0; z-index:5;
+    background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+    white-space:nowrap; align-items:center; padding:6px 12px;
+    border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0;
+  }
+  .arow{
+    padding:9px 12px; border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
+    font-size:12.5px; text-align:left; width:100%; font-family:var(--body); color:inherit;
+    text-decoration:none;
+  }
+  .arow:hover{ background:#F5F7F3; }
+  .arow.red{ background:#FBF1EF; }
+  .arow.red:hover{ background:#F8E4DF; }
+  .arow .nm{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-weight:700; }
+  .arow .no{ font-family:var(--mono); font-size:11px; color:var(--ink-2); display:block; }
+  .arow .sub{ font-size:11px; color:var(--sub); line-height:1.4; }
+  .arow .num{ font-family:var(--mono); text-align:left; white-space:nowrap; }
+  .ahead .num{ text-align:left; }
+
+  .mlbl{ display:none; }
+  .cat{ font-size:10.5px; font-weight:700; padding:1px 5px; border-radius:var(--radius-sm); margin-right:5px; }
+  .cat.material{ background:#E3EBF3; color:var(--ink-2); }
+  .cat.labor{ background:#FBF1EF; color:#8C2A1D; }
+
+  .stag{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:var(--radius-sm); white-space:nowrap; color:var(--sub); background:#EDEFEA; }
+  .stag.est{ color:#8C2A1D; background:#FBF1EF; }
+  .stag.ord{ color:#6B4E00; background:#FBF0D4; }
+
+  .altag{ font-size:11px; font-weight:700; padding:3px 8px; border-radius:var(--radius-sm);
+          white-space:normal; line-height:1.35; display:inline-block; }
+  .altag.red{ color:#fff; background:var(--alert); }
+  .altag.amber{ color:#6B4E00; background:#FBF0D4; border:1px solid #E7C866; }
+  .altag.ok{ color:var(--ok); background:#EAF2ED; }
+  .altag .dl{ font-family:var(--mono); font-weight:500; display:block; font-size:10px; opacity:.9; }
+
+  @media (max-width:860px){
+    /* 狭い画面ではカード表示になるため、通常のページスクロールに戻す */
+    body{ height:auto; overflow:visible; display:block; }
+    .wrap{ flex:none; height:auto; overflow:visible; display:block; }
+    #atable{ display:block; }
+    .atable{ flex:none; max-height:none; overflow:visible; }
+    .ahead{ display:none; }
+    .arow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
+    .arow .num{ text-align:left; }
+    .mlbl{ display:inline; color:var(--sub); font-weight:700; font-size:11px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>材料発注アラート</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+  <p class="lead">
+    工程の着工予定と、材料の発注リードタイム・納品予定を照らし合わせ、
+    <b>発注が遅れそう・納品が着工に間に合わなそうな材料</b>を、金額を伏せて一覧します。
+    リードタイムや納品予定日は「実行予算」から取り込みます。
+  </p>
+
+  <div class="ctl">
+    <select id="fproj"><option value="">すべての工事</option></select>
+    <select id="fcat">
+      <option value="">材工すべて</option>
+      <option value="material">材料のみ</option>
+      <option value="labor">外注・労務のみ</option>
+    </select>
+    <select id="fshow">
+      <option value="risk">要対応のみ</option>
+      <option value="all">未納品すべて</option>
+    </select>
+    <span class="sp"></span>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div class="sumgrid" id="sumgrid" hidden></div>
+
+  <p class="count" id="count"></p>
+  <div id="atable"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const STATN = { estimate:'見積中', ordered:'発注済み' };
+  const STATCLS = { estimate:'est', ordered:'ord' };
+  const WARN_DAYS = 7;   // 発注期限の何日前からアラート扱いにするか（工程表と合わせる）
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isMgr = (me.role === 'admin' || me.role === 'manager');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+
+  /* ================= 日付の道具（工程表と同じ計算） ================= */
+  function todayYMD(){
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  }
+  function addDaysYMD(ymd, n){
+    const d = new Date(ymd + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function fmtShort(ymd){
+    if (!ymd) return '';
+    const [y, m, d] = ymd.split('-');
+    return `${y.slice(2)}/${Number(m)}/${Number(d)}`;
+  }
+
+  const TODAY = todayYMD();
+  const WARN_LIMIT = addDaysYMD(TODAY, WARN_DAYS);
+
+  let projects = [], phases = [], items = [];
+
+  async function loadAll(){
+    // 金額の列は一切取得しない（発注・納品のタイミングだけを扱う）
+    const [pr, ph, bi] = await Promise.all([
+      sb.from('projects').select('id,project_no,name,status')
+        .eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('project_phases').select('id,project_id,name,start_date')
+        .eq('is_active', true).order('seq'),
+      sb.from('phase_budget_items')
+        .select('id,project_id,phase_id,category,item_name,quantity,unit,status,scheduled_delivery_date,delivered_on,lead_time_days')
+    ]);
+    if (pr.error){ showMsg($('msg'), '読み込めませんでした。' + pr.error.message, 'err'); return; }
+    if (bi.error){
+      showMsg($('msg'),
+        /relation .* does not exist|schema cache/i.test(bi.error.message || '')
+          ? 'データベースに実行予算の表がまだありません。Supabase の SQL Editor で phase3_budget.sql と phase5_order_deadline.sql を実行してください。'
+          : '材料の読み込みに失敗しました。' + bi.error.message, 'err');
+    }
+    projects = pr.data || [];
+    phases   = ph.data || [];
+
+    // 完了・中止の工事は対象外（動いている工事の未納品だけを見る）
+    const liveProjIds = new Set(projects
+      .filter(p => !['completed','invoiced','paid','cancelled'].includes(p.status))
+      .map(p => p.id));
+
+    // 未納品（見積中・発注済み）だけを対象にする
+    items = (bi.data || []).filter(x =>
+      liveProjIds.has(x.project_id) &&
+      (x.status === 'estimate' || x.status === 'ordered'));
+
+    // 工事の絞り込みには、動いている工事だけを出す
+    $('fproj').innerHTML = '<option value="">すべての工事</option>' +
+      projects.filter(p => liveProjIds.has(p.id))
+        .map(p => `<option value="${p.id}">${esc(p.project_no)}　${esc(p.name)}</option>`).join('');
+
+    render();
+  }
+
+  // 材料1件の遅れ判定（金額は一切見ない）。工程表の判定と同じ考え方。
+  function classify(x, phase){
+    const dd    = x.scheduled_delivery_date || null;
+    const start = phase ? phase.start_date : null;
+    const lead  = (x.lead_time_days === null || x.lead_time_days === undefined || x.lead_time_days === '')
+                    ? null : Number(x.lead_time_days);
+    const deadline = (dd && lead !== null) ? addDaysYMD(dd, -lead) : null;
+    const est = (x.status === 'estimate');
+
+    // 納品予定が着工日より後 → 発注済みでも間に合わない（最重要）
+    if (dd && start && dd > start)
+      return { level:'red', rank:0, text:'着工に間に合いません', deadline, dd, start, dlNote:false };
+    // 見積中で、発注期限を過ぎている
+    if (est && deadline && deadline < TODAY)
+      return { level:'red', rank:1, text:'発注期限を過ぎています', deadline, dd, start, dlNote:true };
+    // 見積中で、発注期限が近い
+    if (est && deadline && deadline <= WARN_LIMIT)
+      return { level:'amber', rank:2, text:'まもなく発注期限', deadline, dd, start, dlNote:true };
+    // 納品予定日が未定 → 間に合うか判断できない
+    if (!dd)
+      return { level:'amber', rank:3, text:'納品予定日が未定', deadline, dd, start, dlNote:false };
+    // それ以外は余裕あり
+    return { level:'ok', rank:4, text: est ? '発注期限まで余裕あり' : '納品待ち', deadline, dd, start, dlNote:false };
+  }
+
+  function render(){
+    const fp = $('fproj').value, fc = $('fcat').value, fs = $('fshow').value;
+    const pmap = Object.fromEntries(projects.map(p => [p.id, p]));
+    const phmap = Object.fromEntries(phases.map(p => [p.id, p]));
+
+    let rows = items
+      .filter(x => (!fp || x.project_id === fp) && (!fc || x.category === fc))
+      .map(x => ({ x, phase: x.phase_id ? phmap[x.phase_id] : null }))
+      .map(o => ({ ...o, a: classify(o.x, o.phase) }));
+
+    const redN = rows.filter(o => o.a.level === 'red').length;
+    const amberN = rows.filter(o => o.a.level === 'amber').length;
+
+    if (fs === 'risk') rows = rows.filter(o => o.a.level !== 'ok');
+
+    // 至急順 → 発注期限の早い順 → 納品予定の早い順
+    rows.sort((a, b) => {
+      if (a.a.rank !== b.a.rank) return a.a.rank - b.a.rank;
+      const ad = a.a.deadline || a.a.dd || '9999', bd = b.a.deadline || b.a.dd || '9999';
+      return ad < bd ? -1 : ad > bd ? 1 : 0;
+    });
+
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML = `
+      <div class="sumcard red"><div class="t">至急対応</div><div class="v">${redN}件</div></div>
+      <div class="sumcard amber"><div class="t">注意</div><div class="v">${amberN}件</div></div>
+      <div class="sumcard"><div class="t">未納品 合計</div><div class="v">${items.filter(x => !fp || x.project_id === fp).filter(x => !fc || x.category === fc).length}件</div></div>
+    `;
+
+    $('count').textContent = `${rows.length} 件を表示`;
+
+    if (!rows.length){
+      $('atable').innerHTML = `<div class="empty"><b>${fs === 'risk' ? '発注・納品の遅れの心配はありません' : '対象の材料がありません'}</b>${fs === 'risk' ? '発注期限が近い・過ぎている材料や、着工に間に合わない材料が出るとここに並びます。' : '絞り込みを変えてお試しください。'}</div>`;
+      return;
+    }
+
+    let h = `<div class="atable"><div class="ahead">
+      <span>工事</span><span>工程／着工予定</span><span>材料</span>
+      <span class="num">納品予定</span><span class="num">発注期限</span><span>状態</span><span>アラート</span>
+    </div>`;
+    rows.forEach(({ x, phase, a }) => {
+      const pj = pmap[x.project_id];
+      const href = isMgr ? `budget.html?p=${x.project_id}` : `schedule.html?p=${x.project_id}`;
+      h += `<a class="arow ${a.level === 'red' ? 'red' : ''}" href="${href}">
+        <span class="nm"><span class="no">${pj ? esc(pj.project_no) : ''}</span>${pj ? esc(pj.name) : '（工事不明）'}</span>
+        <span><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '（工事全体）'}</span>
+          <span class="sub">${phase && phase.start_date ? '着工 ' + fmtShort(phase.start_date) : '着工日 未定'}</span></span>
+        <span><span class="cat ${x.category}">${x.category === 'labor' ? '工' : '材'}</span>
+          <span class="nm" style="display:inline;font-size:12px">${esc(x.item_name)}</span>
+          <span class="sub">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</span></span>
+        <span class="num"><b class="mlbl">納品予定 </b>${x.scheduled_delivery_date ? fmtShort(x.scheduled_delivery_date) : '未定'}</span>
+        <span class="num"><b class="mlbl">発注期限 </b>${a.deadline ? fmtShort(a.deadline) : '—'}</span>
+        <span><span class="stag ${STATCLS[x.status] || ''}">${STATN[x.status] || x.status}</span></span>
+        <span><span class="altag ${a.level}">${esc(a.text)}${a.dlNote && a.deadline ? `<span class="dl">発注期限 ${fmtShort(a.deadline)}</span>` : ''}</span></span>
+      </a>`;
+    });
+    h += `</div>`;
+    $('atable').innerHTML = h;
+  }
+
+  $('fproj').addEventListener('change', render);
+  $('fcat').addEventListener('change', render);
+  $('fshow').addEventListener('change', render);
+
+  await loadAll();
+})();
+</script>
+</body>
+</html>
