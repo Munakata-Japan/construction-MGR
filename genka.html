@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<!-- BUILD: genka (原価台帳) v20260903A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>原価台帳 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:44px; flex:0 1 auto; }
+  .ctl .sp{ flex:1 1 0; }
+
+  .sumgrid{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); margin-bottom:18px; }
+  .sumcard{
+    background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:12px 14px;
+  }
+  .sumcard .t{ font-size:11.5px; color:var(--sub); margin-bottom:6px; }
+  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:19px; color:var(--ink); }
+  .sumcard .v.neg{ color:var(--alert); }
+
+  .gtable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+           box-shadow:var(--shadow-1); overflow-x:auto; }
+  .ghead, .grow{
+    display:grid; align-items:center; gap:6px; min-width:860px;
+    grid-template-columns:1.5fr 90px 110px 110px 110px 110px 110px 80px;
+    padding:9px 12px;
+  }
+  .ghead{ background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub); white-space:nowrap; }
+  .grow{
+    border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
+    font-size:12.5px; text-align:left; width:100%; font-family:var(--body); color:inherit;
+  }
+  .grow:hover{ background:#F5F7F3; }
+  .grow .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+  .grow .nm{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }
+  .grow .no{ font-family:var(--mono); font-size:11px; color:var(--ink-2); display:block; }
+  .profit.neg{ color:var(--alert); font-weight:700; }
+  .profit.pos{ color:var(--ok); }
+  .gfoot{
+    display:grid; grid-template-columns:1.5fr 90px 110px 110px 110px 110px 110px 80px;
+    min-width:860px; gap:6px; padding:9px 12px; border-top:2px solid var(--ink);
+    font-weight:700; background:#F5F7F3;
+  }
+  .gfoot .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+
+  @media (max-width:820px){
+    .ghead, .gfoot{ display:none; }
+    .grow{ grid-template-columns:1fr; min-width:0; padding:10px 12px; gap:2px; }
+    .grow .num{ text-align:left; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>原価台帳</h1>
+  <div class="who" id="who"></div>
+  <button class="btn ghost sm barbtn" id="out">出る</button>
+</header>
+
+<div class="wrap">
+  <div class="ctl">
+    <select id="fst">
+      <option value="">すべての状態</option>
+      <option value="active">見積〜施工中（完工前）</option>
+      <option value="estimate">見積</option>
+      <option value="ordered">受注</option>
+      <option value="started">着工</option>
+      <option value="completed">完工</option>
+      <option value="invoiced">請求済</option>
+      <option value="paid">入金済</option>
+      <option value="cancelled">中止</option>
+    </select>
+    <span class="sp"></span>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div class="sumgrid" id="sumgrid" hidden></div>
+
+  <p class="count" id="count"></p>
+  <div id="gtable"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+
+  paintBar(me, await loadOrgName(me.organization_id));
+  $('out').addEventListener('click', signOut);
+
+  let projects = [], costByProject = {};
+
+  async function loadAll(){
+    const [pr, bi] = await Promise.all([
+      sb.from('projects').select('id,project_no,name,status,contract_amount')
+        .eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('phase_budget_items').select('project_id,category,quantity,unit_price,amount,contract_amount')
+    ]);
+    if (pr.error){ showMsg($('msg'), '読み込めませんでした。' + pr.error.message, 'err'); return; }
+    if (bi.error){
+      showMsg($('msg'),
+        /relation .* does not exist|schema cache/i.test(bi.error.message || '')
+          ? 'データベースに実行予算の表がまだありません。Supabase の SQL Editor で phase3_budget.sql を実行してください。'
+          : '原価の読み込みに失敗しました。' + bi.error.message, 'err');
+    }
+    projects = pr.data || [];
+
+    costByProject = {};
+    (bi.data || []).forEach(x => {
+      const g = costByProject[x.project_id] || (costByProject[x.project_id] = { material:0, labor:0 });
+      const v = (x.contract_amount ?? x.amount) || 0;
+      g[x.category === 'labor' ? 'labor' : 'material'] += Number(v);
+    });
+
+    render();
+  }
+
+  /* ================= 表示 ================= */
+  function render(){
+    const st = $('fst').value;
+    const rows = projects.filter(p => {
+      if (!st) return true;
+      if (st === 'active') return !['completed','invoiced','paid','cancelled'].includes(p.status);
+      return p.status === st;
+    });
+
+    $('count').textContent = `${rows.length} 件 ／ 全 ${projects.length} 件`;
+
+    // 全体集計
+    let sOrder = 0, sMat = 0, sLab = 0;
+    rows.forEach(p => {
+      const g = costByProject[p.id] || { material:0, labor:0 };
+      sOrder += Number(p.contract_amount) || 0;
+      sMat += g.material; sLab += g.labor;
+    });
+    const sCost = sMat + sLab, sProfit = sOrder - sCost;
+    const sRate = sOrder ? (sProfit / sOrder * 100) : null;
+
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML = `
+      <div class="sumcard"><div class="t">受注金額 合計</div><div class="v">${fmtMoney(sOrder)}</div></div>
+      <div class="sumcard"><div class="t">原価 合計（材料費 ${fmtMoney(sMat)} ／ 労務・外注費 ${fmtMoney(sLab)}）</div><div class="v">${fmtMoney(sCost)}</div></div>
+      <div class="sumcard"><div class="t">粗利益 合計</div><div class="v${sProfit < 0 ? ' neg' : ''}">${fmtMoney(sProfit)}</div></div>
+      <div class="sumcard"><div class="t">粗利率</div><div class="v${sRate !== null && sRate < 0 ? ' neg' : ''}">${sRate === null ? '—' : sRate.toFixed(1) + '%'}</div></div>
+    `;
+
+    if (!rows.length){
+      $('gtable').innerHTML = `<div class="empty"><b>対象の工事がありません</b>絞り込みを変えてお試しください。</div>`;
+      return;
+    }
+
+    let h = `<div class="gtable"><div class="ghead">
+      <span>工事</span><span>状態</span><span>受注金額</span><span>材料費</span>
+      <span>労務・外注費</span><span>原価合計</span><span>粗利益</span><span>粗利率</span>
+    </div>`;
+    rows.forEach(p => {
+      const g = costByProject[p.id] || { material:0, labor:0 };
+      const order = Number(p.contract_amount) || 0;
+      const cost = g.material + g.labor;
+      const profit = order - cost;
+      const rate = order ? (profit / order * 100) : null;
+      h += `<a class="grow" href="budget.html?p=${p.id}">
+        <span class="nm"><span class="no">${esc(p.project_no)}</span>${esc(p.name)}</span>
+        <span>${STATUS[p.status] || p.status}</span>
+        <span class="num">${fmtMoney(order)}</span>
+        <span class="num">${fmtMoney(g.material)}</span>
+        <span class="num">${fmtMoney(g.labor)}</span>
+        <span class="num">${fmtMoney(cost)}</span>
+        <span class="num profit ${profit < 0 ? 'neg' : 'pos'}">${fmtMoney(profit)}</span>
+        <span class="num">${rate === null ? '—' : rate.toFixed(1) + '%'}</span>
+      </a>`;
+    });
+    h += `<div class="gfoot">
+      <span>合計</span><span></span>
+      <span class="num">${fmtMoney(sOrder)}</span>
+      <span class="num">${fmtMoney(sMat)}</span>
+      <span class="num">${fmtMoney(sLab)}</span>
+      <span class="num">${fmtMoney(sCost)}</span>
+      <span class="num">${fmtMoney(sProfit)}</span>
+      <span class="num">${sRate === null ? '—' : sRate.toFixed(1) + '%'}</span>
+    </div>`;
+    h += `</div>`;
+    $('gtable').innerHTML = h;
+  }
+
+  $('fst').addEventListener('change', render);
+
+  await loadAll();
+})();
+</script>
+</body>
+</html>
