@@ -376,17 +376,22 @@
     $('list').innerHTML = rows.map(u => {
       const rk = rmap[u.job_rank_id];
       const kbs = [];
-      kbs.push(`<span class="kb ${u.role === 'admin' ? 'ad' : (u.role === 'manager' ? 'mg' : 'mb')}">${ROLE[u.role]}</span>`);
-      if (rk) kbs.push(`<span class="kb mb">${esc(rk.name)}</span>`);
+      // 開発者アカウントは役割（経営者など）の表示を出さない
+      if (!u.is_developer)
+        kbs.push(`<span class="kb ${u.role === 'admin' ? 'ad' : (u.role === 'manager' ? 'mg' : 'mb')}">${ROLE[u.role]}</span>`);
+      if (rk && !u.is_developer) kbs.push(`<span class="kb mb">${esc(rk.name)}</span>`);
       if (u.is_external) kbs.push(`<span class="kb ex">社外${pmap[u.partner_id] ? '・' + esc(pmap[u.partner_id]) : ''}</span>`);
       if (!u.auth_user_id) kbs.push('<span class="kb nl">ログインなし</span>');
       if (!u.is_active) kbs.push('<span class="kb nl">退職・停止</span>');
 
       const meta = [];
-      if (u.title && !u.is_developer) meta.push(esc(u.title));
-      if (DEPT[u.department]) meta.push(DEPT[u.department]);
-      if (EMP[u.employee_type]) meta.push(EMP[u.employee_type]);
-      if (u.email && !u.is_developer) meta.push(esc(u.email));
+      // 開発者アカウントは氏名「開発者」だけにする（役職・部門・社員/職人・メールは出さない）
+      if (!u.is_developer){
+        if (u.title) meta.push(esc(u.title));
+        if (DEPT[u.department]) meta.push(DEPT[u.department]);
+        if (EMP[u.employee_type]) meta.push(EMP[u.employee_type]);
+        if (u.email) meta.push(esc(u.email));
+      }
 
       const lim = u.approve_unlimited
         ? `<span class="lim">決裁 上限なし</span>`
