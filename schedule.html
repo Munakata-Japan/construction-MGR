@@ -124,7 +124,7 @@ body > header.bar{ flex:0 0 auto; }
 .gname{
   position:sticky; z-index:3; background:var(--card);
   border-right:1px solid var(--rule); border-bottom:1px solid var(--rule-2);
-  padding:2px 10px 2px 40px; min-width:0;
+  padding:2px 10px 2px 26px; min-width:0;
   display:flex; flex-direction:column; justify-content:center;
   box-shadow:2px 0 5px rgba(22,50,79,.08);
 }
@@ -423,9 +423,6 @@ body > header.bar{ flex:0 0 auto; }
     <span><i style="background:var(--ok);border-radius:50%;width:10px;height:10px"></i>発注：すべて済み</span>
     <span><i style="background:var(--safety);border-radius:50%;width:10px;height:10px"></i>発注：未発注あり</span>
     <span><i style="background:var(--alert);border-radius:50%;width:10px;height:10px"></i>発注：期限超過</span>
-    <span><i style="background:var(--ok);border-radius:50%;width:10px;height:10px"></i>材料：すべて納品済み</span>
-    <span><i style="background:var(--safety);border-radius:50%;width:10px;height:10px"></i>材料：未納品（余裕あり）</span>
-    <span><i style="background:var(--alert);border-radius:50%;width:10px;height:10px"></i>材料：着工に間に合わない</span>
   </div>
 </div>
 
@@ -1142,11 +1139,6 @@ body > header.bar{ flex:0 0 auto; }
         odot += `<span class="odot ${ocls}" title="${otxt}"></span>`;
       }
 
-      // この工程に必要な材料が、着工日までに納品されるかどうかの印（金額は一切見ない）
-      const mat = materialReadiness(p.id);
-      if (mat){
-        odot += `<span class="odot ${mat.cls}" title="${mat.text}"></span>`;
-      }
       if (odot) odot = `<span class="odots">${odot}<span class="odiv"></span></span>`;
 
       h += `<div class="gno${alt}" data-row="${r}" style="grid-column:1;grid-row:${r+2}">${r+1}</div>`;
