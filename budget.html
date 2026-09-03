@@ -80,7 +80,10 @@
   .brow.conflict{ background:#FBF1EF; }
   .brow.conflict:hover{ background:#F8E4DF; }
   .bgroup .gwarn{ color:var(--alert); font-weight:700; margin-left:8px; }
-  .stag{ font-size:10.5px; color:var(--sub); white-space:nowrap; }
+  .stag{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:var(--radius-sm); white-space:nowrap; color:var(--sub); background:#EDEFEA; }
+  .stag.notstarted{ color:#7A2A20; background:#FBF1EF; }
+  .stag.progress{ color:#6B4E00; background:#FBF0D4; }
+  .stag.done{ color:#1D4F38; background:#EAF2ED; }
 
   @media (max-width:820px){
     /* 狭い画面ではカード表示になるため、通常のページスクロールに戻す */
@@ -281,6 +284,8 @@
 
   const CATN  = { material:'材料費', labor:'外注・労務費' };
   const STATN = { estimate:'見積中', ordered:'発注済み', delivered:'納品済み', inspected:'検査完了', cancelled:'中止' };
+  // 工程表のステータス配色（未着手＝赤／着手中＝黄／完了＝緑）に合わせる
+  const STATCLS = { estimate:'notstarted', ordered:'progress', delivered:'done', inspected:'done', cancelled:'' };
   const QN    = { pending:'未検査', pass:'良', fail:'否' };
 
   const auth = await requireAuth();
@@ -342,6 +347,12 @@
     const d = new Date(ymd + 'T00:00:00');
     d.setDate(d.getDate() + n);
     return d.toISOString().slice(0, 10);
+  }
+  // 一覧の狭い列用：2026-08-28 → 26/8/28
+  function fmtDateShort(ymd){
+    if (!ymd) return '';
+    const [y, m, d] = ymd.split('-');
+    return `${y.slice(2)}/${Number(m)}/${Number(d)}`;
   }
 
   function render(){
@@ -457,8 +468,8 @@
           <span class="num">${fmt(x.budget_amount)}</span>
           <span class="num">${fmt(x.contract_amount)}</span>
           <span class="num${diff === null ? '' : (diff < 0 ? ' diff over' : ' diff under')}">${diff === null ? '—' : fmtMoney(diff)}</span>
-          <span class="dtag ${dcls}" title="${conflict ? esc(conflict.text) : (isActual ? '実際に届いた日' : '')}">${conflict ? '<span class="dwarn">⚠</span>' : ''}${dd ? fmtDate(dd) : '未定'}</span>
-          <span class="stag">${STATN[x.status]}</span>
+          <span class="dtag ${dcls}" title="${conflict ? esc(conflict.text) : (dd ? fmtDate(dd) : '')}">${conflict ? '<span class="dwarn">⚠</span>' : ''}${dd ? fmtDateShort(dd) : '未定'}</span>
+          <span class="stag ${STATCLS[x.status] || ''}">${STATN[x.status]}</span>
           <span class="qtag ${x.quality_status}">${QN[x.quality_status]}</span>
         </button>`;
       });
