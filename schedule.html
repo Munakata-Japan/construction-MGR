@@ -654,6 +654,14 @@ body > header.bar{ flex:0 0 auto; }
         <label for="f_status">進み具合</label>
         <div class="fld"><select id="f_status"></select></div>
       </div>
+
+      <div class="row">
+        <label>材料の準備</label>
+        <div class="fld">
+          <button type="button" id="p_matnote" class="matnote" hidden></button>
+          <div id="p_matlist" class="matlist" hidden></div>
+        </div>
+      </div>
     </div>
 
     <div style="height:14px"></div>
@@ -2106,6 +2114,7 @@ body > header.bar{ flex:0 0 auto; }
     $('f_ou').value     = p ? (p.order_alert_user_id || '') : '';
     $('f_done').checked = !!(p && p.ordered_at);
     $('f_note').value   = p ? (p.note || '') : '';
+    updatePhaseMatNote(p);
 
     const mine = p ? deps.filter(d => d.to_phase_id === p.id) : [];
     $('deps').innerHTML = mine.length ? mine.map(depRow).join('')
@@ -2125,6 +2134,45 @@ body > header.bar{ flex:0 0 auto; }
   }
 
   function closePanel(){ $('panel').classList.remove('open'); editing = null; }
+
+  // この工程に紐づく材料が揃っているかを、工程そのものの編集パネルに出す
+  // （ガントを見ながら「材料がまだ届いていない」と分かるように）
+  function updatePhaseMatNote(p){
+    const note = $('p_matnote'), list = $('p_matlist');
+    list.hidden = true; list.innerHTML = '';
+    const mat = p ? materialReadiness(p.id) : null;
+    if (!mat){ note.hidden = true; return; }
+    note.className = 'matnote ' + mat.cls;
+    note.innerHTML = `<i></i>${esc(mat.text)}<span class="chev">▾</span>`;
+    note.hidden = false;
+  }
+  $('p_matnote').addEventListener('click', () => {
+    const list = $('p_matlist');
+    if (!list.hidden){ list.hidden = true; return; }
+    if (!editing) return;
+
+    const items = materials.filter(x => x.phase_id === editing.id && x.status !== 'cancelled');
+    list.innerHTML = items.map(x => {
+      const r = itemReadiness(x, editing.start_date);
+      const sub = [x.quantity != null ? `${x.quantity}${x.unit ? esc(x.unit) : ''}` : null, x.note].filter(Boolean).join(' ・ ');
+      return `<div class="matitem" data-id="${x.id}">
+        <div class="mi-head ${r.cls}"><i></i>
+          <span class="mi-name">${esc(x.item_name || '（名称未設定）')}</span>
+          <span class="mi-stat">${esc(r.text)}</span>
+        </div>
+        <div class="mi-detail">
+          ${sub ? `${esc(sub)}<br>` : ''}
+          ${x.delivered_on ? `届いた日：${fmtDate(x.delivered_on)}` : (x.scheduled_delivery_date ? `納品予定日：${fmtDate(x.scheduled_delivery_date)}` : '納品予定日：未定')}
+        </div>
+      </div>`;
+    }).join('') || '<div class="matitem">紐づく材料がありません</div>';
+
+    list.hidden = false;
+  });
+  $('p_matlist').addEventListener('click', e => {
+    const item = e.target.closest('.matitem');
+    if (item) item.classList.toggle('open');
+  });
 
   $('add').addEventListener('click', () => openPanel(null));
   $('close').addEventListener('click', closePanel);
