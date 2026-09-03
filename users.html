@@ -376,8 +376,10 @@
     $('list').innerHTML = rows.map(u => {
       const rk = rmap[u.job_rank_id];
       const kbs = [];
-      kbs.push(`<span class="kb ${u.role === 'admin' ? 'ad' : (u.role === 'manager' ? 'mg' : 'mb')}">${ROLE[u.role]}</span>`);
-      if (rk) kbs.push(`<span class="kb mb">${esc(rk.name)}</span>`);
+      // 開発者アカウントは役割（経営者など）の表示を出さない
+      if (!u.is_developer)
+        kbs.push(`<span class="kb ${u.role === 'admin' ? 'ad' : (u.role === 'manager' ? 'mg' : 'mb')}">${ROLE[u.role]}</span>`);
+      if (rk && !u.is_developer) kbs.push(`<span class="kb mb">${esc(rk.name)}</span>`);
       if (u.is_external) kbs.push(`<span class="kb ex">社外${pmap[u.partner_id] ? '・' + esc(pmap[u.partner_id]) : ''}</span>`);
       if (!u.auth_user_id) kbs.push('<span class="kb nl">ログインなし</span>');
       if (!u.is_active) kbs.push('<span class="kb nl">退職・停止</span>');
