@@ -370,6 +370,8 @@ async function resolveGeo(file, devicePos){
 
 /* ---------- ログアウト ---------- */
 async function signOut(){
+  // 「出る」は誤タップでシステムからログアウトしてしまうため、必ず確認する
+  if (!confirm('システムからログアウトします。よろしいですか。\n（作業を続けるときは「メニュー」からお戻りください）')) return;
   await sb.auth.signOut();
   location.replace('index.html');
 }
@@ -383,6 +385,20 @@ async function signOut(){
   const here = location.pathname.split('/').pop() || 'index.html';
   if (/^(index|mode-select|report-entry|signup)\.html$/.test(here)) return;
 
+  // 作業のために別ページから来たか（メニュー・ログイン・直接アクセスは除く）。
+  // 来ていれば「戻る」で元居たページへ、そうでなければ「メニュー」へ。
+  let backToPrev = false;
+  try {
+    if (document.referrer){
+      const ref = new URL(document.referrer);
+      const rf = ref.pathname.split('/').pop() || '';
+      if (ref.origin === location.origin && rf && rf !== here &&
+          !/^(index|mode-select|report-entry|signup)\.html$/.test(rf)){
+        backToPrev = true;
+      }
+    }
+  } catch (e) {}
+
   function put(){
     const bar = document.querySelector('.bar');
     if (!bar) return;
@@ -390,8 +406,17 @@ async function signOut(){
 
     const a = document.createElement('a');
     a.className = 'btn ghost sm barbtn backbtn';
-    a.href = 'mode-select.html';
-    a.textContent = '◂ メニュー';
+    if (backToPrev){
+      a.href = '#';
+      a.textContent = '◂ 戻る';
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        if (history.length > 1) history.back(); else location.href = 'mode-select.html';
+      });
+    } else {
+      a.href = 'mode-select.html';
+      a.textContent = '◂ メニュー';
+    }
 
     const mark = bar.querySelector('.mark');
     if (mark) mark.after(a); else bar.prepend(a);

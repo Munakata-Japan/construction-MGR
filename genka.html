@@ -53,7 +53,9 @@
   .grow{
     padding:9px 12px; border-top:1px solid var(--rule-2); background:var(--card);
     font-size:12.5px; text-align:left; width:100%; font-family:var(--body); color:inherit;
+    text-decoration:none; cursor:pointer;
   }
+  .grow:hover{ background:#F5F7F3; }
   .grow .rno, .ghead .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
   .grow .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
   .ghead .num{ text-align:right; }
@@ -235,7 +237,8 @@
         `<span class="gc">${arr.length} 件 ・ ${fmtMoney(sum(arr, 'amount'))}</span></div>`;
       arr.forEach(x => {
         no++;
-        h += `<div class="grow">
+        // クリックすると、その品目の入力画面（実行予算）を直接開く（確認→入力の統一）
+        h += `<a class="grow" href="budget.html?p=${projId}&item=${x.id}">
           <span class="rno">${no}</span>
           <span class="cat ${x.category}">${x.category === 'material' ? '材' : '工'}</span>
           <span class="nm" title="${esc(x.item_name)}">${esc(x.item_name)}${x.note ? `<span class="sub">${esc(x.note)}</span>` : ''}</span>
@@ -244,7 +247,7 @@
           <span class="num">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</span>
           <span class="num">${fmt(x.unit_price)}</span>
           <span class="num">${fmt(x.amount)}</span>
-        </div>`;
+        </a>`;
       });
     });
     h += `<div class="gfoot">

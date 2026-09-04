@@ -600,7 +600,13 @@
     $('panel').classList.add('open');
     window.scrollTo(0,0);
   }
-  function closePanel(){ $('panel').classList.remove('open'); editing = null; }
+  // 確認ページ（アラート・原価台帳など）から品目を直接開いて来たときは、
+  // 閉じる・保存したら来た確認ページへ戻す（一覧に取り残さない）
+  let backOnClose = false;
+  function closePanel(){
+    if (backOnClose && history.length > 1){ history.back(); return; }
+    $('panel').classList.remove('open'); editing = null;
+  }
   $('add').addEventListener('click', () => openPanel(null));
   $('close').addEventListener('click', closePanel);
   $('cancel').addEventListener('click', closePanel);
@@ -691,11 +697,16 @@
       const it = items.find(x => x.id === itemId);
       if (it){
         openPanel(it);
-        // アラート（納期の確認）から来たので、いきなり納品・発注の入力欄まで送る
-        requestAnimationFrame(() => {
-          const f = $('f_sdate');
-          if (f){ f.scrollIntoView({ block:'center' }); try { f.focus(); } catch(e){} }
-        });
+        // 確認ページから来たので、閉じる・保存で元の確認ページへ戻す
+        backOnClose = true;
+        $('close').textContent = '◀ 戻る';
+        // focus=delivery（納期の確認から来た）なら、いきなり納品・発注の入力欄まで送る
+        if (qs.get('focus') === 'delivery'){
+          requestAnimationFrame(() => {
+            const f = $('f_sdate');
+            if (f){ f.scrollIntoView({ block:'center' }); try { f.focus(); } catch(e){} }
+          });
+        }
       }
     }
   } else {
