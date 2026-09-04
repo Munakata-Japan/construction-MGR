@@ -1914,6 +1914,7 @@ body > header.bar{ flex:0 0 auto; }
         <div class="mi-detail">
           ${sub ? `${esc(sub)}<br>` : ''}
           ${x.delivered_on ? `届いた日：${fmtDate(x.delivered_on)}` : (x.scheduled_delivery_date ? `納品予定日：${fmtDate(x.scheduled_delivery_date)}` : '納品予定日：未定')}
+          ${canEdit ? `<div style="margin-top:6px"><a class="btn ghost sm mi-go" href="budget.html?p=${projId}&item=${x.id}&focus=delivery">納期・発注を入力（実行予算）→</a></div>` : ''}
         </div>
       </div>`;
     }).join('') || '<div class="matitem">紐づく材料がありません</div>';
@@ -1921,6 +1922,7 @@ body > header.bar{ flex:0 0 auto; }
     list.hidden = false;
   });
   $('o_matlist').addEventListener('click', e => {
+    if (e.target.closest('.mi-go')) return; // 入力リンクはそのまま遷移
     const item = e.target.closest('.matitem');
     if (item) item.classList.toggle('open');
   });
@@ -2202,6 +2204,7 @@ body > header.bar{ flex:0 0 auto; }
         <div class="mi-detail">
           ${sub ? `${esc(sub)}<br>` : ''}
           ${x.delivered_on ? `届いた日：${fmtDate(x.delivered_on)}` : (x.scheduled_delivery_date ? `納品予定日：${fmtDate(x.scheduled_delivery_date)}` : '納品予定日：未定')}
+          ${canEdit ? `<div style="margin-top:6px"><a class="btn ghost sm mi-go" href="budget.html?p=${projId}&item=${x.id}&focus=delivery">納期・発注を入力（実行予算）→</a></div>` : ''}
         </div>
       </div>`;
     }).join('') || '<div class="matitem">紐づく材料がありません</div>';
@@ -2209,6 +2212,7 @@ body > header.bar{ flex:0 0 auto; }
     list.hidden = false;
   });
   $('p_matlist').addEventListener('click', e => {
+    if (e.target.closest('.mi-go')) return; // 入力リンクはそのまま遷移
     const item = e.target.closest('.matitem');
     if (item) item.classList.toggle('open');
   });
@@ -2374,7 +2378,8 @@ body > header.bar{ flex:0 0 auto; }
 
   /* ================= 起動 ================= */
   await loadRefs();
-  const q = new URL(location.href).searchParams.get('p');
+  const qs = new URL(location.href).searchParams;
+  const q = qs.get('p');
   if (q && projects.some(x => x.id === q)){ projId = q; $('proj').value = q; }
   await loadPhases();
   requestAnimationFrame(() => {
@@ -2383,6 +2388,12 @@ body > header.bar{ flex:0 0 auto; }
       drawGantt(slack);
     }
   });
+  // 確認ページ（カレンダー等）から特定の工程を指定して来たら、その工程を直接開く
+  const phaseId = qs.get('phase');
+  if (phaseId){
+    const ph = phases.find(x => x.id === phaseId);
+    if (ph) openPanel(ph);
+  }
 })();
 </script>
 </body>
