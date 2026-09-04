@@ -336,7 +336,7 @@
       <span class="k">現場代理人</span>
       <span class="dv r"><input id="f_agent" type="text"></span>
       <span class="k">現場担当</span>
-      <span class="dv"><select id="f_mgr"></select></span>
+      <span class="dv"><input id="f_mgr" type="text"></span>
 
       <span class="k">主任技術者</span>
       <span class="dv r"><input id="f_eng" type="text"></span>
@@ -411,11 +411,6 @@
 
     $('f_client').innerHTML = '<option value="">（未設定）</option>' +
       partners.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
-    const mgrCandidates = users.filter(x => x.role !== 'member');
-    $('f_mgr').innerHTML = '<option value="">（未設定）</option>' +
-      mgrCandidates.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
-    setEmptyNote($('f_mgr'), mgrCandidates.length === 0,
-      '現場監督・管理者の利用者が登録されていません。先に利用者ページから登録してください。', 'users.html', '利用者ページへ');
   }
 
   async function loadProjects(){
@@ -450,7 +445,7 @@
     $('list').innerHTML = rows.map((p, i) => {
       const meta = [];
       if (pmap[p.client_partner_id]) meta.push(esc(pmap[p.client_partner_id]));
-      if (umap[p.manager_user_id])   meta.push('担当 ' + esc(umap[p.manager_user_id]));
+      if (p.manager_name)   meta.push('担当 ' + esc(p.manager_name));
       if (p.start_date || p.end_date_planned)
         meta.push(`${fmtDate(p.start_date)||'—'} 〜 ${fmtDate(p.end_date_planned)||'—'}`);
       if (Number(p.contract_amount) > 0)
@@ -548,7 +543,7 @@
           <div class="sh">体制・その他</div>
           ${cell('現場代理人', esc(p.agent_name||''), {r:true})}${cell('工事種別', esc(p.construction_type||''))}
           ${cell('主任技術者', esc(p.engineer_name||''), {r:true})}${cell('保険・保証', esc(p.insurance_note||''))}
-          ${cell('現場担当', esc(umap[p.manager_user_id]||''), {r:true})}${cell('備考', esc(p.note||'').replace(/\n/g,'<br>'))}
+          ${cell('現場担当', esc(p.manager_name||''), {r:true})}${cell('備考', esc(p.note||'').replace(/\n/g,'<br>'))}
         </div>
 
         <div class="ovsec" style="margin-top:10px"><div class="t">許認可</div>${pmHtml}</div>
@@ -695,7 +690,7 @@
     $('f_actual').value = p ? (p.end_date_actual||'') : '';
     $('f_agent').value  = p ? (p.agent_name||'') : '';
     $('f_eng').value    = p ? (p.engineer_name||'') : '';
-    $('f_mgr').value    = p ? (p.manager_user_id||'') : '';
+    $('f_mgr').value    = p ? (p.manager_name||'') : '';
     $('f_ins').value    = p ? (p.insurance_note||'') : '';
     $('f_note').value   = p ? (p.note||'') : '';
 
@@ -814,7 +809,7 @@
       end_date_actual  : $('f_actual').value || null,
       agent_name       : $('f_agent').value.trim() || null,
       engineer_name    : $('f_eng').value.trim() || null,
-      manager_user_id  : $('f_mgr').value || null,
+      manager_name     : $('f_mgr').value.trim() || null,
       permits          : permits,
       insurance_note   : $('f_ins').value.trim() || null,
       note             : $('f_note').value.trim() || null

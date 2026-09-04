@@ -225,7 +225,7 @@
   /* ================= 読み込み ================= */
   async function loadRefs(){
     const [pr, u] = await Promise.all([
-      sb.from('projects').select('id,project_no,name,manager_user_id').eq('is_active', true)
+      sb.from('projects').select('id,project_no,name,manager_user_id,manager_name').eq('is_active', true)
         .order('project_no', { ascending:false }),
       sb.from('app_users').select('id,name').eq('is_active', true).order('name')
     ]);
@@ -305,9 +305,10 @@
 
   function updateProjMgr(){
     const p = projects.find(x => x.id === $('proj').value);
-    const mgr = p ? users.find(u => u.id === p.manager_user_id) : null;
-    $('pmgr').hidden = !mgr;
-    $('pmgr').textContent = mgr ? `現場責任者：${mgr.name}` : '';
+    let name = p ? (p.manager_name || '') : '';
+    if (!name && p && p.manager_user_id){ const u = users.find(x => x.id === p.manager_user_id); name = u ? u.name : ''; }
+    $('pmgr').hidden = !name;
+    $('pmgr').textContent = name ? `現場責任者：${name}` : '';
   }
   $('proj').addEventListener('change', () => { loadReports(); updateProjMgr(); });
   $('fst').addEventListener('change', render);
