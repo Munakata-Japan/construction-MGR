@@ -72,6 +72,11 @@
   .cat{ font-size:10.5px; font-weight:700; padding:2px 6px; border-radius:var(--radius-sm); text-align:center; }
   .cat.material{ background:#E3EBF3; color:var(--ink-2); }
   .cat.labor{ background:#FBF1EF; color:#8C2A1D; }
+  .xtag{ font-size:10px; font-weight:700; padding:1px 5px; border-radius:var(--radius-sm); background:#FBF0D4; color:#6B4E00; margin-left:6px; white-space:nowrap; }
+  .startalert{ font-size:12px; font-weight:700; color:#8C2A1D; background:#FBF1EF;
+    border:1px solid #E7C3BC; border-radius:var(--radius-sm); padding:5px 10px;
+    white-space:normal; line-height:1.4; max-width:560px; margin-left:auto; }
+  .startalert[hidden]{ display:none; }
   .diff.over{ color:var(--alert); font-weight:700; }
   .diff.under{ color:var(--ok); }
   .qtag{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:var(--radius-sm); white-space:nowrap; }
@@ -123,6 +128,7 @@
       <option value="labor">外注・労務費のみ</option>
     </select>
     <span class="sp"></span>
+    <span id="startalert" class="startalert" hidden>⚠ 着工済み：着工前原価には追加できません（追加は副資材・突発として記録）</span>
   </div>
 
   <div id="msg" class="msg"></div>
@@ -168,6 +174,13 @@
       <div class="row">
         <label for="f_estp">見積先</label>
         <div class="fld"><select id="f_estp"></select></div>
+      </div>
+      <div class="row">
+        <label for="f_stage">原価区分</label>
+        <div class="fld"><select id="f_stage">
+          <option value="estimate">当初見積（着工前・原価台帳に載る）</option>
+          <option value="extra">追加（副資材・突発。実行予算のみ）</option>
+        </select><span id="f_stagehint" style="font-size:11.5px;color:var(--alert);margin-left:8px;flex:1 1 100%"></span></div>
       </div>
     </div>
 
@@ -311,7 +324,7 @@
 
   async function loadRefs(){
     const [pr, pt] = await Promise.all([
-      sb.from('projects').select('id,project_no,name').eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('projects').select('id,project_no,name,start_date').eq('is_active', true).order('project_no', { ascending:false }),
       sb.from('partners').select('id,name').eq('is_active', true).order('name')
     ]);
     projects = pr.data || [];
@@ -360,6 +373,12 @@
     d.setDate(d.getDate() + n);
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
+  function todayYMD(){
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  }
+  // 着工後かどうか＝工程表のガント着工日（工事の開始日）を過ぎているか
+  function isStarted(p){ return !!(p && p.start_date && p.start_date <= todayYMD()); }
   // 一覧の狭い列用：2026-08-28 → 26/8/28
   function fmtDateShort(ymd){
     if (!ymd) return '';
@@ -369,6 +388,7 @@
 
   function render(){
     $('dock').hidden = !(canEdit && projId);
+    $('startalert').hidden = !isStarted(projects.find(p => p.id === projId));
     if (!projId){
       $('sumgrid').hidden = true;
       $('count').textContent = '';
@@ -475,7 +495,7 @@
         h += `<button class="brow${conflict ? ' conflict' : ''}" data-id="${x.id}">
           <span class="no">${no}</span>
           <span class="cat ${x.category}">${x.category === 'material' ? '材' : '工'}</span>
-          <span class="nm" title="${esc(x.item_name)}">${esc(x.item_name)}</span>
+          <span class="nm" title="${esc(x.item_name)}">${esc(x.item_name)}${x.cost_stage === 'extra' ? '<span class="xtag">追加</span>' : ''}</span>
           <span class="sub" title="${esc(sub)}">${esc(sub || '—')}</span>
           <span class="num">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</span>
           <span class="num">${fmt(x.unit_price)}</span>
@@ -541,6 +561,16 @@
     $('f_name').value   = x ? (x.item_name || '') : '';
     $('f_phase').value  = x ? (x.phase_id || '') : '';
     $('f_estp').value   = x ? (x.estimate_partner_id || '') : '';
+    // 着工後は「当初見積（着工前）」を新規に足せない（着工前原価台帳への滑り込み防止）。
+    // 既存の見積項目はそのまま扱えるが、新規・追加項目は「追加（副資材・突発）」のみ。
+    const curP = projects.find(p => p.id === projId);
+    const started = isStarted(curP);
+    const isExEst = x && (x.cost_stage || 'estimate') === 'estimate';
+    const estOpt = $('f_stage').querySelector('option[value="estimate"]');
+    estOpt.disabled = started && !isExEst;
+    $('f_stage').value = estOpt.disabled ? 'extra' : (x ? (x.cost_stage || 'estimate') : 'estimate');
+    $('f_stagehint').textContent = estOpt.disabled
+      ? 'この工事は着工済みです。着工前原価には追加できません（追加＝副資材・突発として登録されます）。' : '';
     $('f_qty').value    = x && x.quantity !== null ? x.quantity : '';
     $('f_unit').value   = x ? (x.unit || '') : '';
     $('f_price').value  = x && x.unit_price !== null ? x.unit_price : '';
@@ -580,6 +610,14 @@
     const nm = $('f_name').value.trim();
     if (!nm){ showMsg($('pmsg'), '内容を入れてください。', 'err'); $('f_name').focus(); return; }
 
+    // 着工後は着工前原価（当初見積）へ新規追加できない（滑り込み防止）
+    const startedS = isStarted(projects.find(p => p.id === projId));
+    const wasEst = editing && (editing.cost_stage || 'estimate') === 'estimate';
+    if (startedS && $('f_stage').value === 'estimate' && !wasEst){
+      showMsg($('pmsg'), 'この工事は着工済みです。着工前原価（当初見積）に新しく追加できません。「追加（副資材・突発）」で登録してください。', 'err');
+      return;
+    }
+
     const body = {
       organization_id : me.organization_id,
       project_id       : projId,
@@ -587,6 +625,7 @@
       category         : $('f_cat').value,
       item_name        : nm,
       estimate_partner_id: $('f_estp').value || null,
+      cost_stage       : $('f_stage').value,
       quantity         : $('f_qty').value === '' ? null : Number($('f_qty').value),
       unit             : $('f_unit').value.trim() || null,
       unit_price       : $('f_price').value === '' ? null : Number($('f_price').value),
