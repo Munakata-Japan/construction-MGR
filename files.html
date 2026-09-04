@@ -117,6 +117,7 @@
       <option value="other">その他</option>
     </select>
     <select id="fphase"><option value="">すべての工程</option></select>
+    <select id="fassignee"><option value="">すべての担当者</option></select>
     <select id="fsort">
       <option value="date">取り込み日順（新しい順）</option>
       <option value="name">名前順</option>
@@ -144,6 +145,10 @@
         <option value="internal">社内の記録（軽くする）</option>
       </select>
       <select id="u_phase"></select>
+    </div>
+    <div class="opt2">
+      <input id="u_assignee" type="text" list="assigneelist" placeholder="担当者（現場で撮影・作業した人・省略可）">
+      <select id="u_report"><option value="">日報にひもづけない</option></select>
     </div>
     <div class="opt2">
       <input id="u_title" type="text" placeholder="題名（まとめて付ける・省略可）">
@@ -188,7 +193,18 @@
     <div class="sheet">
       <div class="head">この資料について</div>
       <div class="row">
-        <label>アップロード</label>
+        <label for="f_assignee">担当者</label>
+        <div class="fld">
+          <input id="f_assignee" type="text" list="assigneelist" placeholder="現場で撮影・作業した人の氏名">
+          <datalist id="assigneelist"></datalist>
+        </div>
+      </div>
+      <div class="row">
+        <label for="f_report">日報にひもづけ</label>
+        <div class="fld"><select id="f_report"><option value="">ひもづけない</option></select></div>
+      </div>
+      <div class="row">
+        <label>取り込んだ人</label>
         <div class="fld"><span id="p_uploader" style="font-size:13.5px;color:var(--sub)"></span></div>
       </div>
       <div class="row">
@@ -267,8 +283,35 @@
 
   paintBar(me, await loadOrgName(me.organization_id));
 
-  let projects = [], phases = [], bbFields = [], files = [], users = [], editing = null;
+  let projects = [], phases = [], bbFields = [], files = [], users = [], reports = [], editing = null;
   let projId = null, urlCache = {};
+
+  /* 日報の担当者名（外注先は会社名＋記入者、社員は氏名） */
+  function repName(r){
+    if (!r) return '';
+    if (r.reporter_type === 'partner')
+      return [r.partner_company, r.partner_name].filter(Boolean).join(' ');
+    const u = users.find(x => x.id === r.reporter_user_id);
+    return u ? u.name : '';
+  }
+  function repLabel(r){
+    const nm = repName(r);
+    return `${fmtDate(r.report_date)}　${nm || '担当不明'}`;
+  }
+
+  /* その工事の作業日報を読み込み、取り込み欄の「日報にひもづけ」を作る */
+  async function loadReports(){
+    if (!projId){ reports = []; }
+    else {
+      const { data } = await sb.from('daily_reports')
+        .select('id,report_date,reporter_type,reporter_user_id,partner_company,partner_name')
+        .eq('project_id', projId).eq('is_active', true)
+        .order('report_date', { ascending:false }).limit(200);
+      reports = data || [];
+    }
+    const opt = reports.map(r => `<option value="${r.id}">${esc(repLabel(r))}</option>`).join('');
+    $('u_report').innerHTML = '<option value="">日報にひもづけない</option>' + opt;
+  }
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
@@ -287,6 +330,8 @@
       projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
     setEmptyNote($('proj'), projects.length === 0,
       '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
+    // 担当者の候補（社員の氏名）。手入力もできる
+    $('assigneelist').innerHTML = users.map(x => `<option value="${esc(x.name)}">`).join('');
   }
 
   async function loadPhases(){
@@ -339,9 +384,22 @@
       .order('taken_on', { ascending:false }).order('created_at', { ascending:false });
     if (error){ showMsg($('msg'), '読み込めませんでした。' + error.message, 'err'); return; }
     files = data || [];
+    paintAssigneeFilter();
     render();
     paintTagHelp();
     paintUsage();
+  }
+
+  /* 担当者の絞り込み肢を、実際に付いている担当者から作る（選択は保つ） */
+  function paintAssigneeFilter(){
+    const cur = $('fassignee').value;
+    const names = [...new Set(files.map(f => f.assignee_name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ja'));
+    const hasNone = files.some(f => !f.assignee_name);
+    $('fassignee').innerHTML = '<option value="">すべての担当者</option>' +
+      names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('') +
+      (hasNone ? '<option value="（担当なし）">（担当なし）</option>' : '');
+    $('fassignee').value = cur;
+    if ($('fassignee').value !== cur) $('fassignee').value = '';
   }
 
   let usedPct = 0;
@@ -549,12 +607,14 @@
   function render(){
     const kd = $('fkind').value, ph = $('fphase').value;
     const q  = $('q').value.trim().toLowerCase();
+    const asg = $('fassignee').value;
 
     let rows = files.filter(f => {
       if (kd && f.file_kind !== kd) return false;
       if (ph && f.phase_id !== ph) return false;
+      if (asg && (f.assignee_name || '（担当なし）') !== asg) return false;
       if (!q) return true;
-      return [f.title, f.bb_location, f.bb_station, f.original_name, f.description]
+      return [f.title, f.bb_location, f.bb_station, f.original_name, f.description, f.assignee_name]
         .some(v => (v || '').toLowerCase().includes(q));
     });
 
@@ -594,13 +654,14 @@
     $('grid').innerHTML = photos.map(f => {
       const pm = phases.find(p => p.id === f.phase_id);
       const um = users.find(u => u.id === f.uploaded_by);
+      const who = f.assignee_name ? '担当 ' + esc(f.assignee_name) : (um ? '取込 ' + esc(um.name) : '');
       return `<button class="card" data-id="${f.id}">
         <span class="ph" data-p="${esc(f.thumb_path || f.storage_path || '')}" data-m="${esc(f.mime_type||'')}" data-th="${f.thumb_path ? 1 : 0}">
           <span class="pill${f.purpose === 'internal' ? ' int' : ''}">${f.purpose === 'submit' ? '提出用' : '社内'}</span>
         </span>
         <span class="cb">
           <span class="c1">${esc(f.title || f.original_name || '（無題）')}</span>
-          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}${um ? ' ・ ' + esc(um.name) : ''}</span>
+          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}${who ? ' ・ ' + who : ''}</span>
         </span></button>`;
     }).join('');
 
@@ -608,7 +669,8 @@
       const pm = phases.find(p => p.id === f.phase_id);
       const um = users.find(u => u.id === f.uploaded_by);
       const ext = /\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1]?.toUpperCase() || KIND[f.file_kind] || '';
-      const meta = [f.taken_on ? fmtDate(f.taken_on) : '', pm ? pm.name : '', um ? um.name : '', f.purpose === 'internal' ? '社内' : '提出用']
+      const who = f.assignee_name ? '担当 ' + f.assignee_name : (um ? '取込 ' + um.name : '');
+      const meta = [f.taken_on ? fmtDate(f.taken_on) : '', pm ? pm.name : '', who, f.purpose === 'internal' ? '社内' : '提出用']
         .filter(Boolean).map(esc);
       return `<button class="item drow" data-id="${f.id}">
         <span class="rno">${i + 1}</span>
@@ -652,10 +714,18 @@
     $('up').hidden = true;
     updateProjMgr();
     await loadPhases();
+    await loadReports();
     await loadFiles();
+  });
+
+  // 取り込み欄：日報を選ぶと、その日報の担当者を自動で入れる（未入力のときだけ）
+  $('u_report').addEventListener('change', () => {
+    const r = reports.find(x => x.id === $('u_report').value);
+    if (r && !$('u_assignee').value.trim()) $('u_assignee').value = repName(r);
   });
   $('fkind').addEventListener('change', render);
   $('fphase').addEventListener('change', render);
+  $('fassignee').addEventListener('change', render);
   $('fsort').addEventListener('change', render);
   $('q').addEventListener('input', render);
 
@@ -739,6 +809,10 @@
     const phase   = $('u_phase').value || null;
     const utitle  = $('u_title').value.trim() || null;
     const utags   = $('u_tags').value.split(/[、,]/).map(x => x.trim()).filter(Boolean);
+    const ureport = $('u_report').value || null;
+    // 担当者：入力があればそれ。無ければ選んだ日報の担当者を使う
+    const rsel    = reports.find(x => x.id === ureport);
+    const uassign = $('u_assignee').value.trim() || (rsel ? repName(rsel) : '') || null;
     $('u_go').disabled = true;
     let ok = 0, ng = 0, geoOk = 0;
 
@@ -797,6 +871,8 @@
           phase_id       : phase,
           title          : list.length > 1 && utitle ? `${utitle}（${i+1}）` : utitle,
           tags           : utags,
+          assignee_name  : uassign,
+          daily_report_id: ureport,
           taken_on       : (geo.at ? geo.at.slice(0,10)
                             : new Date(f.lastModified || Date.now()).toISOString().slice(0,10)),
           captured_at    : geo.at ? new Date(geo.at).toISOString() : null,
@@ -818,6 +894,7 @@
     picked = [];
     paintPicked();
     $('u_title').value = '';
+    $('u_assignee').value = ''; $('u_report').value = '';
     $('prog').textContent = '';
     showMsg($('msg'),
       `${ok}件を取り込みました。${ng ? `${ng}件は失敗しました。` : ''}` +
@@ -849,6 +926,11 @@
     $('ptitle').textContent = KIND[f.file_kind] || '資料';
     const uploader = users.find(u => u.id === f.uploaded_by);
     $('p_uploader').textContent = uploader ? uploader.name : '（不明）';
+    $('f_assignee').value = f.assignee_name || '';
+    // 日報リンク：この工事の日報から選べるようにする（開いている工事の分を使う）
+    $('f_report').innerHTML = '<option value="">ひもづけない</option>' +
+      reports.map(r => `<option value="${r.id}">${esc(repLabel(r))}</option>`).join('');
+    $('f_report').value  = f.daily_report_id || '';
     $('f_title').value   = f.title || '';
     $('f_kind').value    = f.file_kind;
     $('f_purpose').value = f.purpose;
@@ -931,6 +1013,12 @@
   $('close').addEventListener('click', closePanel);
   $('cancel').addEventListener('click', closePanel);
 
+  // 編集：日報を選ぶと、その日報の担当者を自動で入れる（未入力のときだけ）
+  $('f_report').addEventListener('change', () => {
+    const r = reports.find(x => x.id === $('f_report').value);
+    if (r && !$('f_assignee').value.trim()) $('f_assignee').value = repName(r);
+  });
+
   $('dl').addEventListener('click', async () => {
     if (!editing) return;
     const u = await signedUrl(editing.storage_path);
@@ -949,6 +1037,8 @@
       purpose    : $('f_purpose').value,
       taken_on   : $('f_taken').value || null,
       phase_id   : $('f_phase').value || null,
+      assignee_name  : $('f_assignee').value.trim() || null,
+      daily_report_id: $('f_report').value || null,
       description: $('f_desc').value.trim() || null,
       tags       : $('f_tags').value.split(/[、,]/).map(s => s.trim()).filter(Boolean),
       bb_extra   : {}
@@ -990,6 +1080,7 @@
   if (q && projects.some(x => x.id === q)){ projId = q; $('proj').value = q; $('dock').hidden = false; }
   updateProjMgr();
   await loadPhases();
+  await loadReports();
   await loadFiles();
 })();
 </script>
