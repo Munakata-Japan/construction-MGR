@@ -242,7 +242,6 @@
   <span class="mark" aria-hidden="true"></span>
   <h1>工事一覧</h1>
   <div class="who" id="who"></div>
-  <button class="btn ghost sm barbtn" id="out">出る</button>
 </header>
 
 <div class="wrap">
@@ -383,7 +382,6 @@
   const canDelete = (me.role === 'admin');
 
   paintBar(me, await loadOrgName(me.organization_id));
-  $('out').addEventListener('click', signOut);
   if (canEdit) $('dock').hidden = false;
 
   for (const [k,v] of Object.entries(STATUS)){

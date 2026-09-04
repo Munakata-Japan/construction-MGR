@@ -400,7 +400,6 @@ body > header.bar{ flex:0 0 auto; }
   <span class="mark" aria-hidden="true"></span>
   <h1>工程表</h1>
   <div class="who" id="who"></div>
-  <button class="btn ghost sm barbtn" id="out">出る</button>
 </header>
 
 <div class="ctl">
@@ -764,7 +763,6 @@ body > header.bar{ flex:0 0 auto; }
   const canEdit = (me.role === 'admin' || me.role === 'manager');
 
   paintBar(me, await loadOrgName(me.organization_id));
-  $('out').addEventListener('click', signOut);
 
   $('notebtn').classList.add('on');
 
