@@ -42,10 +42,10 @@
 
   .atable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
            box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
-  .ahead, .arow{
-    display:grid; align-items:start; gap:8px; min-width:1044px;
-    grid-template-columns:40px 1.5fr 1.3fr 1.8fr 96px 96px 74px 168px;
-  }
+  .ahead, .arow{ display:grid; align-items:start; gap:8px; }
+  /* 工事を1つ選んだとき（工事列なし）と、すべての工事（横断・工事列あり）で列を切り替える */
+  .m-one .ahead, .m-one .arow{ min-width:820px; grid-template-columns:40px 172px 1.2fr 1.9fr 96px 96px 80px; }
+  .m-all .ahead, .m-all .arow{ min-width:1050px; grid-template-columns:40px 172px 1.3fr 1.2fr 1.9fr 96px 96px 80px; }
   .ahead{
     position:sticky; top:0; z-index:5;
     background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
@@ -90,7 +90,7 @@
     #atable{ display:block; }
     .atable{ flex:none; max-height:none; overflow:visible; }
     .ahead{ display:none; }
-    .arow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
+    .m-one .arow, .m-all .arow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
     .arow .num, .arow .rno{ text-align:left; }
     .mlbl{ display:inline; color:var(--sub); font-weight:700; font-size:11px; }
   }
@@ -245,7 +245,8 @@
       $('atable').innerHTML = `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、発注・納品の遅れを検知して一覧します。全工事をまとめて見るときは「すべての工事（横断）」を選んでください。</div>`;
       return;
     }
-    const inProj = x => (fp === '__all__' || x.project_id === fp);
+    const isAll = (fp === '__all__');
+    const inProj = x => (isAll || x.project_id === fp);
     const pmap = Object.fromEntries(projects.map(p => [p.id, p]));
     const phmap = Object.fromEntries(phases.map(p => [p.id, p]));
 
@@ -280,25 +281,27 @@
       return;
     }
 
-    let h = `<div class="atable"><div class="ahead">
-      <span class="rno">NO</span><span>工事</span><span>工程／着工予定</span><span>材料</span>
-      <span class="num">納品予定</span><span class="num">発注期限</span><span>状態</span><span>アラート</span>
+    let h = `<div class="atable ${isAll ? 'm-all' : 'm-one'}"><div class="ahead">
+      <span class="rno">NO</span><span>アラート</span>${isAll ? '<span>工事</span>' : ''}<span>工程</span><span>材料</span>
+      <span class="num">納品予定</span><span class="num">発注期限</span><span>状態</span>
     </div>`;
     rows.forEach(({ x, phase, a }, i) => {
       const pj = pmap[x.project_id];
       const href = isMgr ? `budget.html?p=${x.project_id}` : `schedule.html?p=${x.project_id}`;
+      const projCell = isAll
+        ? `<span class="nm"><span class="no">${pj ? esc(pj.project_no) : ''}</span>${pj ? esc(pj.name) : '（工事不明）'}</span>`
+        : '';
       h += `<a class="arow ${a.level === 'red' ? 'red' : ''}" href="${href}">
         <span class="rno"><b class="mlbl">No. </b>${i + 1}</span>
-        <span class="nm"><span class="no">${pj ? esc(pj.project_no) : ''}</span>${pj ? esc(pj.name) : '（工事不明）'}</span>
-        <span><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '（工事全体）'}</span>
-          <span class="sub">${phase && phase.start_date ? '着工 ' + fmtShort(phase.start_date) : '着工日 未定'}</span></span>
+        <span><span class="altag ${a.level}">${esc(a.text)}${a.dlNote && a.deadline ? `<span class="dl">発注期限 ${fmtShort(a.deadline)}</span>` : ''}</span></span>
+        ${projCell}
+        <span><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '工事全体'}</span>${phase && phase.start_date ? `<span class="sub">着工 ${fmtShort(phase.start_date)}</span>` : ''}</span>
         <span><span class="cat ${x.category}">${x.category === 'labor' ? '工' : '材'}</span>
           <span class="nm" style="display:inline;font-size:12px">${esc(x.item_name)}</span>
           <span class="sub">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</span></span>
-        <span class="num"><b class="mlbl">納品予定 </b>${x.scheduled_delivery_date ? fmtShort(x.scheduled_delivery_date) : '未定'}</span>
+        <span class="num"><b class="mlbl">納品予定 </b>${x.scheduled_delivery_date ? fmtShort(x.scheduled_delivery_date) : '—'}</span>
         <span class="num"><b class="mlbl">発注期限 </b>${a.deadline ? fmtShort(a.deadline) : '—'}</span>
         <span><span class="stag ${STATCLS[x.status] || ''}">${STATN[x.status] || x.status}</span></span>
-        <span><span class="altag ${a.level}">${esc(a.text)}${a.dlNote && a.deadline ? `<span class="dl">発注期限 ${fmtShort(a.deadline)}</span>` : ''}</span></span>
       </a>`;
     });
     h += `</div>`;
