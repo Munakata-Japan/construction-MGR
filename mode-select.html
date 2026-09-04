@@ -35,12 +35,15 @@
   .frame .grp:first-of-type{ margin-top:0; }
   .frame .grp{ margin:22px 0 11px; }
   .frame .modes{ grid-template-columns:repeat(auto-fill, minmax(196px, 1fr)); }
+  /* 現場管理は3列×2段で、左→右に実務・作業工程の流れを表す */
+  .frame .modes.m3{ grid-template-columns:repeat(3, minmax(0, 1fr)); }
   .frame .foot{ margin:14px 0 0; }
 
   @media (max-width:700px){
     .stage{ padding:14px 10px; }
     .frame .outer{ padding:4px; }
     .frame .inner{ padding:14px; }
+    .frame .modes.m3{ grid-template-columns:1fr 1fr; }
   }
 </style>
 </head>
@@ -97,26 +100,26 @@
   <div class="grp">
     <h2>現場管理</h2><span class="gph">第一段階</span>
   </div>
-  <div class="modes">
+  <div class="modes m3">
     <a class="mode" href="schedule.html">
       <span class="mno">11</span>
       <span class="mbody"><span class="mttl">工程表</span><span class="msub">ガント・ネットワーク</span></span>
     </a>
-    <a class="mode" href="reports.html">
+    <a class="mode" href="order-alerts.html">
       <span class="mno">12</span>
+      <span class="mbody"><span class="mttl">材料発注アラート</span><span class="msub">発注・納品の遅れを検知</span></span>
+    </a>
+    <a class="mode" href="calendar.html">
+      <span class="mno">13</span>
+      <span class="mbody"><span class="mttl">カレンダー</span><span class="msub">月表示・担当別</span></span>
+    </a>
+    <a class="mode" href="reports.html">
+      <span class="mno">14</span>
       <span class="mbody"><span class="mttl">作業日報</span><span class="msub">記入・承認・受領</span></span>
     </a>
     <a class="mode" href="files.html">
-      <span class="mno">13</span>
-      <span class="mbody"><span class="mttl">写真・書類</span><span class="msub">取り込み・黒板・検索</span></span>
-    </a>
-    <a class="mode" href="calendar.html">
-      <span class="mno">14</span>
-      <span class="mbody"><span class="mttl">カレンダー</span><span class="msub">月表示・担当別</span></span>
-    </a>
-    <a class="mode" href="order-alerts.html">
       <span class="mno">15</span>
-      <span class="mbody"><span class="mttl">材料発注アラート</span><span class="msub">発注・納品の遅れを検知</span></span>
+      <span class="mbody"><span class="mttl">写真・書類</span><span class="msub">取り込み・黒板・検索</span></span>
     </a>
     <a class="mode" href="safety-docs.html">
       <span class="mno">16</span>
@@ -129,13 +132,13 @@
     <h2>工事台帳</h2><span class="gph">第二段階</span>
   </div>
   <div class="modes">
-    <a class="mode" href="budget.html" data-role="manager">
-      <span class="mno">21</span>
-      <span class="mbody"><span class="mttl">実行予算</span><span class="msub">材工管理台帳</span></span>
-    </a>
     <a class="mode" href="genka.html" data-role="manager">
-      <span class="mno">24</span>
-      <span class="mbody"><span class="mttl">原価台帳</span><span class="msub">工事別の受注・原価・粗利</span></span>
+      <span class="mno">21</span>
+      <span class="mbody"><span class="mttl">原価台帳</span><span class="msub">工事別の仕入原価</span></span>
+    </a>
+    <a class="mode" href="budget.html" data-role="manager">
+      <span class="mno">22</span>
+      <span class="mbody"><span class="mttl">実行予算</span><span class="msub">材工管理台帳</span></span>
     </a>
   </div>
 
