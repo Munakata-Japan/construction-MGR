@@ -321,7 +321,7 @@
       return;
     }
 
-    $('list').innerHTML = rows.map(p => {
+    $('list').innerHTML = rows.map((p, i) => {
       const kbs = [];
       if (p.is_client) kbs.push('<span class="kb cl">クライアント</span>');
       if (p.is_subcontractor) kbs.push('<span class="kb sb">協力会社</span>');
@@ -340,6 +340,7 @@
       const flag = lic ? 'fl-cancelled' : (p.is_subcontractor ? 'fl-started' : 'fl-ordered');
 
       return `<button class="item" data-id="${p.id}">
+        <span class="rno">${i + 1}</span>
         <span class="flag ${flag}"></span>
         <span class="body">
           <span class="nm">${esc(p.name)}</span>

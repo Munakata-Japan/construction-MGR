@@ -373,7 +373,7 @@
       return;
     }
 
-    $('list').innerHTML = rows.map(u => {
+    $('list').innerHTML = rows.map((u, i) => {
       const rk = rmap[u.job_rank_id];
       const kbs = [];
       // 開発者アカウントは役割（経営者など）の表示を出さない
@@ -398,6 +398,7 @@
         : (Number(u.approve_limit) > 0 ? `<span class="lim">決裁 ${fmtMoney(u.approve_limit)}</span>` : '');
 
       return `<button class="item" data-id="${u.id}" style="${u.is_active ? '' : 'opacity:.6'}">
+        <span class="rno">${i + 1}</span>
         <span class="flag ${u.role === 'admin' ? 'fl-cancelled' : (u.role === 'manager' ? 'fl-started' : 'fl-estimate')}"></span>
         <span class="body">
           <span class="nm">${esc(dispName(u))}</span>

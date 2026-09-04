@@ -43,8 +43,8 @@
   .atable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
            box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
   .ahead, .arow{
-    display:grid; align-items:start; gap:8px; min-width:1000px;
-    grid-template-columns:1.5fr 1.3fr 1.8fr 96px 96px 74px 168px;
+    display:grid; align-items:start; gap:8px; min-width:1044px;
+    grid-template-columns:40px 1.5fr 1.3fr 1.8fr 96px 96px 74px 168px;
   }
   .ahead{
     position:sticky; top:0; z-index:5;
@@ -62,6 +62,7 @@
   .arow.red:hover{ background:#F8E4DF; }
   .arow .nm{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-weight:700; }
   .arow .no{ font-family:var(--mono); font-size:11px; color:var(--ink-2); display:block; }
+  .arow .rno, .ahead .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
   .arow .sub{ font-size:11px; color:var(--sub); line-height:1.4; }
   .arow .num{ font-family:var(--mono); text-align:left; white-space:nowrap; }
   .ahead .num{ text-align:left; }
@@ -90,7 +91,7 @@
     .atable{ flex:none; max-height:none; overflow:visible; }
     .ahead{ display:none; }
     .arow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
-    .arow .num{ text-align:left; }
+    .arow .num, .arow .rno{ text-align:left; }
     .mlbl{ display:inline; color:var(--sub); font-weight:700; font-size:11px; }
   }
 </style>
@@ -271,13 +272,14 @@
     }
 
     let h = `<div class="atable"><div class="ahead">
-      <span>工事</span><span>工程／着工予定</span><span>材料</span>
+      <span class="rno">NO</span><span>工事</span><span>工程／着工予定</span><span>材料</span>
       <span class="num">納品予定</span><span class="num">発注期限</span><span>状態</span><span>アラート</span>
     </div>`;
-    rows.forEach(({ x, phase, a }) => {
+    rows.forEach(({ x, phase, a }, i) => {
       const pj = pmap[x.project_id];
       const href = isMgr ? `budget.html?p=${x.project_id}` : `schedule.html?p=${x.project_id}`;
       h += `<a class="arow ${a.level === 'red' ? 'red' : ''}" href="${href}">
+        <span class="rno"><b class="mlbl">No. </b>${i + 1}</span>
         <span class="nm"><span class="no">${pj ? esc(pj.project_no) : ''}</span>${pj ? esc(pj.name) : '（工事不明）'}</span>
         <span><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '（工事全体）'}</span>
           <span class="sub">${phase && phase.start_date ? '着工 ' + fmtShort(phase.start_date) : '着工日 未定'}</span></span>

@@ -257,11 +257,18 @@ select{ appearance:none; background-image:none; }
 
 .item{
   background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-  display:grid; grid-template-columns:6px 1fr auto; align-items:stretch;
+  display:grid; grid-template-columns:auto 6px 1fr auto; align-items:stretch;
   cursor:pointer; text-align:left; width:100%; padding:0;
   font-family:var(--body); color:inherit;
   overflow:hidden; box-shadow:var(--shadow-1);
   transition:box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+}
+/* 縦に並ぶ一覧の通し番号（件数が一目で分かるよう、各行の左端に振る） */
+.item .rno{
+  align-self:stretch; display:flex; align-items:center; justify-content:center;
+  min-width:34px; padding:0 8px;
+  font-family:var(--mono); font-size:12px; color:var(--sub);
+  background:#F5F7F2; border-right:1px solid var(--rule-2);
 }
 .item:hover{ border-color:var(--ink); box-shadow:var(--shadow-2); transform:translateY(-1px); }
 .item:active{ box-shadow:var(--shadow-1); transform:translateY(0); }

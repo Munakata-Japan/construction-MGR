@@ -448,7 +448,7 @@
       return;
     }
 
-    $('list').innerHTML = rows.map(p => {
+    $('list').innerHTML = rows.map((p, i) => {
       const meta = [];
       if (pmap[p.client_partner_id]) meta.push(esc(pmap[p.client_partner_id]));
       if (umap[p.manager_user_id])   meta.push('担当 ' + esc(umap[p.manager_user_id]));
@@ -458,6 +458,7 @@
         meta.push(`<span class="amt">${fmtMoney(p.contract_amount)}</span>`);
 
       return `<button class="item" data-id="${p.id}">
+        <span class="rno">${i + 1}</span>
         <span class="flag fl-${p.status}"></span>
         <span class="body">
           <span class="no">${esc(p.project_no)}</span>
