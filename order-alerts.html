@@ -287,7 +287,8 @@
     </div>`;
     rows.forEach(({ x, phase, a }, i) => {
       const pj = pmap[x.project_id];
-      const href = isMgr ? `budget.html?p=${x.project_id}` : `schedule.html?p=${x.project_id}`;
+      // 確認ページから、その品目の入力画面（実行予算）へ直接飛ばす
+      const href = isMgr ? `budget.html?p=${x.project_id}&item=${x.id}&focus=delivery` : `schedule.html?p=${x.project_id}`;
       const projCell = isAll
         ? `<span class="nm"><span class="no">${pj ? esc(pj.project_no) : ''}</span>${pj ? esc(pj.name) : '（工事不明）'}</span>`
         : '';
