@@ -174,11 +174,12 @@
   .docform textarea{ min-height:58px; padding:5px 8px; font-size:13.5px; line-height:1.55; }
   .docform .pmwrap{ grid-column:1 / -1; padding:8px 10px; border-bottom:none; }
 
-  .pmrow{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
-  .pmrow select{ flex:1 1 190px; width:auto; min-width:0; }
-  .pmrow .pno{ flex:1 1 140px; width:auto; min-width:0; }
-  .pmrow .pdt{ flex:0 0 152px; width:152px; }
-  .pmrow .pnt{ flex:1 1 130px; width:auto; min-width:0; }
+  .pmrow{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
+  .pmrow select{ flex:0 1 220px; width:auto; min-width:0; }
+  .pmrow .p_lic{ flex:1 1 260px; min-width:0; font-size:12px; color:var(--sub); line-height:1.5; }
+  .pmrow .p_lic .licwarn{ color:var(--alert); font-weight:700; }
+  .pmrow .p_lic .licnear{ color:#9A6E00; font-weight:700; }
+  .pmrow .p_lic .p_licnone{ color:#9AA39C; }
 
   @media (max-width:1080px){
     .ovmain{ grid-template-columns:1fr; }
@@ -342,10 +343,10 @@
       <span class="k">備考</span>
       <span class="dv"><textarea id="f_note"></textarea></span>
 
-      <div class="sh">許認可</div>
+      <div class="sh">許認可（協力会社の建設業許可）</div>
       <div class="pmwrap">
         <div id="pms"></div>
-        <button class="btn ghost sm" id="pmadd" type="button" style="margin-top:4px">＋ 許認可を足す</button>
+        <button class="btn ghost sm" id="pmadd" type="button" style="margin-top:4px">＋ 協力会社を足す</button>
       </div>
     </div>
 
@@ -394,7 +395,7 @@
   /* ================= 読み込み ================= */
   async function loadRefs(){
     const [p, u, k] = await Promise.all([
-      sb.from('partners').select('id,name').eq('is_active', true).order('name'),
+      sb.from('partners').select('id,name,is_subcontractor,license_no,license_kinds,license_start_on,license_end_on').eq('is_active', true).order('name'),
       sb.from('app_users').select('id,name,role').eq('is_active', true).order('name'),
       sb.from('permit_kinds').select('id,name').eq('is_active', true).order('sort_order')
     ]);
@@ -503,11 +504,19 @@
     const tax  = Math.floor(amt * rate);
     const area = p.site_area ? Number(p.site_area).toLocaleString('ja-JP') + '<span class="un">㎡</span>' : '';
 
+    const pmap2 = Object.fromEntries(partners.map(x => [x.id, x]));
+    const _today = new Date(new Date().toDateString());
     const pms = Array.isArray(p.permits) ? p.permits : [];
     const pmHtml = pms.length
-      ? `<table class="ovpm"><thead><tr><th>種類</th><th>番号</th><th>取得日</th><th>備考</th></tr></thead><tbody>` +
-        pms.map(x => `<tr><td>${esc(x.kind||'')}</td><td class="mono">${esc(x.no||'')}</td>` +
-          `<td class="mono">${x.date ? fmtDate(x.date) : ''}</td><td>${esc(x.note||'')}</td></tr>`).join('') +
+      ? `<table class="ovpm"><thead><tr><th>協力会社</th><th>許可番号</th><th>業種</th><th>有効期限</th></tr></thead><tbody>` +
+        pms.map(x => {
+          const pt = pmap2[x.partner_id]; if (!pt) return '';
+          const exp = pt.license_end_on ? fmtDate(pt.license_end_on) : '—';
+          const late = pt.license_end_on && new Date(pt.license_end_on + 'T00:00:00') < _today;
+          return `<tr><td>${esc(pt.name)}</td><td class="mono">${esc(pt.license_no||'—')}</td>` +
+            `<td>${esc((pt.license_kinds||[]).join('・')||'—')}</td>` +
+            `<td class="mono"${late ? ' style="color:var(--alert);font-weight:700"' : ''}>${exp}</td></tr>`;
+        }).join('') +
         `</tbody></table>`
       : `<div class="ovnone">登録されていません</div>`;
 
@@ -617,22 +626,46 @@
   $('ovclose').addEventListener('click', () => { $('ovp').classList.remove('open'); editing = null; });
   $('ovedit').addEventListener('click', () => { $('ovp').classList.remove('open'); openPanel(editing); });
 
-  /* ================= 許認可の編集 ================= */
+  /* ================= 許認可（協力会社の建設業許可） ================= */
+  const _pmDay = 86400000;
+  const _pmd2n = s => s ? Math.round(new Date(s + 'T00:00:00').getTime() / _pmDay) : null;
+  // 選んだ協力会社の建設業許可（番号・業種・期限）を取引先の登録から表示。未登録・期限切れは警告
+  function licHtml(pt){
+    if (!pt) return '<span class="p_licnone">協力会社を選んでください</span>';
+    if (!pt.is_subcontractor) return '<span class="licwarn">協力会社として登録されていません</span>';
+    const parts = [];
+    if (pt.license_no) parts.push('許可 ' + esc(pt.license_no));
+    if (Array.isArray(pt.license_kinds) && pt.license_kinds.length) parts.push('業種 ' + esc(pt.license_kinds.join('・')));
+    let warn = '';
+    if (!pt.license_no){
+      warn = '<span class="licwarn">建設業許可 未登録</span>';
+    } else if (pt.license_end_on){
+      const left = _pmd2n(pt.license_end_on) - Math.round(Date.now() / _pmDay);
+      if (left < 0) warn = `<span class="licwarn">許可の期限切れ（${fmtDate(pt.license_end_on)}）</span>`;
+      else if (left < 90) warn = `<span class="licnear">許可の期限まで${left}日（${fmtDate(pt.license_end_on)}）</span>`;
+      else parts.push('期限 ' + fmtDate(pt.license_end_on));
+    }
+    return parts.join('　') + (warn ? (parts.length ? '　' : '') + warn : '');
+  }
+  function paintLic(row){
+    const id = row.querySelector('.p_sub').value;
+    row.querySelector('.p_lic').innerHTML = licHtml(partners.find(x => x.id === id));
+  }
   function pmRow(v){
-    const known = pkinds.some(k => k.name === (v && v.kind));
-    const opt = '<option value="">（種類を選ぶ）</option>' +
-      pkinds.map(k => `<option value="${esc(k.name)}"${v && v.kind === k.name ? ' selected' : ''}>${esc(k.name)}</option>`).join('') +
-      (v && v.kind && !known ? `<option value="${esc(v.kind)}" selected>${esc(v.kind)}</option>` : '');
+    const sel = (v && v.partner_id) || '';
+    const subs = partners.filter(p => p.is_subcontractor);
+    const opt = '<option value="">（協力会社を選ぶ）</option>' +
+      subs.map(p => `<option value="${p.id}"${sel === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
     return `<div class="pmrow">
-      <select class="p_kind">${opt}</select>
-      <input class="pno p_no" type="text" placeholder="番号" value="${esc((v&&v.no)||'')}">
-      <input class="pdt p_dt" type="date" value="${esc((v&&v.date)||'')}">
-      <input class="pnt p_nt" type="text" placeholder="備考" value="${esc((v&&v.note)||'')}">
+      <select class="p_sub">${opt}</select>
+      <span class="p_lic"></span>
       <button class="btn ghost sm p_rm" type="button">削除</button>
     </div>`;
   }
   function bindPmRm(){
     $('pms').querySelectorAll('.p_rm').forEach(b => b.onclick = () => b.closest('.pmrow').remove());
+    $('pms').querySelectorAll('.pmrow').forEach(paintLic);
+    $('pms').querySelectorAll('.p_sub').forEach(s => s.onchange = () => paintLic(s.closest('.pmrow')));
   }
   $('pmadd').addEventListener('click', () => {
     $('pms').insertAdjacentHTML('beforeend', pmRow(null)); bindPmRm();
@@ -758,11 +791,8 @@
     if (!name){ showMsg($('pmsg'), '工事名を入力してください。', 'err'); $('f_name').focus(); return; }
 
     const permits = [...$('pms').querySelectorAll('.pmrow')].map(r => ({
-      kind: r.querySelector('.p_kind').value,
-      no  : r.querySelector('.p_no').value.trim(),
-      date: r.querySelector('.p_dt').value,
-      note: r.querySelector('.p_nt').value.trim()
-    })).filter(x => x.kind || x.no || x.date || x.note);
+      partner_id: r.querySelector('.p_sub').value
+    })).filter(x => x.partner_id);
 
     const body = {
       organization_id  : me.organization_id,
