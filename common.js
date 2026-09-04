@@ -3,6 +3,17 @@
    BUILD: common.js v20260724A
    ============================================================ */
 
+/* ---------- 最新版をすぐ反映する（Service Worker・ネットワーク優先） ----------
+   GitHub Pages はHTMLに no-cache ヘッダーを付けられず、変更後に
+   ハード再読み込みが要りがちだった。ネットワーク優先のSWを常駐させ、
+   オンライン時は常に最新を取りに行くようにする（普通のリロードで反映）。
+------------------------------------------------------------------ */
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
 const STATUS = {
   estimate : '見積',
   ordered  : '受注',
