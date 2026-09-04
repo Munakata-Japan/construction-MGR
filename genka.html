@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: genka (原価台帳) v20260903A -->
+<!-- BUILD: genka (着工前原価台帳) v20260904A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -7,63 +7,72 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>原価台帳 ｜ 宗像総合管理システム</title>
+<title>着工前原価台帳 ｜ 宗像総合管理システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <style>
-  /* このページは横に長い表を扱うため、共通の960pxより広く使う */
+  /* 横に長い表を扱うため、共通の960pxより広く使う */
   .wrap{ max-width:1440px; }
 
   /* ページ自体はスクロールさせず、表の中だけをスクロールさせる（二重スクロール防止） */
   html, body{ height:100%; }
   body{ overflow:hidden; display:flex; flex-direction:column; }
   .bar{ flex:0 0 auto; }
-  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
-  .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:10px; }
+  .lead, .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
   #gtable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
 
-  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
-  .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:44px; flex:0 1 auto; }
+  .lead{ color:var(--sub); font-size:12.5px; line-height:1.6; margin:0 0 8px; }
+
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:38px; flex:0 1 auto; }
   .ctl .sp{ flex:1 1 0; }
 
-  .sumgrid{ display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); margin-bottom:18px; }
+  .sumgrid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); margin-bottom:10px; }
   .sumcard{
     background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-    box-shadow:var(--shadow-1); padding:12px 14px;
+    box-shadow:var(--shadow-1); padding:8px 12px;
   }
-  .sumcard .t{ font-size:11.5px; color:var(--sub); margin-bottom:6px; }
-  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:19px; color:var(--ink); }
-  .sumcard .v.neg{ color:var(--alert); }
+  .sumcard .t{ font-size:11px; color:var(--sub); margin-bottom:3px; }
+  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:18px; color:var(--ink); }
 
   .gtable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
            box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
   .ghead, .grow{
-    display:grid; align-items:start; gap:6px; min-width:640px;
-    grid-template-columns:40px 1.8fr 90px 130px 130px 130px;
+    display:grid; align-items:start; gap:6px; min-width:980px;
+    grid-template-columns:40px 54px 2.2fr 1.4fr 1.1fr 78px 96px 116px;
   }
-  .grow .rno, .ghead .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
   .ghead{
     position:sticky; top:0; z-index:5;
     background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
-    white-space:nowrap; align-items:center; padding:5px 12px;
+    white-space:nowrap; align-items:center; padding:6px 12px;
     border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0;
   }
   .grow{
-    padding:9px 12px; border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
+    padding:9px 12px; border-top:1px solid var(--rule-2); background:var(--card);
     font-size:12.5px; text-align:left; width:100%; font-family:var(--body); color:inherit;
   }
-  .grow:hover{ background:#F5F7F3; }
+  .grow .rno, .ghead .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
   .grow .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
   .ghead .num{ text-align:right; }
   .grow .nm{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-weight:700; }
-  .grow .no{ font-family:var(--mono); font-size:11px; color:var(--ink-2); display:block; }
-  .profit.neg{ color:var(--alert); font-weight:700; }
-  .profit.pos{ color:var(--ok); }
+  .grow .sub{ white-space:normal; overflow-wrap:break-word; line-height:1.4; color:var(--sub); }
+  .cat{ font-size:10.5px; font-weight:700; padding:2px 6px; border-radius:var(--radius-sm); text-align:center; }
+  .cat.material{ background:#E3EBF3; color:var(--ink-2); }
+  .cat.labor{ background:#FBF1EF; color:#8C2A1D; }
+  .gphase{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:7px 12px; background:#E9ECE4; border-top:1px solid var(--rule);
+    font-size:11.5px; font-weight:700; color:var(--ink-2);
+  }
+  .gphase:first-child{ border-top:none; }
+  .gphase .gc{ font-weight:400; color:var(--sub); font-family:var(--mono); font-size:11px; }
   .gfoot{
-    display:grid; grid-template-columns:40px 1.8fr 90px 130px 130px 130px;
-    min-width:640px; gap:6px; padding:9px 12px; border-top:2px solid var(--ink);
+    position:sticky; bottom:0; z-index:4;
+    display:grid; grid-template-columns:40px 54px 2.2fr 1.4fr 1.1fr 78px 96px 116px;
+    min-width:980px; gap:6px; padding:9px 12px; border-top:2px solid var(--ink);
     font-weight:700; background:#F5F7F3;
   }
   .gfoot .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
@@ -74,10 +83,10 @@
     .wrap{ flex:none; height:auto; overflow:visible; display:block; }
     #gtable{ display:block; }
     .gtable{ flex:none; max-height:none; overflow:visible; }
-
     .ghead, .gfoot{ display:none; }
-    .grow{ grid-template-columns:1fr; min-width:0; padding:10px 12px; gap:2px; }
+    .grow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
     .grow .num{ text-align:left; }
+    .grow .rno{ text-align:left; }
   }
 </style>
 </head>
@@ -85,23 +94,24 @@
 
 <header class="bar">
   <span class="mark" aria-hidden="true"></span>
-  <h1>原価台帳</h1>
+  <h1>着工前原価台帳</h1>
   <div class="who" id="who"></div>
   <button class="btn ghost sm barbtn" id="out">出る</button>
 </header>
 
 <div class="wrap">
+  <p class="lead">
+    見積先から取った材工の見積を、工事ごとに1件ずつ明細で並べた
+    <b>着工前の原価</b>です。工事が進む中で出てくる副資材や突発的な費用は
+    「実行予算」に記録します。
+  </p>
+
   <div class="ctl">
-    <select id="fst">
-      <option value="">すべての状態</option>
-      <option value="active">見積〜施工中（完工前）</option>
-      <option value="estimate">見積</option>
-      <option value="ordered">受注</option>
-      <option value="started">着工</option>
-      <option value="completed">完工</option>
-      <option value="invoiced">請求済</option>
-      <option value="paid">入金済</option>
-      <option value="cancelled">中止</option>
+    <select id="proj"><option value="">工事を選んでください</option></select>
+    <select id="fcat">
+      <option value="">材工すべて</option>
+      <option value="material">材料費のみ</option>
+      <option value="labor">外注・労務費のみ</option>
     </select>
     <span class="sp"></span>
   </div>
@@ -128,93 +138,140 @@
   paintBar(me, await loadOrgName(me.organization_id));
   $('out').addEventListener('click', signOut);
 
-  let projects = [], costByProject = {};
+  let projects = [], partners = [], phases = [], items = [], projId = null;
 
-  async function loadAll(){
-    const [pr, bi] = await Promise.all([
-      sb.from('projects').select('id,project_no,name,status')
-        .eq('is_active', true).order('project_no', { ascending:false }),
-      sb.from('phase_budget_items').select('project_id,category,quantity,unit_price,amount,contract_amount')
+  async function loadRefs(){
+    const [pr, pt] = await Promise.all([
+      sb.from('projects').select('id,project_no,name').eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('partners').select('id,name').eq('is_active', true).order('name')
     ]);
-    if (pr.error){ showMsg($('msg'), '読み込めませんでした。' + pr.error.message, 'err'); return; }
-    if (bi.error){
-      showMsg($('msg'),
-        /relation .* does not exist|schema cache/i.test(bi.error.message || '')
-          ? 'データベースに実行予算の表がまだありません。Supabase の SQL Editor で phase3_budget.sql を実行してください。'
-          : '原価の読み込みに失敗しました。' + bi.error.message, 'err');
-    }
     projects = pr.data || [];
+    partners = pt.data || [];
+    $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
+      projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+  }
 
-    costByProject = {};
-    (bi.data || []).forEach(x => {
-      const g = costByProject[x.project_id] || (costByProject[x.project_id] = { material:0, labor:0 });
-      const v = (x.contract_amount ?? x.amount) || 0;
-      g[x.category === 'labor' ? 'labor' : 'material'] += Number(v);
-    });
+  async function loadPhases(){
+    if (!projId){ phases = []; return; }
+    const { data } = await sb.from('project_phases')
+      .select('id,name').eq('project_id', projId).eq('is_active', true).order('seq');
+    phases = data || [];
+  }
 
+  async function loadItems(){
+    if (!projId){ items = []; render(); return; }
+    // 着工前の見積原価だけ（cost_stage=estimate）。中止は除く
+    const { data, error } = await sb.from('phase_budget_items')
+      .select('id,phase_id,category,item_name,estimate_partner_id,quantity,unit,unit_price,amount,status,cost_stage,note')
+      .eq('project_id', projId).order('seq');
+    if (error){
+      showMsg($('msg'),
+        /column .* does not exist|schema cache|relation .* does not exist/i.test(error.message || '')
+          ? 'データベースに必要な項目がまだありません。Supabase の SQL Editor で phase3_budget.sql と phase8_cost_stage.sql を実行してください。'
+          : '読み込めませんでした。' + error.message, 'err');
+      items = [];
+    } else {
+      items = (data || []).filter(x => (x.cost_stage || 'estimate') === 'estimate' && x.status !== 'cancelled');
+    }
     render();
   }
 
-  /* ================= 表示 ================= */
+  function fmt(v){ return (v || v === 0) ? fmtMoney(v) : '—'; }
+
   function render(){
-    const st = $('fst').value;
-    const rows = projects.filter(p => {
-      if (!st) return true;
-      if (st === 'active') return !['completed','invoiced','paid','cancelled'].includes(p.status);
-      return p.status === st;
-    });
-
-    $('count').textContent = `${rows.length} 件 ／ 全 ${projects.length} 件`;
-
-    // 仕入原価だけを集計する（受注金額・粗利益・粗利率は実行予算の領域なので扱わない）
-    let sMat = 0, sLab = 0;
-    rows.forEach(p => {
-      const g = costByProject[p.id] || { material:0, labor:0 };
-      sMat += g.material; sLab += g.labor;
-    });
-    const sCost = sMat + sLab;
-
-    $('sumgrid').hidden = false;
-    $('sumgrid').innerHTML = `
-      <div class="sumcard"><div class="t">材料費 合計</div><div class="v">${fmtMoney(sMat)}</div></div>
-      <div class="sumcard"><div class="t">労務・外注費 合計</div><div class="v">${fmtMoney(sLab)}</div></div>
-      <div class="sumcard"><div class="t">仕入原価 合計</div><div class="v">${fmtMoney(sCost)}</div></div>
-    `;
-
-    if (!rows.length){
-      $('gtable').innerHTML = `<div class="empty"><b>対象の工事がありません</b>絞り込みを変えてお試しください。</div>`;
+    if (!projId){
+      $('sumgrid').hidden = true;
+      $('count').textContent = '';
+      $('gtable').innerHTML = `<div class="hold" style="height:200px"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、着工前の見積原価が出ます。</div></div>`;
       return;
     }
 
+    const fc = $('fcat').value;
+    const rows = items.filter(x => !fc || x.category === fc);
+    const ptmap = Object.fromEntries(partners.map(p => [p.id, p.name]));
+    const phmap = Object.fromEntries(phases.map(p => [p.id, p.name]));
+
+    const sum = (arr, k) => arr.reduce((s, x) => s + (Number(x[k]) || 0), 0);
+    const sMat = sum(rows.filter(x => x.category === 'material'), 'amount');
+    const sLab = sum(rows.filter(x => x.category === 'labor'), 'amount');
+    const sAll = sMat + sLab;
+
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML = `
+      <div class="sumcard"><div class="t">材料費（見積）</div><div class="v">${fmtMoney(sMat)}</div></div>
+      <div class="sumcard"><div class="t">労務・外注費（見積）</div><div class="v">${fmtMoney(sLab)}</div></div>
+      <div class="sumcard"><div class="t">着工前原価 合計</div><div class="v">${fmtMoney(sAll)}</div></div>
+    `;
+
+    $('count').textContent = `${rows.length} 件 ／ 全 ${items.length} 件`;
+
+    if (!rows.length){
+      $('gtable').innerHTML = `<div class="empty"><b>着工前原価の明細がありません</b>実行予算で見積を入れると、ここに着工前原価として出ます。</div>`;
+      return;
+    }
+
+    // 見積先ごとにまとめる（見積先未設定は末尾）
+    const byPartner = new Map();
+    rows.forEach(x => {
+      const key = x.estimate_partner_id || '__none__';
+      if (!byPartner.has(key)) byPartner.set(key, []);
+      byPartner.get(key).push(x);
+    });
+    const keys = [...byPartner.keys()].sort((a, b) => {
+      if (a === '__none__') return 1;
+      if (b === '__none__') return -1;
+      return (ptmap[a] || '').localeCompare(ptmap[b] || '', 'ja');
+    });
+
     let h = `<div class="gtable"><div class="ghead">
-      <span class="rno">NO</span><span>工事</span><span>状態</span>
-      <span class="num">材料費</span><span class="num">労務・外注費</span><span class="num">原価合計</span>
+      <span class="rno">NO</span><span>区分</span><span>品名</span><span>見積先</span><span>工程</span>
+      <span class="num">数量</span><span class="num">単価</span><span class="num">見積金額</span>
     </div>`;
-    rows.forEach((p, i) => {
-      const g = costByProject[p.id] || { material:0, labor:0 };
-      const cost = g.material + g.labor;
-      h += `<a class="grow" href="budget.html?p=${p.id}">
-        <span class="rno">${i + 1}</span>
-        <span class="nm"><span class="no">${esc(p.project_no)}</span>${esc(p.name)}</span>
-        <span>${STATUS[p.status] || p.status}</span>
-        <span class="num">${fmtMoney(g.material)}</span>
-        <span class="num">${fmtMoney(g.labor)}</span>
-        <span class="num">${fmtMoney(cost)}</span>
-      </a>`;
+    let no = 0;
+    keys.forEach(key => {
+      const arr = byPartner.get(key);
+      const pname = key === '__none__' ? '（見積先 未設定）' : (ptmap[key] || '（不明）');
+      h += `<div class="gphase"><span>${esc(pname)}</span>` +
+        `<span class="gc">${arr.length} 件 ・ ${fmtMoney(sum(arr, 'amount'))}</span></div>`;
+      arr.forEach(x => {
+        no++;
+        h += `<div class="grow">
+          <span class="rno">${no}</span>
+          <span class="cat ${x.category}">${x.category === 'material' ? '材' : '工'}</span>
+          <span class="nm" title="${esc(x.item_name)}">${esc(x.item_name)}${x.note ? `<span class="sub">${esc(x.note)}</span>` : ''}</span>
+          <span>${esc(ptmap[x.estimate_partner_id] || '—')}</span>
+          <span>${esc(phmap[x.phase_id] || '（工事全体）')}</span>
+          <span class="num">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</span>
+          <span class="num">${fmt(x.unit_price)}</span>
+          <span class="num">${fmt(x.amount)}</span>
+        </div>`;
+      });
     });
     h += `<div class="gfoot">
-      <span></span><span>合計</span><span></span>
-      <span class="num">${fmtMoney(sMat)}</span>
-      <span class="num">${fmtMoney(sLab)}</span>
-      <span class="num">${fmtMoney(sCost)}</span>
+      <span></span><span></span><span>着工前原価 合計</span><span></span><span></span>
+      <span></span><span></span><span class="num">${fmtMoney(sAll)}</span>
     </div>`;
     h += `</div>`;
     $('gtable').innerHTML = h;
   }
 
-  $('fst').addEventListener('change', render);
+  $('fcat').addEventListener('change', render);
+  $('proj').addEventListener('change', async () => {
+    projId = $('proj').value || null;
+    await loadPhases();
+    await loadItems();
+  });
 
-  await loadAll();
+  /* ================= 起動 ================= */
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)){
+    $('proj').value = q; projId = q;
+    await loadPhases();
+    await loadItems();
+  } else {
+    render();
+  }
 })();
 </script>
 </body>
