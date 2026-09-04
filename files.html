@@ -118,6 +118,10 @@
       <option value="other">その他</option>
     </select>
     <select id="fphase"><option value="">すべての工程</option></select>
+    <select id="fsort">
+      <option value="date">取り込み日順（新しい順）</option>
+      <option value="name">名前順</option>
+    </select>
     <input id="q" type="text" placeholder="題名・撮影箇所・測点で絞り込み">
   </div>
   <p id="pmgr" hidden style="font-size:12.5px;color:var(--sub);margin:-6px 0 12px"></p>
@@ -548,13 +552,25 @@
     const kd = $('fkind').value, ph = $('fphase').value;
     const q  = $('q').value.trim().toLowerCase();
 
-    const rows = files.filter(f => {
+    let rows = files.filter(f => {
       if (kd && f.file_kind !== kd) return false;
       if (ph && f.phase_id !== ph) return false;
       if (!q) return true;
       return [f.title, f.bb_location, f.bb_station, f.original_name, f.description]
         .some(v => (v || '').toLowerCase().includes(q));
     });
+
+    // 並び替え（取り込み日順＝新しい順／名前順）。写真・書類の両方に効かせる
+    const nameOf = f => (f.title || f.original_name || '');
+    const dateOf = f => (f.taken_on || (f.created_at || '').slice(0, 10) || '');
+    if ($('fsort').value === 'name'){
+      rows = [...rows].sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'ja'));
+    } else {
+      rows = [...rows].sort((a, b) => {
+        const da = dateOf(a), db = dateOf(b);
+        return da < db ? 1 : da > db ? -1 : 0;
+      });
+    }
 
     $('count').textContent = projId ? `${rows.length} 件 ／ 全 ${files.length} 件` : '';
 
@@ -590,13 +606,14 @@
         </span></button>`;
     }).join('');
 
-    $('doclist').innerHTML = docs.map(f => {
+    $('doclist').innerHTML = docs.map((f, i) => {
       const pm = phases.find(p => p.id === f.phase_id);
       const um = users.find(u => u.id === f.uploaded_by);
       const ext = /\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1]?.toUpperCase() || KIND[f.file_kind] || '';
       const meta = [f.taken_on ? fmtDate(f.taken_on) : '', pm ? pm.name : '', um ? um.name : '', f.purpose === 'internal' ? '社内' : '提出用']
         .filter(Boolean).map(esc);
       return `<button class="item drow" data-id="${f.id}">
+        <span class="rno">${i + 1}</span>
         <span class="flag"></span>
         <span class="body">
           <span class="no">${esc(ext)}</span>
@@ -640,6 +657,7 @@
   });
   $('fkind').addEventListener('change', render);
   $('fphase').addEventListener('change', render);
+  $('fsort').addEventListener('change', render);
   $('q').addEventListener('input', render);
 
   /* ================= 取り込み ================= */

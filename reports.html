@@ -279,7 +279,7 @@
       return;
     }
 
-    $('list').innerHTML = rows.map(r => {
+    $('list').innerHTML = rows.map((r, i) => {
       const pj = pmap[r.project_id];
       const who = r.reporter_type === 'partner'
         ? `${esc(r.partner_company || '')} ${esc(r.partner_name || '')}`
@@ -290,6 +290,7 @@
       if (r.reporter_type === 'partner') meta.push('外注先');
 
       return `<button class="item" data-id="${r.id}">
+        <span class="rno">${i + 1}</span>
         <span class="flag f-${r.status}"></span>
         <span class="body">
           <span class="no">${fmtDate(r.report_date)}　${pj ? esc(pj.project_no) : ''}</span>

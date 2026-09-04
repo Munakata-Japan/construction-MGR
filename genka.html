@@ -40,9 +40,10 @@
   .gtable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
            box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
   .ghead, .grow{
-    display:grid; align-items:start; gap:6px; min-width:860px;
-    grid-template-columns:1.8fr 90px 110px 110px 110px 110px 110px 80px;
+    display:grid; align-items:start; gap:6px; min-width:640px;
+    grid-template-columns:40px 1.8fr 90px 130px 130px 130px;
   }
+  .grow .rno, .ghead .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
   .ghead{
     position:sticky; top:0; z-index:5;
     background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
@@ -61,8 +62,8 @@
   .profit.neg{ color:var(--alert); font-weight:700; }
   .profit.pos{ color:var(--ok); }
   .gfoot{
-    display:grid; grid-template-columns:1.5fr 90px 110px 110px 110px 110px 110px 80px;
-    min-width:860px; gap:6px; padding:9px 12px; border-top:2px solid var(--ink);
+    display:grid; grid-template-columns:40px 1.8fr 90px 130px 130px 130px;
+    min-width:640px; gap:6px; padding:9px 12px; border-top:2px solid var(--ink);
     font-weight:700; background:#F5F7F3;
   }
   .gfoot .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
@@ -131,7 +132,7 @@
 
   async function loadAll(){
     const [pr, bi] = await Promise.all([
-      sb.from('projects').select('id,project_no,name,status,contract_amount')
+      sb.from('projects').select('id,project_no,name,status')
         .eq('is_active', true).order('project_no', { ascending:false }),
       sb.from('phase_budget_items').select('project_id,category,quantity,unit_price,amount,contract_amount')
     ]);
@@ -165,22 +166,19 @@
 
     $('count').textContent = `${rows.length} 件 ／ 全 ${projects.length} 件`;
 
-    // 全体集計
-    let sOrder = 0, sMat = 0, sLab = 0;
+    // 仕入原価だけを集計する（受注金額・粗利益・粗利率は実行予算の領域なので扱わない）
+    let sMat = 0, sLab = 0;
     rows.forEach(p => {
       const g = costByProject[p.id] || { material:0, labor:0 };
-      sOrder += Number(p.contract_amount) || 0;
       sMat += g.material; sLab += g.labor;
     });
-    const sCost = sMat + sLab, sProfit = sOrder - sCost;
-    const sRate = sOrder ? (sProfit / sOrder * 100) : null;
+    const sCost = sMat + sLab;
 
     $('sumgrid').hidden = false;
     $('sumgrid').innerHTML = `
-      <div class="sumcard"><div class="t">受注金額 合計</div><div class="v">${fmtMoney(sOrder)}</div></div>
-      <div class="sumcard"><div class="t">原価 合計（材料費 ${fmtMoney(sMat)} ／ 労務・外注費 ${fmtMoney(sLab)}）</div><div class="v">${fmtMoney(sCost)}</div></div>
-      <div class="sumcard"><div class="t">粗利益 合計</div><div class="v${sProfit < 0 ? ' neg' : ''}">${fmtMoney(sProfit)}</div></div>
-      <div class="sumcard"><div class="t">粗利率</div><div class="v${sRate !== null && sRate < 0 ? ' neg' : ''}">${sRate === null ? '—' : sRate.toFixed(1) + '%'}</div></div>
+      <div class="sumcard"><div class="t">材料費 合計</div><div class="v">${fmtMoney(sMat)}</div></div>
+      <div class="sumcard"><div class="t">労務・外注費 合計</div><div class="v">${fmtMoney(sLab)}</div></div>
+      <div class="sumcard"><div class="t">仕入原価 合計</div><div class="v">${fmtMoney(sCost)}</div></div>
     `;
 
     if (!rows.length){
@@ -189,34 +187,26 @@
     }
 
     let h = `<div class="gtable"><div class="ghead">
-      <span>工事</span><span>状態</span><span class="num">受注金額</span><span class="num">材料費</span>
-      <span class="num">労務・外注費</span><span class="num">原価合計</span><span class="num">粗利益</span><span class="num">粗利率</span>
+      <span class="rno">NO</span><span>工事</span><span>状態</span>
+      <span class="num">材料費</span><span class="num">労務・外注費</span><span class="num">原価合計</span>
     </div>`;
-    rows.forEach(p => {
+    rows.forEach((p, i) => {
       const g = costByProject[p.id] || { material:0, labor:0 };
-      const order = Number(p.contract_amount) || 0;
       const cost = g.material + g.labor;
-      const profit = order - cost;
-      const rate = order ? (profit / order * 100) : null;
       h += `<a class="grow" href="budget.html?p=${p.id}">
+        <span class="rno">${i + 1}</span>
         <span class="nm"><span class="no">${esc(p.project_no)}</span>${esc(p.name)}</span>
         <span>${STATUS[p.status] || p.status}</span>
-        <span class="num">${fmtMoney(order)}</span>
         <span class="num">${fmtMoney(g.material)}</span>
         <span class="num">${fmtMoney(g.labor)}</span>
         <span class="num">${fmtMoney(cost)}</span>
-        <span class="num profit ${profit < 0 ? 'neg' : 'pos'}">${fmtMoney(profit)}</span>
-        <span class="num">${rate === null ? '—' : rate.toFixed(1) + '%'}</span>
       </a>`;
     });
     h += `<div class="gfoot">
-      <span>合計</span><span></span>
-      <span class="num">${fmtMoney(sOrder)}</span>
+      <span></span><span>合計</span><span></span>
       <span class="num">${fmtMoney(sMat)}</span>
       <span class="num">${fmtMoney(sLab)}</span>
       <span class="num">${fmtMoney(sCost)}</span>
-      <span class="num">${fmtMoney(sProfit)}</span>
-      <span class="num">${sRate === null ? '—' : sRate.toFixed(1) + '%'}</span>
     </div>`;
     h += `</div>`;
     $('gtable').innerHTML = h;
