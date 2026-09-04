@@ -679,18 +679,19 @@
   /* ================= 削除 ================= */
   $('del').addEventListener('click', async () => {
     if (!editing) return;
-    if (!confirm(`「${editing.name}」を削除します。\n日報や工程の担当から外れます。取り消せません。\n\n退職の場合は「在籍中」の印を外すほうが記録が残ります。`)) return;
-    const { error } = await sb.from('app_users').delete().eq('id', editing.id);
-    if (error){
-      showMsg($('pmsg'), error.code === '23503'
-        ? 'この利用者は記録で使われているため削除できません。「在籍中」の印を外してください。'
-        : '削除できませんでした。' + error.message, 'err');
-      return;
-    }
+    if (!confirm(`「${editing.name}」を削除します。\n日報や工程の担当からは外れますが、記録自体は残ります。`)) return;
+    const id = editing.id, nm = editing.name;
+    const { data, error } = await sb.from('app_users').update({ is_active:false }).eq('id', id).select('id');
+    if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
+    if (!data || !data.length){ showMsg($('pmsg'), 'この操作を行う権限がないようです。経営者権限のアカウントでログインし直してください。', 'err'); return; }
     snapshot = formState();
     $('panel').classList.remove('open'); editing = null;
     await load();
-    showMsg($('msg'), '削除しました。', 'ok');
+    showUndo($('msg'), `「${nm}」を削除しました。`, async () => {
+      const { error:e2 } = await sb.from('app_users').update({ is_active:true }).eq('id', id);
+      if (e2) throw e2;
+      await load();
+    });
   });
 
   /* ================= 上限なしの印 ================= */

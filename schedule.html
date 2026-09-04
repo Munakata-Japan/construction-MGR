@@ -1988,13 +1988,18 @@ body > header.bar{ flex:0 0 auto; }
 
   $('odel').addEventListener('click', async () => {
     if (!oediting) return;
-    if (!confirm(`「${oediting.title}」を削除します。取り消せません。`)) return;
-    const { error } = await sb.from('phase_orders').delete().eq('id', oediting.id);
+    if (!confirm(`「${oediting.title}」を削除します。`)) return;
+    const id = oediting.id, ttl = oediting.title;
+    const { error } = await sb.from('phase_orders').update({ is_active:false }).eq('id', id);
     if (error){ showMsg($('oemsg'), '削除できませんでした。' + error.message, 'err'); return; }
     $('oedit').classList.remove('open');
     await loadPhases();
     paintOrders(null);
-    showMsg($('omsg'), '削除しました。', 'ok');
+    showUndo($('msg'), `「${ttl}」を削除しました。`, async () => {
+      const { error:e2 } = await sb.from('phase_orders').update({ is_active:true }).eq('id', id);
+      if (e2) throw e2;
+      await loadPhases(); paintOrders(null);
+    });
   });
 
   /* ================= 切替 ================= */
@@ -2368,12 +2373,17 @@ body > header.bar{ flex:0 0 auto; }
   /* ================= 削除 ================= */
   $('del').addEventListener('click', async () => {
     if (!editing) return;
-    if (!confirm(`「${editing.name}」を削除します。\nこの工程に繋がる前後関係も消えます。`)) return;
-    const { error } = await sb.from('project_phases').delete().eq('id', editing.id);
+    if (!confirm(`「${editing.name}」を削除します。`)) return;
+    const id = editing.id, nm = editing.name;
+    const { error } = await sb.from('project_phases').update({ is_active:false }).eq('id', id);
     if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
     closePanel();
     await loadPhases();
-    showMsg($('msg'), '工程を削除しました。', 'ok');
+    showUndo($('msg'), `「${nm}」を削除しました。`, async () => {
+      const { error:e2 } = await sb.from('project_phases').update({ is_active:true }).eq('id', id);
+      if (e2) throw e2;
+      await loadPhases();
+    });
   });
 
   /* ================= 起動 ================= */
