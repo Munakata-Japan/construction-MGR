@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<!-- BUILD: genba-hub (現場フォルダ) v20260904A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>現場フォルダ ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  /* 件数チップ（一覧の各行で、すぐ見て判断できるように） */
+  .cts{ display:flex; flex-wrap:wrap; gap:2px 12px; margin-top:2px; }
+  .ct{ font-family:var(--mono); font-size:12.5px; color:var(--sub); white-space:nowrap; }
+  .ct b{ color:var(--ink); font-weight:500; }
+  .ct.zero{ color:#9AA29A; }
+  .ct.zero b{ color:#9AA29A; }
+  .pend{ color:#9A6E00; font-weight:700; }
+
+  /* 現場フォルダ（詳細パネル） */
+  .fhead{
+    background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    padding:14px 16px; box-shadow:var(--shadow-1); margin-bottom:14px;
+  }
+  .fhead .no{ font-family:var(--mono); font-size:12.5px; color:var(--ink-2); letter-spacing:.04em; }
+  .fhead .nm{ font-family:var(--disp); font-weight:700; font-size:20px; line-height:1.35; margin:2px 0 8px; overflow-wrap:anywhere; }
+  .fhead .rows{ display:flex; flex-wrap:wrap; gap:4px 22px; font-size:13px; color:var(--sub); }
+  .fhead .rows b{ color:var(--ink); font-weight:500; }
+
+  .strip{ display:flex; gap:6px; overflow-x:auto; padding:2px 0 8px; margin-bottom:14px; }
+  .strip .ph{
+    height:88px; flex:0 0 auto; border:1px solid var(--rule); border-radius:3px;
+    background:#EEF0EC center/cover no-repeat; box-shadow:var(--shadow-1);
+  }
+  .strip .more{
+    height:88px; min-width:64px; flex:0 0 auto; border:1px dashed var(--rule); border-radius:3px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:12px; color:var(--sub); text-decoration:none;
+  }
+
+  /* タイルに件数バッジを付ける */
+  .mode .mbody{ position:relative; }
+  .mode .badge{
+    position:absolute; top:8px; right:10px;
+    font-family:var(--mono); font-size:12px; color:var(--ink-2);
+  }
+  .mode .badge .pend{ margin-left:6px; }
+  .grp .close{ margin-left:auto; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>現場フォルダ</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<!-- 現場一覧 -->
+<div class="wrap" id="listwrap">
+  <div id="msg" class="msg"></div>
+
+  <div class="toolbar">
+    <input class="grow" id="q" type="search" placeholder="工事番号・工事名で絞り込み" autocomplete="off">
+    <select id="fst">
+      <option value="">すべての状態</option>
+      <option value="run">着工中</option>
+      <option value="done">完工・請求・入金</option>
+      <option value="pre">着工前（見積・受注）</option>
+    </select>
+  </div>
+
+  <p class="count" id="count">読み込んでいます…</p>
+  <div class="list" id="list"></div>
+</div>
+
+<!-- 現場フォルダ（詳細） -->
+<div class="panel" id="panel">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1 id="p_title">現場フォルダ</h1>
+    <button class="btn ghost sm barbtn" id="p_close" type="button">◀ 現場一覧へ</button>
+  </header>
+  <div class="wrap">
+    <div class="fhead" id="fhead"></div>
+    <div class="strip" id="strip" hidden></div>
+
+    <div class="grp"><h2>この現場の情報</h2><span class="gph">現場別に集約</span></div>
+    <div class="modes m3" id="tiles"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const BUCKET = 'project-files';
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isMgr = (me.role === 'admin' || me.role === 'manager');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  let projects = [], counts = {}, curId = null, urlCache = {};
+
+  /* ---- 状態のまとまり（着工前 / 着工中 / 完工以降） ---- */
+  const isRun  = s => s === 'started';
+  const isDone = s => ['completed','invoiced','paid'].includes(s);
+  const isPre  = s => ['estimate','ordered'].includes(s);
+
+  /* ================= 読み込み ================= */
+  const [pr, cnt] = await Promise.all([
+    sb.from('projects')
+      .select('id,project_no,name,status,agent_name,engineer_name,manager_name,site_address,start_date,end_date_planned,end_date_actual')
+      .eq('is_active', true).eq('is_sample', false)
+      .order('project_no', { ascending:false }),
+    sb.rpc('project_folder_counts')
+  ]);
+
+  if (pr.error){
+    showMsg($('msg'), '工事を読み込めませんでした。' + pr.error.message, 'err');
+    $('count').textContent = '';
+    return;
+  }
+  projects = pr.data || [];
+  if (!cnt.error && Array.isArray(cnt.data)){
+    counts = Object.fromEntries(cnt.data.map(r => [r.project_id, r]));
+  }
+
+  /* ================= 一覧の表示 ================= */
+  function cInfo(id){
+    return counts[id] || { reports_total:0, reports_pending:0, photos:0, docs:0, last_report:null, last_file:null };
+  }
+
+  function ctChip(label, n, extra){
+    const z = n ? '' : ' zero';
+    return `<span class="ct${z}">${label} <b>${n}</b>${extra || ''}</span>`;
+  }
+
+  function render(){
+    const q = $('q').value.trim().toLowerCase();
+    const fs = $('fst').value;
+    const rows = projects.filter(p => {
+      if (q && !((p.project_no||'').toLowerCase().includes(q) || (p.name||'').toLowerCase().includes(q))) return false;
+      if (fs === 'run'  && !isRun(p.status))  return false;
+      if (fs === 'done' && !isDone(p.status)) return false;
+      if (fs === 'pre'  && !isPre(p.status))  return false;
+      return true;
+    });
+
+    $('count').textContent = `${rows.length} 件 ／ 全 ${projects.length} 件`;
+
+    if (!rows.length){
+      $('list').innerHTML = `<div class="empty"><b>該当する工事がありません</b>絞り込みを変えるか、工事ページから登録してください。</div>`;
+      return;
+    }
+
+    $('list').innerHTML = rows.map((p, i) => {
+      const c = cInfo(p.id);
+      const who = [p.agent_name && ('代理人 ' + esc(p.agent_name)),
+                   p.manager_name && ('担当 ' + esc(p.manager_name))].filter(Boolean).join('　');
+      const pendTxt = c.reports_pending ? `<span class="pend">（確認待ち${c.reports_pending}）</span>` : '';
+      const last = c.last_file || c.last_report;
+      const lastTxt = last ? ('最終 ' + fmtDate(String(last).slice(0,10))) : '';
+      return `<button class="item" data-id="${p.id}">
+        <span class="rno">${i + 1}</span>
+        <span class="flag fl-${p.status}"></span>
+        <span class="body">
+          <span class="no">${esc(p.project_no||'')}</span>
+          <span class="nm">${esc(p.name||'（無題）')}</span>
+          <span class="meta">${who ? `<span>${who}</span>` : ''}${lastTxt ? `<span>${lastTxt}</span>` : ''}</span>
+          <span class="cts">
+            ${ctChip('日報', c.reports_total, pendTxt)}
+            ${ctChip('写真', c.photos, '枚')}
+            ${ctChip('書類', c.docs)}
+          </span>
+        </span>
+        <span class="side"><span class="tag st-${p.status}">${STATUS[p.status]||esc(p.status)}</span></span>
+      </button>`;
+    }).join('');
+
+    $('list').querySelectorAll('.item').forEach(b =>
+      b.addEventListener('click', () => openFolder(b.dataset.id)));
+  }
+
+  $('q').addEventListener('input', render);
+  $('fst').addEventListener('change', render);
+
+  /* ================= 現場フォルダ（詳細） ================= */
+  async function signedThumb(path){
+    if (!path) return null;
+    if (urlCache[path]) return urlCache[path];
+    const { data } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+    if (data?.signedUrl) urlCache[path] = data.signedUrl;
+    return data?.signedUrl || null;
+  }
+
+  function tile(no, ttl, sub, href, badge){
+    return `<a class="mode" href="${href}">
+      <span class="mno">${no}</span>
+      <span class="mbody">
+        ${badge ? `<span class="badge">${badge}</span>` : ''}
+        <span class="mttl">${ttl}</span><span class="msub">${sub}</span>
+      </span>
+    </a>`;
+  }
+
+  async function openFolder(id){
+    const p = projects.find(x => x.id === id);
+    if (!p) return;
+    curId = id;
+    const c = cInfo(id);
+
+    $('p_title').textContent = p.name || '現場フォルダ';
+
+    // 見出し（工事情報）
+    const period = `${fmtDate(p.start_date)||'—'} 〜 ${fmtDate(p.end_date_actual || p.end_date_planned)||'—'}`;
+    const rowsHtml = [
+      p.agent_name    && `現場代理人 <b>${esc(p.agent_name)}</b>`,
+      p.manager_name  && `現場担当 <b>${esc(p.manager_name)}</b>`,
+      p.engineer_name && `主任技術者 <b>${esc(p.engineer_name)}</b>`,
+      `工期 <b>${period}</b>`,
+      p.site_address  && `現場 <b>${esc(p.site_address)}</b>`
+    ].filter(Boolean).map(s => `<span>${s}</span>`).join('');
+    $('fhead').innerHTML =
+      `<div class="no">${esc(p.project_no||'')}　<span class="tag st-${p.status}">${STATUS[p.status]||esc(p.status)}</span></div>` +
+      `<div class="nm">${esc(p.name||'（無題）')}</div>` +
+      `<div class="rows">${rowsHtml}</div>`;
+
+    // タイル（この現場の各ページへ。件数を添えて一目で分かるように）
+    const pp = `?p=${encodeURIComponent(id)}`;
+    const repBadge = c.reports_total ? (c.reports_total + (c.reports_pending ? ` <span class="pend">待${c.reports_pending}</span>` : '')) : '';
+    let tiles =
+      tile('工程', '工程表', 'ガント・材料の遅れ', 'schedule.html' + pp) +
+      tile('発注', '材料発注アラート', '発注・納品の遅れ', 'order-alerts.html' + pp) +
+      tile('日報', '作業日報', '記入・承認・受領', 'reports.html' + pp, repBadge) +
+      tile('写真', '写真', '施工状況・出来形', 'files.html' + pp, c.photos ? c.photos + '枚' : '') +
+      tile('書類', '書類・図面', '提出物・図面', 'files.html' + pp, c.docs || '') +
+      tile('暦', 'カレンダー', '月表示・予定', 'calendar.html' + pp);
+    if (isMgr){
+      tiles +=
+        tile('原価', '着工前原価台帳', '見積先ごとの材工明細', 'genka.html' + pp) +
+        tile('予算', '実行予算', '見積＋実支出・損益', 'budget.html' + pp);
+    }
+    $('tiles').innerHTML = tiles;
+
+    // 最新の写真（数枚だけ、視覚的な手がかりとして）
+    const strip = $('strip');
+    strip.hidden = true; strip.innerHTML = '';
+    if (c.photos){
+      const { data:ph } = await sb.from('project_files')
+        .select('thumb_path,storage_path,taken_on')
+        .eq('project_id', id).eq('is_active', true).eq('file_kind', 'photo')
+        .order('taken_on', { ascending:false }).order('created_at', { ascending:false })
+        .limit(6);
+      if (curId === id && ph && ph.length){
+        const cells = await Promise.all(ph.map(async f => {
+          const u = await signedThumb(f.thumb_path || f.storage_path);
+          return u ? `<span class="ph" style="width:66px;background-image:url('${u}')"></span>` : '';
+        }));
+        if (curId === id){
+          strip.innerHTML = cells.join('') +
+            (c.photos > ph.length ? `<a class="more" href="files.html${pp}">ほか${c.photos - ph.length}枚 →</a>` : '');
+          strip.hidden = false;
+        }
+      }
+    }
+
+    // URL に現場を持たせる（直リンク・戻り対策）。パネルを開く。
+    const u = new URL(location.href);
+    u.searchParams.set('p', id);
+    history.replaceState(null, '', u);
+    $('panel').classList.add('open');
+    window.scrollTo(0, 0);
+  }
+
+  function closeFolder(){
+    $('panel').classList.remove('open');
+    curId = null;
+    const u = new URL(location.href);
+    u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+  }
+  $('p_close').addEventListener('click', closeFolder);
+
+  /* ================= 初期表示 ================= */
+  render();
+
+  // ?p= 付きで来たら、その現場フォルダを開く
+  const q0 = new URL(location.href).searchParams.get('p');
+  if (q0 && projects.some(p => p.id === q0)) openFolder(q0);
+})();
+</script>
+</body>
+</html>
