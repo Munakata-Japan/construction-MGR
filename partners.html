@@ -179,7 +179,7 @@
       <span class="k licf">許可の期限</span>
       <span class="dv licf"><input id="f_led" type="date"></span>
 
-      <div class="sh">社会保険と振込先</div>
+      <div class="sh">社会保険</div>
       <span class="k">加入状況</span>
       <span class="dv r">
         <label class="chk"><input id="f_sih" type="checkbox">健康保険</label>
@@ -188,33 +188,6 @@
       </span>
       <span class="k">確認した日</span>
       <span class="dv"><input id="f_sid" type="date"></span>
-
-      <span class="k">金融機関</span>
-      <span class="dv r"><input id="f_bank" type="text" placeholder="福岡銀行"></span>
-      <span class="k">支店</span>
-      <span class="dv"><input id="f_branch" type="text" placeholder="宗像支店"></span>
-
-      <span class="k">口座</span>
-      <span class="dv r">
-        <select id="f_batype" style="flex:0 0 92px">
-          <option value="">—</option><option value="futsu">普通</option>
-          <option value="touza">当座</option><option value="chochiku">貯蓄</option>
-        </select>
-        <input id="f_bano" type="text" inputmode="numeric" placeholder="口座番号" style="flex:1 1 100px">
-      </span>
-      <span class="k">名義</span>
-      <span class="dv"><input id="f_bahol" type="text" placeholder="カナ"></span>
-
-      <div class="sh">支払・入金の条件</div>
-      <span class="k">締め日</span>
-      <span class="dv r"><input id="f_close" type="number" min="1" max="31" placeholder="20"><span class="u2">日</span></span>
-      <span class="k">支払</span>
-      <span class="dv">
-        <select id="f_moff" style="flex:0 0 96px">
-          <option value="0">当月</option><option value="1">翌月</option><option value="2">翌々月</option>
-        </select>
-        <input id="f_pday" type="number" min="1" max="31" placeholder="25" style="flex:0 0 84px"><span class="u2">日</span>
-      </span>
 
       <div class="sh">担当者</div>
       <div class="full">
@@ -411,14 +384,6 @@
     $('f_sip').checked = !!g('si_pension', false);
     $('f_sie').checked = !!g('si_employment', false);
     $('f_sid').value   = g('si_checked_on','') || '';
-    $('f_bank').value  = g('bank_name','');
-    $('f_branch').value= g('bank_branch','');
-    $('f_batype').value= g('bank_acc_type','') || '';
-    $('f_bano').value  = g('bank_acc_no','');
-    $('f_bahol').value = g('bank_holder','');
-    $('f_close').value = g('closing_day','') || '';
-    $('f_moff').value  = String(g('payment_month_offset', 1) ?? 1);
-    $('f_pday').value  = g('payment_day','') || '';
     $('f_note').value  = g('note','');
 
     const cs = p ? (contacts[p.id] || []) : [];
@@ -489,14 +454,6 @@
       si_pension      : $('f_sip').checked,
       si_employment   : $('f_sie').checked,
       si_checked_on   : $('f_sid').value || null,
-      bank_name       : $('f_bank').value.trim() || null,
-      bank_branch     : $('f_branch').value.trim() || null,
-      bank_acc_type   : $('f_batype').value || null,
-      bank_acc_no     : $('f_bano').value.trim() || null,
-      bank_holder     : $('f_bahol').value.trim() || null,
-      closing_day     : $('f_close').value === '' ? null : Number($('f_close').value),
-      payment_month_offset: Number($('f_moff').value),
-      payment_day     : $('f_pday').value === '' ? null : Number($('f_pday').value),
       note            : $('f_note').value.trim() || null
     };
 
