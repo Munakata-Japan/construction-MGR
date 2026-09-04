@@ -677,12 +677,27 @@
 
   /* ================= 起動 ================= */
   await loadRefs();
-  const q = new URL(location.href).searchParams.get('p');
+  const qs = new URL(location.href).searchParams;
+  const q = qs.get('p');
   if (q && projects.some(x => x.id === q)){
     $('proj').value = q;
     projId = q;
     await loadPhases();
     await loadItems();
+    // 確認ページ（材料発注アラート等）から特定の品目を指定して来たら、
+    // その品目の入力画面を直接開く（確認→入力を迷わせない）
+    const itemId = qs.get('item');
+    if (itemId){
+      const it = items.find(x => x.id === itemId);
+      if (it){
+        openPanel(it);
+        // アラート（納期の確認）から来たので、いきなり納品・発注の入力欄まで送る
+        requestAnimationFrame(() => {
+          const f = $('f_sdate');
+          if (f){ f.scrollIntoView({ block:'center' }); try { f.focus(); } catch(e){} }
+        });
+      }
+    }
   } else {
     render();
   }
