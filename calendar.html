@@ -249,7 +249,7 @@
       if (pu && pj.manager_user_id !== pu) return;
       if (!ph.start_date || !ph.end_date) return;
       ev.push({
-        from:d2n(ph.start_date), to:d2n(ph.end_date), kind:'ph',
+        from:d2n(ph.start_date), to:d2n(ph.end_date), kind:'ph', id:ph.id,
         label:ph.name, sub:`${pj.project_no} ${pj.name}`,
         status:ph.status, projectId:ph.project_id,
         md:Number(ph.planned_mandays)||0
@@ -364,7 +364,7 @@
       const span = (x.from !== x.to)
         ? `${fmtDate(new Date(x.from*DAY).toISOString().slice(0,10))} 〜 ${fmtDate(new Date(x.to*DAY).toISOString().slice(0,10))}`
         : '';
-      return `<a class="drow" href="schedule.html?p=${x.projectId}">
+      return `<a class="drow" href="schedule.html?p=${x.projectId}${x.kind === 'ph' && x.id ? '&phase=' + x.id : ''}">
         <span class="fl" style="background:${col}"></span>
         <span class="bd"><span class="t1">${esc(x.label)}</span>
           <span class="t2">${esc(x.sub)}${x.md ? ' ・ ' + x.md + '人工' : ''}</span></span>
