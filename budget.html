@@ -520,6 +520,11 @@
 
   $('proj').addEventListener('change', async () => {
     projId = $('proj').value || null;
+    // 選んだ工事をURLに残す（別ページから戻ってきても選択が残るように）
+    const u = new URL(location.href);
+    if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
+    u.searchParams.delete('item'); u.searchParams.delete('focus');
+    history.replaceState(null, '', u);
     await loadPhases();
     await loadItems();
   });

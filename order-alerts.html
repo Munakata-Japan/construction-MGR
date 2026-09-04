@@ -207,7 +207,19 @@
       projects.filter(p => liveProjIds.has(p.id))
         .map(p => `<option value="${p.id}">${esc(p.project_no)}　${esc(p.name)}</option>`).join('');
 
+    // URLに保存された工事を選び直す（別ページから戻ってきても選択が残るように）
+    const pParam = new URL(location.href).searchParams.get('p');
+    if (pParam){ $('fproj').value = pParam; }
+
     render();
+  }
+
+  // 選んだ工事をURLに残す（戻ってきたときに同じ工事の状態へ復帰できるように）
+  function syncProjUrl(){
+    const u = new URL(location.href);
+    const v = $('fproj').value;
+    if (v) u.searchParams.set('p', v); else u.searchParams.delete('p');
+    history.replaceState(null, '', u);
   }
 
   // 材料1件の遅れ判定（金額は一切見ない）。工程表の判定と同じ考え方。
@@ -309,7 +321,7 @@
     $('atable').innerHTML = h;
   }
 
-  $('fproj').addEventListener('change', render);
+  $('fproj').addEventListener('change', () => { syncProjUrl(); render(); });
   $('fcat').addEventListener('change', render);
   $('fshow').addEventListener('change', render);
 
