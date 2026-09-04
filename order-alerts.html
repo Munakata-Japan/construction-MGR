@@ -203,7 +203,7 @@
       (x.status === 'estimate' || x.status === 'ordered'));
 
     // 工事の絞り込みには、動いている工事だけを出す
-    $('fproj').innerHTML = '<option value="">すべての工事</option>' +
+    $('fproj').innerHTML = '<option value="">工事を選んでください</option><option value="__all__">すべての工事（横断）</option>' +
       projects.filter(p => liveProjIds.has(p.id))
         .map(p => `<option value="${p.id}">${esc(p.project_no)}　${esc(p.name)}</option>`).join('');
 
@@ -237,11 +237,20 @@
 
   function render(){
     const fp = $('fproj').value, fc = $('fcat').value, fs = $('fshow').value;
+
+    // 工事を選ぶまでは何も出さない（他のページと同じ動き）
+    if (!fp){
+      $('sumgrid').hidden = true;
+      $('count').textContent = '';
+      $('atable').innerHTML = `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、発注・納品の遅れを検知して一覧します。全工事をまとめて見るときは「すべての工事（横断）」を選んでください。</div>`;
+      return;
+    }
+    const inProj = x => (fp === '__all__' || x.project_id === fp);
     const pmap = Object.fromEntries(projects.map(p => [p.id, p]));
     const phmap = Object.fromEntries(phases.map(p => [p.id, p]));
 
     let rows = items
-      .filter(x => (!fp || x.project_id === fp) && (!fc || x.category === fc))
+      .filter(x => inProj(x) && (!fc || x.category === fc))
       .map(x => ({ x, phase: x.phase_id ? phmap[x.phase_id] : null }))
       .map(o => ({ ...o, a: classify(o.x, o.phase) }));
 
@@ -261,7 +270,7 @@
     $('sumgrid').innerHTML = `
       <div class="sumcard red"><div class="t">至急対応</div><div class="v">${redN}件</div></div>
       <div class="sumcard amber"><div class="t">注意</div><div class="v">${amberN}件</div></div>
-      <div class="sumcard"><div class="t">未納品 合計</div><div class="v">${items.filter(x => !fp || x.project_id === fp).filter(x => !fc || x.category === fc).length}件</div></div>
+      <div class="sumcard"><div class="t">未納品 合計</div><div class="v">${items.filter(inProj).filter(x => !fc || x.category === fc).length}件</div></div>
     `;
 
     $('count').textContent = `${rows.length} 件を表示`;
