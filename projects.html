@@ -699,7 +699,8 @@
     $('f_ins').value    = p ? (p.insurance_note||'') : '';
     $('f_note').value   = p ? (p.note||'') : '';
 
-    const pms = (p && Array.isArray(p.permits)) ? p.permits : [];
+    // 協力会社ID方式の行だけを表示（旧・土地開発系の手入力データは空欄として出さない）
+    const pms = (p && Array.isArray(p.permits) ? p.permits : []).filter(x => x && x.partner_id);
     $('pms').innerHTML = pms.map(pmRow).join('');
     bindPmRm();
 

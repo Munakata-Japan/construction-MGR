@@ -269,23 +269,6 @@
       </div>
     </div>
 
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">支払状況</div>
-      <div class="row">
-        <label for="f_pstat">状況</label>
-        <div class="fld"><select id="f_pstat">
-          <option value="unscheduled">支払未定</option>
-          <option value="partial">支払残あり</option>
-          <option value="paid">支払済</option>
-        </select></div>
-      </div>
-      <div class="row">
-        <label for="f_paid">支払済金額</label>
-        <div class="fld"><input id="f_paid" type="number" step="any" placeholder="0"><span id="f_remain" style="font-size:12px;color:var(--sub);margin-left:8px"></span></div>
-      </div>
-    </div>
-
     <div style="height:16px"></div>
     <button class="btn danger" id="del" hidden>この項目を削除する</button>
   </div>
@@ -536,15 +519,6 @@
   $('f_qty').addEventListener('input', recalcAmt);
   $('f_price').addEventListener('input', recalcAmt);
 
-  function recalcRemain(){
-    const contract = Number($('f_contract').value) || 0;
-    const paid = Number($('f_paid').value) || 0;
-    const remain = contract - paid;
-    $('f_remain').textContent = contract ? `支払残　${fmtMoney(remain)}` : '';
-  }
-  $('f_contract').addEventListener('input', recalcRemain);
-  $('f_paid').addEventListener('input', recalcRemain);
-
   // 発注期限＝納品予定日−発注リードタイム。工程表のガントの警告と同じ考え方を、
   // この画面でも参考値として出す（実際のアラート判定は工程表側で行う）
   function recalcDeadline(){
@@ -589,10 +563,7 @@
     $('f_qstat').value  = x ? x.quality_status : 'pending';
     $('f_qnote').value  = x ? (x.quality_note || '') : '';
     $('f_note').value   = x ? (x.note || '') : '';
-    $('f_pstat').value  = x ? x.payment_status : 'unscheduled';
-    $('f_paid').value   = x && x.paid_amount !== null ? x.paid_amount : '';
     recalcAmt();
-    recalcRemain();
     recalcDeadline();
 
     document.querySelectorAll('#panel input, #panel select, #panel textarea')
@@ -649,9 +620,7 @@
       delivered_qty    : $('f_dqty').value === '' ? null : Number($('f_dqty').value),
       quality_status   : $('f_qstat').value,
       quality_note     : $('f_qnote').value.trim() || null,
-      note             : $('f_note').value.trim() || null,
-      payment_status   : $('f_pstat').value,
-      paid_amount      : $('f_paid').value === '' ? null : Number($('f_paid').value)
+      note             : $('f_note').value.trim() || null
     };
     if (!editing){
       body.seq = (items.length ? Math.max(...items.map(x => x.seq || 0)) : 0) + 10;
