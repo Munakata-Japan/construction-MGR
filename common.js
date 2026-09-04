@@ -44,6 +44,33 @@ function showMsg(el, text, kind){
   if (text) el.scrollIntoView({ block:'nearest' });
 }
 
+/* ---------- 削除の取り消し（元に戻す） ----------
+   削除した直後に「元に戻す」ボタン付きの通知を出す。
+   undoFn は、控えておいた内容を入れ直す非同期関数。
+   これで、削除ボタンのある画面はどこでも復元できる。
+------------------------------------------------ */
+function showUndo(el, text, undoFn){
+  if (!el){ return; }
+  el.className = 'msg ok';
+  el.innerHTML = `<span>${esc(text)}</span>` +
+    `<button type="button" class="undobtn" style="margin-left:12px;font-weight:700;` +
+    `text-decoration:underline;background:none;border:none;color:var(--ink-2);cursor:pointer;font-size:13px">` +
+    `元に戻す</button>`;
+  const btn = el.querySelector('.undobtn');
+  let used = false;
+  btn.addEventListener('click', async () => {
+    if (used) return;
+    used = true; btn.disabled = true; btn.textContent = '元に戻しています…';
+    try {
+      await undoFn();
+      el.className = 'msg ok'; el.textContent = '元に戻しました。';
+    } catch (e){
+      el.className = 'msg err'; el.textContent = '元に戻せませんでした。' + (e.message || '');
+    }
+  });
+  el.scrollIntoView({ block:'nearest' });
+}
+
 /* ---------- 事前登録が必要なドロップダウンの空欄アナウンス ----------
    取引先・工程・利用者などのマスタが1件も無いまま選択肢が空の
    セレクトを黙って出すと、登録し忘れなのか本当に無いのか分からない。
