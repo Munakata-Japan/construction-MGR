@@ -1,6 +1,6 @@
 /* ============================================================
    宗像総合管理システム  共通処理
-   BUILD: common.js v20260724A
+   BUILD: common.js v20260905A
    ============================================================ */
 
 /* ---------- 最新版をすぐ反映する（Service Worker・ネットワーク優先） ----------
@@ -25,6 +25,32 @@ const STATUS = {
 };
 
 const ROLE_LABEL = { admin:'管理者', manager:'現場監督', member:'作業員' };
+
+/* ---------- 竣工図書の章立て（民間工事の標準）----------
+   写真・書類（project_files.doc_category）を、この章に振り分けて
+   竣工図書として積み上げる。files.html で分類・handover.html で整理／印刷。
+   会社・発注者ごとの追加は、この配列に足すだけで両画面へ反映される。
+------------------------------------------------------------ */
+const HANDOVER_CHAPTERS = [
+  { key:'gaiyou',   label:'工事概要' },
+  { key:'plan',     label:'施工計画書' },
+  { key:'permit',   label:'届出・許認可' },
+  { key:'safety',   label:'安全衛生書類' },
+  { key:'quality',  label:'品質・出来形記録' },
+  { key:'photo',    label:'工事写真帳' },
+  { key:'drawing',  label:'竣工図' },
+  { key:'inspect',  label:'検査記録' },
+  { key:'warranty', label:'保証書・その他' }
+];
+function chapterLabel(key){
+  const c = HANDOVER_CHAPTERS.find(x => x.key === key);
+  return c ? c.label : '';
+}
+function chapterOptions(sel){
+  return HANDOVER_CHAPTERS
+    .map(c => `<option value="${c.key}"${c.key === sel ? ' selected' : ''}>${esc(c.label)}</option>`)
+    .join('');
+}
 
 /* ---------- 表示の整形 ---------- */
 function fmtMoney(v){
