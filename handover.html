@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<!-- BUILD: handover (竣工図書) v20260905A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>竣工図書 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  .ctl select{ width:auto; min-width:200px; max-width:420px; min-height:44px; flex:0 1 auto; }
+  .actrow{ display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
+  .actrow .btn{ flex:0 0 auto; }
+
+  .summary{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+            box-shadow:var(--shadow-1); padding:10px 14px; margin-bottom:14px; font-size:13px; line-height:1.7; }
+  .summary .st{ font-family:var(--mono); font-size:11.5px; color:var(--sub); }
+  .summary b{ font-family:var(--disp); }
+
+  /* 目次チェックリスト */
+  .toc{ margin-bottom:20px; }
+  .toc .item .rno{ min-width:40px; }
+  .toc .cbadge{ font-family:var(--mono); font-size:12px; color:var(--sub); }
+  .toc .stt{ font-size:12px; font-weight:700; padding:2px 9px; border-radius:var(--radius-sm);
+             border:1px solid currentColor; white-space:nowrap; }
+  .toc .stt.has{ color:var(--ok); } .toc .stt.non{ color:#9AA39C; }
+  .toc .item .side{ gap:10px; }
+
+  /* 章別 整理エリア */
+  .sech{ font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink);
+         margin:22px 0 10px; padding-left:10px; border-left:4px solid var(--safety); }
+  .chap{ border:1px solid var(--rule); border-radius:var(--radius); background:var(--card);
+         box-shadow:var(--shadow-1); margin-bottom:12px; overflow:hidden; }
+  .chap > .ch{ display:flex; align-items:center; gap:10px; padding:9px 13px;
+               background:#F1F3EF; border-bottom:1px solid var(--rule-2); }
+  .chap > .ch .cn{ font-family:var(--mono); font-size:12px; color:var(--sub); min-width:26px; }
+  .chap > .ch .cl{ font-family:var(--disp); font-weight:700; font-size:14.5px; flex:1 1 auto; }
+  .chap > .ch .cc{ font-family:var(--mono); font-size:12px; color:var(--sub); }
+  .chap.none > .ch{ background:#FBF6EA; }
+  .chap.dragover{ outline:2px dashed var(--safety); outline-offset:-2px; }
+  .chap .items{ padding:8px; display:flex; flex-direction:column; gap:6px; min-height:20px; }
+  .chap .items:empty::after{ content:"（ここへドラッグして分類）"; color:#9AA39C; font-size:12.5px; padding:6px 4px; }
+
+  .row2{ display:grid; grid-template-columns:34px 52px 1fr auto; align-items:center; gap:10px;
+         border:1px solid var(--rule); border-radius:var(--radius-sm); background:#fff; padding:6px 8px;
+         cursor:grab; box-shadow:var(--shadow-1); }
+  .row2.dragging{ opacity:.4; }
+  .row2.dropbefore{ box-shadow:inset 0 3px 0 var(--safety); }
+  .row2.dropafter{ box-shadow:inset 0 -3px 0 var(--safety); }
+  .row2 .rno{ font-family:var(--mono); font-size:12px; color:var(--sub); text-align:center; }
+  .row2 .rno .gh{ color:#9aa3b8; }
+  .row2 .th{ width:52px; height:40px; border-radius:2px; background:#DFE2DC; object-fit:cover;
+             display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .row2 .th img{ width:100%; height:100%; object-fit:cover; }
+  .row2 .th .ext{ font-family:var(--mono); font-size:10px; color:var(--sub); }
+  .row2 .nm{ min-width:0; }
+  .row2 .nm .t1{ font-family:var(--disp); font-weight:700; font-size:13.5px; line-height:1.4;
+                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row2 .nm .t2{ font-size:11.5px; color:var(--sub); font-family:var(--mono); line-height:1.5;
+                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row2 .mv{ font-size:11px; }
+
+  .hint{ font-size:12.5px; color:var(--sub); margin:-4px 0 12px; line-height:1.7; }
+
+  /* ===== 印刷（目次・工事写真帳） ===== */
+  .printdoc{ display:none; }
+
+  @media print{
+    @page{ size:A4 portrait; margin:12mm; }
+    body{ background:#fff; color:#000; }
+    body > header.bar, .wrap, .dock, .noprint{ display:none !important; }
+    .printdoc{ color:#000; font-family:var(--body); }
+    body.pm-toc   #printToc{ display:block; }
+    body.pm-album #printAlbum{ display:block; }
+
+    .pdhead{ font-family:var(--disp); font-weight:700; font-size:20px; text-align:center;
+             letter-spacing:.2em; margin:0 0 4px; }
+    .pdsub{ text-align:center; font-size:12px; color:#333; margin:0 0 18px; }
+    .pdproj{ font-family:var(--disp); font-weight:700; font-size:15px; margin:0 0 12px; }
+    .pdtbl{ width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:16px; }
+    .pdtbl th, .pdtbl td{ border:1px solid #000; padding:5px 8px; text-align:left; vertical-align:top; }
+    .pdtbl th{ background:#eee !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; width:26%; }
+    .toctbl{ width:100%; border-collapse:collapse; font-size:13px; }
+    .toctbl th, .toctbl td{ border:1px solid #000; padding:7px 10px; }
+    .toctbl th{ background:#eee !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .toctbl td.no{ text-align:center; width:12%; font-family:var(--mono); }
+    .toctbl td.ct{ text-align:center; width:16%; font-family:var(--mono); }
+    .toctbl td.stt{ text-align:center; width:16%; }
+
+    .albumhead{ font-family:var(--disp); font-weight:700; font-size:16px; text-align:center;
+                letter-spacing:.14em; margin:0 0 3px; }
+    .albumsub{ text-align:center; font-size:11.5px; color:#333; margin:0 0 12px; }
+    .album{ display:grid; grid-template-columns:1fr 1fr; gap:6mm; }
+    .acard{ border:1px solid #000; break-inside:avoid; display:flex; flex-direction:column; }
+    .acard .aimg{ background:#fff; display:flex; align-items:center; justify-content:center;
+                  height:62mm; overflow:hidden; border-bottom:1px solid #000; }
+    .acard .aimg img{ max-width:100%; max-height:62mm; object-fit:contain; }
+    .acard .acap{ font-size:10.5px; }
+    .acard .crow{ display:grid; grid-template-columns:20mm 1fr; border-top:1px solid #ccc; }
+    .acard .crow:first-child{ border-top:none; }
+    .acard .crow .ck{ background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact;
+                      padding:2px 4px; font-weight:700; border-right:1px solid #ccc; }
+    .acard .crow .cv{ padding:2px 5px; min-width:0; overflow-wrap:anywhere; }
+    .acard .ano{ font-family:var(--mono); font-size:9.5px; text-align:right; padding:1px 4px; color:#333; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>竣工図書</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<div class="wrap">
+  <div class="ctl">
+    <select id="proj"><option value="">工事を選んでください</option></select>
+  </div>
+
+  <div id="summary" class="summary" hidden></div>
+
+  <div class="actrow" id="actrow" hidden>
+    <button class="btn ghost sm" id="printTocBtn" type="button">目次を印刷（PDF）</button>
+    <button class="btn ghost sm" id="printAlbumBtn" type="button">工事写真帳を印刷（PDF）</button>
+    <button class="btn ghost sm" id="allToAlbum" type="button">未分類の写真を工事写真帳へ</button>
+  </div>
+
+  <div id="msg" class="msg"></div>
+  <p class="hint" id="rohint" hidden>整理（分類・並べ替え）は現場監督・管理者のみ行えます。</p>
+
+  <div id="body" hidden>
+    <p class="sech">目次（集まり具合）</p>
+    <div class="list toc" id="toc"></div>
+
+    <p class="sech">章ごとに整理（ドラッグで章へ振り分け・並べ替え）</p>
+    <p class="hint">写真・書類の取り込みは「写真・書類」画面から。ここでは取り込んだものを竣工図書の章へ並べます。行の <b>⠿</b> をドラッグして、章の枠へ落としてください。</p>
+    <div id="chaps"></div>
+  </div>
+
+  <div id="emptymsg"></div>
+</div>
+
+<!-- ===== 印刷用：目次 ===== -->
+<div id="printToc" class="printdoc">
+  <div class="pdhead">竣 工 図 書</div>
+  <div class="pdsub" id="pt_sub"></div>
+  <div class="pdproj" id="pt_proj"></div>
+  <table class="pdtbl" id="pt_overview"></table>
+  <div class="pdproj" style="font-size:14px">目　次</div>
+  <table class="toctbl">
+    <thead><tr><th style="width:12%">NO</th><th>章</th><th style="width:16%">点数</th><th style="width:16%">状態</th></tr></thead>
+    <tbody id="pt_rows"></tbody>
+  </table>
+</div>
+
+<!-- ===== 印刷用：工事写真帳 ===== -->
+<div id="printAlbum" class="printdoc">
+  <div class="albumhead">工 事 写 真 帳</div>
+  <div class="albumsub" id="pa_sub"></div>
+  <div class="album" id="pa_grid"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const BUCKET = 'project-files';
+  const KINDEXT = { photo:'写真', drawing:'図面', document:'書類', other:'ファイル' };
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isMgr = (me.role === 'admin' || me.role === 'manager');
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  let projects = [], partners = [], phases = [], files = [], projId = null, curProj = null;
+  let urlCache = {}, draggingId = null;
+
+  const isPhoto = f => f.file_kind === 'photo' || (f.mime_type || '').startsWith('image/');
+  const NONE = '__none__';
+
+  /* ---------- 参照読み込み ---------- */
+  async function loadRefs(){
+    const [pr, pa] = await Promise.all([
+      sb.from('projects')
+        .select('id,project_no,name,construction_type,status,contract_amount,tax_rate,start_date,end_date_planned,end_date_actual,agent_name,engineer_name,manager_name,manager_user_id,client_partner_id,site_address')
+        .eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('partners').select('id,name').eq('is_active', true)
+    ]);
+    if (pr.error){ showMsg($('msg'), '読み込めませんでした。' + pr.error.message, 'err'); return; }
+    projects = pr.data || []; partners = pa.data || [];
+    $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
+      projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+    setEmptyNote($('proj'), projects.length === 0,
+      '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
+  }
+
+  async function loadPhases(){
+    if (!projId){ phases = []; return; }
+    const { data } = await sb.from('project_phases')
+      .select('id,name').eq('project_id', projId).eq('is_active', true).order('seq');
+    phases = data || [];
+  }
+  const phName = id => (phases.find(p => p.id === id) || {}).name || '';
+
+  async function loadFiles(){
+    if (!projId){ files = []; return; }
+    const { data, error } = await sb.from('project_files')
+      .select('*').eq('project_id', projId).eq('is_active', true);
+    if (error){
+      showMsg($('msg'), /doc_category|sort_order|column|schema cache/i.test(error.message||'')
+        ? '竣工図書に必要な項目がまだありません。Supabase で phase14_handover.sql を実行してください。'
+        : '読み込めませんでした。' + error.message, 'err');
+      files = []; return;
+    }
+    files = data || [];
+  }
+
+  async function signedUrl(path){
+    if (!path) return null;
+    if (urlCache[path]) return urlCache[path];
+    const { data } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+    if (data?.signedUrl) urlCache[path] = data.signedUrl;
+    return data?.signedUrl || null;
+  }
+
+  /* ---------- 概要 ---------- */
+  function money(v, rate){
+    if (v === null || v === undefined || v === '') return '';
+    const n = Number(v); if (isNaN(n)) return '';
+    const tax = Math.round(n * (1 + (Number(rate) || 0)));
+    return `${fmtMoney(n)}（税込 ${fmtMoney(tax)}）`;
+  }
+  function clientName(p){ const c = partners.find(x => x.id === p.client_partner_id); return c ? c.name : ''; }
+
+  function paintSummary(){
+    const p = curProj;
+    if (!p){ $('summary').hidden = true; return; }
+    const term = [fmtDate(p.start_date), (p.end_date_actual || p.end_date_planned) ? fmtDate(p.end_date_actual || p.end_date_planned) : '']
+      .filter(Boolean).join(' 〜 ');
+    $('summary').hidden = false;
+    $('summary').innerHTML =
+      `<span class="st">${esc(p.project_no || '')}${p.construction_type ? '　' + esc(p.construction_type) : ''}</span><br>` +
+      `<b>${esc(p.name || '')}</b><br>` +
+      [ clientName(p) ? '発注者 ' + esc(clientName(p)) : '',
+        term ? '工期 ' + esc(term) : '',
+        p.contract_amount != null ? '請負金額 ' + esc(money(p.contract_amount, p.tax_rate)) : '',
+        p.agent_name ? '現場代理人 ' + esc(p.agent_name) : '',
+        p.engineer_name ? '主任技術者 ' + esc(p.engineer_name) : '',
+        p.manager_name ? '現場担当 ' + esc(p.manager_name) : ''
+      ].filter(Boolean).join('　／　');
+  }
+
+  /* ---------- 章ごとの集計 ---------- */
+  function byChapter(){
+    const map = new Map();
+    HANDOVER_CHAPTERS.forEach(c => map.set(c.key, []));
+    map.set(NONE, []);
+    files.forEach(f => {
+      const k = (f.doc_category && map.has(f.doc_category)) ? f.doc_category : NONE;
+      map.get(k).push(f);
+    });
+    const ord = (a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) ||
+                          ((a.taken_on || '') < (b.taken_on || '') ? 1 : -1);
+    map.forEach(arr => arr.sort(ord));
+    return map;
+  }
+
+  /* ---------- 目次チェックリスト ---------- */
+  function renderToc(map){
+    $('toc').innerHTML = HANDOVER_CHAPTERS.map((c, i) => {
+      const n = (map.get(c.key) || []).length;
+      const has = n > 0;
+      return `<button class="item" data-jump="${c.key}">
+        <span class="rno">${String(i + 1).padStart(2, '0')}</span>
+        <span class="flag ${has ? 'fl-completed' : ''}"></span>
+        <span class="body">
+          <span class="nm" style="font-size:15px;margin:0">${esc(c.label)}</span>
+        </span>
+        <span class="side">
+          <span class="cbadge">${n} 点</span>
+          <span class="stt ${has ? 'has' : 'non'}">${has ? '有' : '未'}</span>
+        </span></button>`;
+    }).join('');
+    $('toc').querySelectorAll('[data-jump]').forEach(b => b.addEventListener('click', () => {
+      const el = document.querySelector(`.chap[data-key="${b.dataset.jump}"]`);
+      if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    }));
+  }
+
+  /* ---------- 章別 整理エリア ---------- */
+  function itemRow(f, no){
+    const ext = /\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1]?.toUpperCase() || '';
+    const th = isPhoto(f)
+      ? `<span class="th" data-p="${esc(f.thumb_path || f.storage_path || '')}"></span>`
+      : `<span class="th"><span class="ext">${esc(ext || KINDEXT[f.file_kind] || '')}</span></span>`;
+    const t2 = [ f.taken_on ? fmtDate(f.taken_on) : '', f.bb_work_type || '', phName(f.phase_id),
+                 f.assignee_name || '' ].filter(Boolean).map(esc).join(' ・ ');
+    return `<div class="row2" draggable="${isMgr}" data-id="${f.id}">
+      <span class="rno">${isMgr ? '<span class="gh" title="ドラッグして章へ移動・並べ替え">⠿</span>' : ''}${no}</span>
+      ${th}
+      <span class="nm">
+        <span class="t1">${esc(f.title || f.original_name || '（無題）')}</span>
+        <span class="t2">${t2}</span>
+      </span>
+      <span class="mv"><a class="btn ghost sm" href="files.html?p=${projId}" title="写真・書類画面で開く">開く</a></span>
+    </div>`;
+  }
+
+  function renderChaps(map){
+    let html = '';
+    let no = 0;
+    const secOrder = [...HANDOVER_CHAPTERS.map(c => c.key), NONE];
+    secOrder.forEach((key, idx) => {
+      const arr = map.get(key) || [];
+      if (key === NONE && !arr.length) return;   // 未分類は中身があるときだけ
+      const label = key === NONE ? '未分類' : chapterLabel(key);
+      const cn = key === NONE ? '' : String(HANDOVER_CHAPTERS.findIndex(c => c.key === key) + 1).padStart(2, '0');
+      let rows = '';
+      arr.forEach(f => { no++; rows += itemRow(f, no); });
+      html += `<div class="chap${key === NONE ? ' none' : ''}" data-key="${key === NONE ? '' : key}">
+        <div class="ch"><span class="cn">${cn}</span><span class="cl">${esc(label)}</span>
+          <span class="cc">${arr.length} 点</span></div>
+        <div class="items">${rows}</div>
+      </div>`;
+    });
+    $('chaps').innerHTML = html;
+
+    // サムネイル遅延読み込み
+    $('chaps').querySelectorAll('.th[data-p]').forEach(box => {
+      const p = box.dataset.p; if (!p) return;
+      signedUrl(p).then(u => { if (u) box.innerHTML = `<img src="${u}" alt="" loading="lazy">`; });
+    });
+    if (isMgr) wireDrag();
+  }
+
+  function render(){
+    const map = byChapter();
+    renderToc(map);
+    renderChaps(map);
+  }
+
+  /* ---------- ドラッグで章へ振り分け・並べ替え ---------- */
+  function clearInd(){
+    $('chaps').querySelectorAll('.dropbefore,.dropafter,.dragover')
+      .forEach(el => el.classList.remove('dropbefore', 'dropafter', 'dragover'));
+  }
+  function wireDrag(){
+    const box = $('chaps');
+    box.querySelectorAll('.row2').forEach(row => {
+      row.addEventListener('dragstart', e => {
+        draggingId = row.dataset.id; row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', row.dataset.id); } catch (_) {}
+      });
+      row.addEventListener('dragend', () => { row.classList.remove('dragging'); clearInd(); });
+      row.addEventListener('dragover', e => {
+        e.preventDefault(); clearInd();
+        const r = row.getBoundingClientRect();
+        row.classList.add((e.clientY - r.top) > r.height / 2 ? 'dropafter' : 'dropbefore');
+      });
+      row.addEventListener('drop', async e => {
+        e.preventDefault(); e.stopPropagation();
+        const r = row.getBoundingClientRect();
+        const after = (e.clientY - r.top) > r.height / 2;
+        const chap = row.closest('.chap');
+        clearInd();
+        await doMove(draggingId, chap ? (chap.dataset.key || '') : '', row.dataset.id, after);
+      });
+    });
+    box.querySelectorAll('.chap').forEach(sec => {
+      sec.addEventListener('dragover', e => { e.preventDefault(); sec.classList.add('dragover'); });
+      sec.addEventListener('dragleave', () => sec.classList.remove('dragover'));
+      sec.addEventListener('drop', async e => {
+        e.preventDefault(); sec.classList.remove('dragover');
+        await doMove(draggingId, sec.dataset.key || '', null, false);
+      });
+    });
+  }
+
+  async function doMove(draggedId, targetKey, refId, after){
+    if (!draggedId) return;
+    if (refId && refId === draggedId) return;
+    const dragged = files.find(x => x.id === draggedId);
+    if (!dragged) return;
+
+    const inSec = files
+      .filter(x => x.id !== draggedId && ((x.doc_category || '') === targetKey))
+      .sort((a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) ||
+                      ((a.taken_on || '') < (b.taken_on || '') ? 1 : -1));
+    let idx = inSec.length;
+    if (refId){ const i = inSec.findIndex(x => x.id === refId); if (i >= 0) idx = after ? i + 1 : i; }
+    inSec.splice(idx, 0, dragged);
+
+    const updates = [];
+    inSec.forEach((x, i) => {
+      const so = (i + 1) * 10;
+      if (x.id === draggedId){
+        const cat = targetKey || null;
+        updates.push({ id: x.id, body: { sort_order: so, doc_category: cat } });
+        x.sort_order = so; x.doc_category = cat;
+      } else if ((x.sort_order || 0) !== so){
+        updates.push({ id: x.id, body: { sort_order: so } });
+        x.sort_order = so;
+      }
+    });
+
+    render();
+    if (!updates.length) return;
+    try {
+      await Promise.all(updates.map(async u => {
+        const { error } = await sb.from('project_files').update(u.body).eq('id', u.id);
+        if (error) throw error;
+      }));
+    } catch (err){
+      showMsg($('msg'),
+        /doc_category|sort_order|column|schema cache/i.test(err.message || '')
+          ? '保存に必要な項目がまだありません。Supabase で phase14_handover.sql を実行してください。'
+          : '並び順を保存できませんでした。' + (err.message || ''), 'err');
+    }
+  }
+
+  /* ---------- 未分類の写真をまとめて工事写真帳へ ---------- */
+  $('allToAlbum').addEventListener('click', async () => {
+    if (!isMgr){ return; }
+    const targets = files.filter(f => isPhoto(f) && !f.doc_category);
+    if (!targets.length){ showMsg($('msg'), '未分類の写真はありません。', 'ok'); return; }
+    if (!confirm(`未分類の写真 ${targets.length} 枚を「工事写真帳」へまとめます。`)) return;
+    // 既存の工事写真帳の末尾へ続ける
+    let base = Math.max(0, ...files.filter(f => f.doc_category === 'photo').map(f => f.sort_order || 0));
+    const updates = targets.map(f => { base += 10; return { id: f.id, so: base }; });
+    try {
+      await Promise.all(updates.map(async u => {
+        const { error } = await sb.from('project_files')
+          .update({ doc_category: 'photo', sort_order: u.so }).eq('id', u.id);
+        if (error) throw error;
+        const f = files.find(x => x.id === u.id); if (f){ f.doc_category = 'photo'; f.sort_order = u.so; }
+      }));
+      render();
+      showMsg($('msg'), `${targets.length} 枚を工事写真帳へ入れました。`, 'ok');
+    } catch (err){
+      showMsg($('msg'),
+        /doc_category|sort_order|column|schema cache/i.test(err.message || '')
+          ? '保存に必要な項目がまだありません。Supabase で phase14_handover.sql を実行してください。'
+          : 'まとめられませんでした。' + (err.message || ''), 'err');
+    }
+  });
+
+  /* ---------- 印刷：目次 ---------- */
+  function buildTocPrint(map){
+    const p = curProj || {};
+    $('pt_sub').textContent = `${p.project_no || ''}`;
+    $('pt_proj').textContent = p.name || '';
+    const term = [fmtDate(p.start_date), (p.end_date_actual || p.end_date_planned) ? fmtDate(p.end_date_actual || p.end_date_planned) : ''].filter(Boolean).join(' 〜 ');
+    const ovRows = [
+      ['工事名', p.name || ''],
+      ['工事番号', p.project_no || ''],
+      ['工事種別', p.construction_type || ''],
+      ['発注者', clientName(p)],
+      ['工事場所', p.site_address || ''],
+      ['工期', term],
+      ['請負金額', p.contract_amount != null ? money(p.contract_amount, p.tax_rate) : ''],
+      ['現場代理人', p.agent_name || ''],
+      ['主任技術者', p.engineer_name || ''],
+      ['現場担当', p.manager_name || '']
+    ].filter(r => r[1]);
+    $('pt_overview').innerHTML = ovRows.map(r => `<tr><th>${esc(r[0])}</th><td>${esc(r[1])}</td></tr>`).join('');
+    $('pt_rows').innerHTML = HANDOVER_CHAPTERS.map((c, i) => {
+      const n = (map.get(c.key) || []).length;
+      return `<tr><td class="no">${String(i + 1).padStart(2, '0')}</td><td>${esc(c.label)}</td>` +
+             `<td class="ct">${n} 点</td><td class="stt">${n > 0 ? '有' : '－'}</td></tr>`;
+    }).join('');
+  }
+
+  $('printTocBtn').addEventListener('click', () => {
+    if (!curProj) return;
+    buildTocPrint(byChapter());
+    document.body.classList.add('pm-toc');
+    const done = () => { document.body.classList.remove('pm-toc'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+  });
+
+  /* ---------- 印刷：工事写真帳 ---------- */
+  function cap(f){
+    const rows = [
+      ['工種', f.bb_work_type || ''],
+      ['内容', f.title || f.description || ''],
+      ['撮影日', f.taken_on ? fmtDate(f.taken_on) : ''],
+      ['位置', [f.bb_location, f.bb_station].filter(Boolean).join('　')]
+    ];
+    return rows;
+  }
+  async function buildAlbumPrint(){
+    const p = curProj || {};
+    const photos = (byChapter().get('photo') || []).filter(isPhoto);
+    $('pa_sub').textContent = `${p.project_no || ''}　${p.name || ''}`;
+    if (!photos.length){
+      $('pa_grid').innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#666;padding:20px">
+        工事写真帳に写真がありません。画面で「未分類の写真を工事写真帳へ」か、写真を工事写真帳へドラッグしてください。</div>`;
+      return true;
+    }
+    // 署名URLを先に用意（印刷前に画像を読み込ませる）
+    const urls = await Promise.all(photos.map(f => signedUrl(f.storage_path)));
+    $('pa_grid').innerHTML = photos.map((f, i) => {
+      const capRows = cap(f).map(r =>
+        `<div class="crow"><span class="ck">${esc(r[0])}</span><span class="cv">${esc(r[1])}</span></div>`).join('');
+      return `<div class="acard">
+        <div class="ano">No.${i + 1}</div>
+        <div class="aimg">${urls[i] ? `<img src="${urls[i]}" alt="">` : ''}</div>
+        <div class="acap">${capRows}</div>
+      </div>`;
+    }).join('');
+    // 画像の読み込み完了を待つ
+    const imgs = [...$('pa_grid').querySelectorAll('img')];
+    await Promise.all(imgs.map(im => im.complete ? Promise.resolve()
+      : new Promise(res => { im.onload = im.onerror = res; })));
+    return true;
+  }
+
+  $('printAlbumBtn').addEventListener('click', async () => {
+    if (!curProj) return;
+    const btn = $('printAlbumBtn'); btn.disabled = true; const t = btn.textContent; btn.textContent = '準備中…';
+    await buildAlbumPrint();
+    btn.disabled = false; btn.textContent = t;
+    document.body.classList.add('pm-album');
+    const done = () => { document.body.classList.remove('pm-album'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+  });
+
+  /* ---------- 工事切り替え ---------- */
+  async function selectProject(id){
+    projId = id || null;
+    curProj = projects.find(x => x.id === projId) || null;
+    const u = new URL(location.href);
+    if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+    urlCache = {};
+    showMsg($('msg'), '');
+    paintSummary();
+    $('actrow').hidden = !projId;
+    $('rohint').hidden = isMgr || !projId;
+    if (!projId){
+      $('body').hidden = true;
+      $('emptymsg').innerHTML = `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、竣工図書の整理ができます。</div>`;
+      return;
+    }
+    $('emptymsg').innerHTML = '';
+    await loadPhases();
+    await loadFiles();
+    if (!files.length){
+      $('body').hidden = true;
+      $('emptymsg').innerHTML = `<div class="empty"><b>まだ資料がありません</b>「写真・書類」画面から写真や書類を取り込むと、ここで章別に整理できます。<br><a href="files.html?p=${projId}">写真・書類へ</a></div>`;
+      return;
+    }
+    $('body').hidden = false;
+    render();
+  }
+  $('proj').addEventListener('change', () => selectProject($('proj').value));
+
+  /* ---------- 起動 ---------- */
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)){ $('proj').value = q; await selectProject(q); }
+  else showMsg($('msg'), ''), $('emptymsg').innerHTML =
+    `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、竣工図書の整理ができます。</div>`;
+})();
+</script>
+</body>
+</html>

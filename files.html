@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: files (写真・書類) v20260724A -->
+<!-- BUILD: files (写真・書類) v20260905A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -118,6 +118,7 @@
     </select>
     <select id="fphase"><option value="">すべての工程</option></select>
     <select id="fassignee"><option value="">すべての担当者</option></select>
+    <select id="fcategory"><option value="">すべての図書分類</option></select>
     <select id="fsort">
       <option value="date">取り込み日順（新しい順）</option>
       <option value="name">名前順</option>
@@ -149,6 +150,9 @@
     <div class="opt2">
       <input id="u_assignee" type="text" list="assigneelist" placeholder="担当者（現場で撮影・作業した人・省略可）">
       <select id="u_report"><option value="">日報にひもづけない</option></select>
+    </div>
+    <div class="opt2">
+      <select id="u_category"><option value="">竣工図書の分類（省略可）</option></select>
     </div>
     <div class="opt2">
       <input id="u_title" type="text" placeholder="題名（まとめて付ける・省略可）">
@@ -232,6 +236,10 @@
       <div class="row">
         <label for="f_phase">工程</label>
         <div class="fld"><select id="f_phase"></select></div>
+      </div>
+      <div class="row">
+        <label for="f_category">図書分類</label>
+        <div class="fld"><select id="f_category"><option value="">（未分類）</option></select></div>
       </div>
       <div class="row">
         <label for="f_tags">タグ</label>
@@ -332,6 +340,10 @@
       '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
     // 担当者の候補（社員の氏名）。手入力もできる
     $('assigneelist').innerHTML = users.map(x => `<option value="${esc(x.name)}">`).join('');
+    // 竣工図書の章立て（絞り込み・取り込み・詳細で共通に使う）
+    $('fcategory').innerHTML = '<option value="">すべての図書分類</option>' + chapterOptions();
+    $('u_category').innerHTML = '<option value="">竣工図書の分類（省略可）</option>' + chapterOptions();
+    $('f_category').innerHTML = '<option value="">（未分類）</option>' + chapterOptions();
   }
 
   async function loadPhases(){
@@ -608,11 +620,13 @@
     const kd = $('fkind').value, ph = $('fphase').value;
     const q  = $('q').value.trim().toLowerCase();
     const asg = $('fassignee').value;
+    const cat = $('fcategory').value;
 
     let rows = files.filter(f => {
       if (kd && f.file_kind !== kd) return false;
       if (ph && f.phase_id !== ph) return false;
       if (asg && (f.assignee_name || '（担当なし）') !== asg) return false;
+      if (cat && (f.doc_category || '') !== cat) return false;
       if (!q) return true;
       return [f.title, f.bb_location, f.bb_station, f.original_name, f.description, f.assignee_name]
         .some(v => (v || '').toLowerCase().includes(q));
@@ -661,7 +675,7 @@
         </span>
         <span class="cb">
           <span class="c1">${esc(f.title || f.original_name || '（無題）')}</span>
-          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}${who ? ' ・ ' + who : ''}</span>
+          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}${who ? ' ・ ' + who : ''}${f.doc_category ? ' ・ ' + esc(chapterLabel(f.doc_category)) : ''}</span>
         </span></button>`;
     }).join('');
 
@@ -670,7 +684,8 @@
       const um = users.find(u => u.id === f.uploaded_by);
       const ext = /\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1]?.toUpperCase() || KIND[f.file_kind] || '';
       const who = f.assignee_name ? '担当 ' + f.assignee_name : (um ? '取込 ' + um.name : '');
-      const meta = [f.taken_on ? fmtDate(f.taken_on) : '', pm ? pm.name : '', who, f.purpose === 'internal' ? '社内' : '提出用']
+      const meta = [f.taken_on ? fmtDate(f.taken_on) : '', pm ? pm.name : '', who,
+                    chapterLabel(f.doc_category), f.purpose === 'internal' ? '社内' : '提出用']
         .filter(Boolean).map(esc);
       return `<button class="item drow" data-id="${f.id}">
         <span class="rno">${i + 1}</span>
@@ -726,6 +741,7 @@
   $('fkind').addEventListener('change', render);
   $('fphase').addEventListener('change', render);
   $('fassignee').addEventListener('change', render);
+  $('fcategory').addEventListener('change', render);
   $('fsort').addEventListener('change', render);
   $('q').addEventListener('input', render);
 
@@ -810,6 +826,9 @@
     const utitle  = $('u_title').value.trim() || null;
     const utags   = $('u_tags').value.split(/[、,]/).map(x => x.trim()).filter(Boolean);
     const ureport = $('u_report').value || null;
+    // 図書分類は選んだときだけ送る（列が未作成（phase14未実行）でも取り込みが壊れないよう、
+    // undefined にして JSON から自動的に外す）
+    const ucat    = $('u_category').value || undefined;
     // 担当者：入力があればそれ。無ければ選んだ日報の担当者を使う
     const rsel    = reports.find(x => x.id === ureport);
     const uassign = $('u_assignee').value.trim() || (rsel ? repName(rsel) : '') || null;
@@ -869,6 +888,7 @@
           byte_size      : origBlob.size,
           width_px       : w, height_px: h,
           phase_id       : phase,
+          doc_category   : ucat,
           title          : list.length > 1 && utitle ? `${utitle}（${i+1}）` : utitle,
           tags           : utags,
           assignee_name  : uassign,
@@ -936,6 +956,7 @@
     $('f_purpose').value = f.purpose;
     $('f_taken').value   = f.taken_on || '';
     $('f_phase').value   = f.phase_id || '';
+    $('f_category').value = f.doc_category || '';
     $('f_tags').value    = (f.tags || []).join('、');
     $('f_desc').value    = f.description || '';
     $('bbrows').innerHTML = bbHtml(f);
@@ -1048,6 +1069,10 @@
       if (el.dataset.col) body[el.dataset.col] = v || null;
       else if (v) body.bb_extra[el.dataset.key] = v;
     });
+    // 図書分類：選んでいるか、既に分類が付いている資料のときだけ送る
+    // （列が未作成（phase14未実行）のときに保存全体が失敗しないようにする）
+    if ($('f_category').value || editing.doc_category)
+      body.doc_category = $('f_category').value || null;
 
     $('save').disabled = true; $('save').textContent = '保存しています…';
     const { error } = await sb.from('project_files').update(body).eq('id', editing.id);
