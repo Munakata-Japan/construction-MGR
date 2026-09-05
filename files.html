@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: files (写真・書類) v20260905A -->
+<!-- BUILD: files (写真・書類) v20260906A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -45,6 +45,12 @@
     padding:2px 6px; border-radius:2px; background:rgba(22,50,79,.86); color:#fff;
   }
   .pill.int{ background:rgba(122,131,124,.9); }
+  .pill.cat{ left:auto; right:5px; max-width:80%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pill.cat.done{ background:rgba(35,133,84,.92); }
+  .pill.cat.none{ background:rgba(176,124,0,.94); }
+  .dtag{ font-size:11px; font-weight:700; padding:1px 7px; border-radius:2px; color:#fff; white-space:nowrap; }
+  .dtag.done{ background:var(--ok); }
+  .dtag.none{ background:#B07C00; }
 
   .sech{ font-family:var(--disp); font-weight:700; font-size:12.5px; color:var(--sub);
          margin:16px 0 8px; padding-left:9px; border-left:3px solid var(--safety); }
@@ -341,7 +347,8 @@
     // 担当者の候補（社員の氏名）。手入力もできる
     $('assigneelist').innerHTML = users.map(x => `<option value="${esc(x.name)}">`).join('');
     // 竣工図書の章立て（絞り込み・取り込み・詳細で共通に使う）
-    $('fcategory').innerHTML = '<option value="">すべての図書分類</option>' + chapterOptions();
+    $('fcategory').innerHTML = '<option value="">すべての図書分類</option>' +
+      '<option value="__none__">未分類のみ</option>' + chapterOptions();
     $('u_category').innerHTML = '<option value="">竣工図書の分類（省略可）</option>' + chapterOptions();
     $('f_category').innerHTML = '<option value="">（未分類）</option>' + chapterOptions();
   }
@@ -626,7 +633,8 @@
       if (kd && f.file_kind !== kd) return false;
       if (ph && f.phase_id !== ph) return false;
       if (asg && (f.assignee_name || '（担当なし）') !== asg) return false;
-      if (cat && (f.doc_category || '') !== cat) return false;
+      if (cat === '__none__'){ if (f.doc_category) return false; }
+      else if (cat && (f.doc_category || '') !== cat) return false;
       if (!q) return true;
       return [f.title, f.bb_location, f.bb_station, f.original_name, f.description, f.assignee_name]
         .some(v => (v || '').toLowerCase().includes(q));
@@ -672,10 +680,11 @@
       return `<button class="card" data-id="${f.id}">
         <span class="ph" data-p="${esc(f.thumb_path || f.storage_path || '')}" data-m="${esc(f.mime_type||'')}" data-th="${f.thumb_path ? 1 : 0}">
           <span class="pill${f.purpose === 'internal' ? ' int' : ''}">${f.purpose === 'submit' ? '提出用' : '社内'}</span>
+          <span class="pill cat ${f.doc_category ? 'done' : 'none'}">${f.doc_category ? esc(chapterLabel(f.doc_category)) : '未分類'}</span>
         </span>
         <span class="cb">
           <span class="c1">${esc(f.title || f.original_name || '（無題）')}</span>
-          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}${who ? ' ・ ' + who : ''}${f.doc_category ? ' ・ ' + esc(chapterLabel(f.doc_category)) : ''}</span>
+          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}${who ? ' ・ ' + who : ''}</span>
         </span></button>`;
     }).join('');
 
@@ -685,8 +694,9 @@
       const ext = /\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1]?.toUpperCase() || KIND[f.file_kind] || '';
       const who = f.assignee_name ? '担当 ' + f.assignee_name : (um ? '取込 ' + um.name : '');
       const meta = [f.taken_on ? fmtDate(f.taken_on) : '', pm ? pm.name : '', who,
-                    chapterLabel(f.doc_category), f.purpose === 'internal' ? '社内' : '提出用']
+                    f.purpose === 'internal' ? '社内' : '提出用']
         .filter(Boolean).map(esc);
+      const catTag = `<span class="dtag ${f.doc_category ? 'done' : 'none'}">${f.doc_category ? esc(chapterLabel(f.doc_category)) : '未分類'}</span>`;
       return `<button class="item drow" data-id="${f.id}">
         <span class="rno">${i + 1}</span>
         <span class="flag"></span>
@@ -694,7 +704,7 @@
           <span class="no">${esc(ext)}</span>
           <span style="min-width:0;flex:1 1 auto">
             <span class="nm" style="font-size:13.5px;margin:0">${esc(f.title || f.original_name || '（無題）')}</span>
-            <span class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</span>
+            <span class="meta">${catTag}${meta.map(m => `<span>${m}</span>`).join('')}</span>
           </span>
         </span></button>`;
     }).join('');
