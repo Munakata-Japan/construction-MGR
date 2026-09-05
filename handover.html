@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260905A -->
+<!-- BUILD: handover (竣工図書) v20260906A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -67,6 +67,27 @@
   .row2 .mv{ font-size:11px; }
 
   .hint{ font-size:12.5px; color:var(--sub); margin:-4px 0 12px; line-height:1.7; }
+
+  /* 進捗バー */
+  .prog2{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+          box-shadow:var(--shadow-1); padding:11px 14px; margin-bottom:16px; }
+  .prog2 .pgtop{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .prog2 .pgtop b{ font-family:var(--disp); font-size:14px; }
+  .prog2 .pgnum{ font-family:var(--mono); font-size:12.5px; color:var(--sub); }
+  .prog2 .pgnum .rem{ color:#8A6400; font-weight:700; }
+  .prog2 .pgbar{ height:9px; background:var(--rule-2); border-radius:5px; overflow:hidden; margin-top:8px; }
+  .prog2 .pgbar > span{ display:block; height:100%; background:var(--ok); width:0; transition:width .3s ease; }
+  .prog2 .pgdone{ color:var(--ok); font-weight:700; font-size:13.5px; margin-top:7px; }
+
+  /* 受け皿（未分類）は目立たせ、章フォルダは埋まると緑に */
+  .chap.pool{ border-color:var(--safety); box-shadow:0 0 0 1px var(--safety) inset, var(--shadow-1); }
+  .chap.pool > .ch{ background:#FBF1D6; }
+  .chap.pool > .ch .cl{ color:#8A6400; }
+  .chap.pool > .ch .cc{ color:#8A6400; font-weight:700; }
+  .chap.folder.filled > .ch{ background:#EFF5F1; }
+  .chap.folder.filled > .ch .cl{ color:var(--ok); }
+  .chap.folder.filled > .ch .cn::after{ content:"✓"; color:var(--ok); margin-left:4px; }
+  .chap.folder.empty > .ch{ opacity:.72; }
 
   /* ===== 印刷（目次・工事写真帳） ===== */
   .printdoc{ display:none; }
@@ -136,12 +157,14 @@
   <p class="hint" id="rohint" hidden>整理（分類・並べ替え）は現場監督・管理者のみ行えます。</p>
 
   <div id="body" hidden>
+    <div id="progress" class="prog2"></div>
+
+    <p class="sech">仕分け（未分類の受け皿 → 各章フォルダへ）</p>
+    <p class="hint">一番上の<b>受け皿</b>にある資料を、行の <b>⠿</b> をつかんで各章の枠へドラッグすると、その章へ移り<b>受け皿から消えます</b>。受け皿が空になれば分類完了です。写真・書類の取り込みは「写真・書類」画面から。</p>
+    <div id="chaps"></div>
+
     <p class="sech">目次（集まり具合）</p>
     <div class="list toc" id="toc"></div>
-
-    <p class="sech">章ごとに整理（ドラッグで章へ振り分け・並べ替え）</p>
-    <p class="hint">写真・書類の取り込みは「写真・書類」画面から。ここでは取り込んだものを竣工図書の章へ並べます。行の <b>⠿</b> をドラッグして、章の枠へ落としてください。</p>
-    <div id="chaps"></div>
   </div>
 
   <div id="emptymsg"></div>
@@ -316,20 +339,37 @@
     </div>`;
   }
 
+  function paintProgress(map){
+    const total = files.length;
+    const none = (map.get(NONE) || []).length;
+    const done = total - none;
+    const pct = total ? Math.round(done / total * 100) : 0;
+    $('progress').innerHTML =
+      `<div class="pgtop"><b>分類の進み具合</b>` +
+      `<span class="pgnum">分類済 ${done} ／ <span class="rem">未分類 ${none}</span>（全 ${total} 点）</span></div>` +
+      `<div class="pgbar"><span style="width:${pct}%"></span></div>` +
+      (total > 0 && none === 0
+        ? `<div class="pgdone">✓ すべて分類できました。目次・工事写真帳を印刷できます。</div>` : '');
+  }
+
   function renderChaps(map){
     let html = '';
     let no = 0;
-    const secOrder = [...HANDOVER_CHAPTERS.map(c => c.key), NONE];
-    secOrder.forEach((key, idx) => {
+    // 受け皿（未分類）を一番上に。分類すると各章フォルダへ移り、受け皿から消える
+    const secOrder = [NONE, ...HANDOVER_CHAPTERS.map(c => c.key)];
+    secOrder.forEach(key => {
       const arr = map.get(key) || [];
-      if (key === NONE && !arr.length) return;   // 未分類は中身があるときだけ
-      const label = key === NONE ? '未分類' : chapterLabel(key);
-      const cn = key === NONE ? '' : String(HANDOVER_CHAPTERS.findIndex(c => c.key === key) + 1).padStart(2, '0');
+      const isPool = key === NONE;
+      if (isPool && !arr.length) return;   // 受け皿は残っているときだけ出す
+      const label = isPool ? '未分類（受け皿）' : chapterLabel(key);
+      const cn = isPool ? '' : String(HANDOVER_CHAPTERS.findIndex(c => c.key === key) + 1).padStart(2, '0');
+      const cls = isPool ? 'pool' : ('folder ' + (arr.length ? 'filled' : 'empty'));
+      const cc = isPool ? `残り ${arr.length} 点` : `${arr.length} 点`;
       let rows = '';
       arr.forEach(f => { no++; rows += itemRow(f, no); });
-      html += `<div class="chap${key === NONE ? ' none' : ''}" data-key="${key === NONE ? '' : key}">
+      html += `<div class="chap ${cls}" data-key="${isPool ? '' : key}">
         <div class="ch"><span class="cn">${cn}</span><span class="cl">${esc(label)}</span>
-          <span class="cc">${arr.length} 点</span></div>
+          <span class="cc">${cc}</span></div>
         <div class="items">${rows}</div>
       </div>`;
     });
@@ -345,6 +385,7 @@
 
   function render(){
     const map = byChapter();
+    paintProgress(map);
     renderToc(map);
     renderChaps(map);
   }
