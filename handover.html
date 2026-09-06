@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260906J -->
+<!-- BUILD: handover (竣工図書) v20260906K -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -536,16 +536,14 @@
       const f = all[i];
       showMsg($('msg'), `取り込み中… ${i + 1} / ${all.length}（${f.name}）`, '');
       try {
-        let origBlob = f, w = null, h = null;
-        if (f.type.startsWith('image/')){
-          const r = await shrinkImage(f, 1600, 0.80);   // 提出用（工事写真台帳の画質）
-          if (r){ origBlob = r.blob; w = r.w; h = r.h; }
-        }
+        showMsg($('msg'), `取り込み中… ${i + 1} / ${all.length}（${f.name}）を軽くしています`, '');
+        const prep = await prepUpload(f, { edge: 1600, quality: 0.80 });   // 写真は縮小・PDFは圧縮
+        let origBlob = prep.blob, w = prep.width, h = prep.height;
         const stamp = Date.now() + '_' + i;
         const baseP = `${me.organization_id}/${projId}`;
         const nm = (f.name || 'file').replace(/[^\w.\-]/g, '_').slice(-80);
         const origPath = `${baseP}/orig/${stamp}_${nm}`;
-        const up1 = await sb.storage.from(BUCKET).upload(origPath, origBlob, { contentType: f.type || 'application/octet-stream' });
+        const up1 = await sb.storage.from(BUCKET).upload(origPath, origBlob, { contentType: origBlob.type || mimeOf(f) });
         if (up1.error) throw up1.error;
         let thumbPath = null;
         const t = await makeThumb(f, 900, 0.75);

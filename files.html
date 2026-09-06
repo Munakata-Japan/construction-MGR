@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: files (写真・書類) v20260906F -->
+<!-- BUILD: files (写真・書類) v20260906G -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -964,21 +964,20 @@
       const nm    = safeName(f.name);
 
       try {
-        let origBlob = f, w = null, h = null;
-
-        // 写真は用途に応じた大きさに落として保存する
-        //   提出用 : 長辺1600px（工事写真台帳で2枚並べ・黒板つきでもA4に約200dpiで刷れる。1枚300〜600KB）
-        //   社内用 : 長辺1200px
-        if (f.type.startsWith('image/')){
-          const edge = (purpose === 'submit') ? 1600 : 1200;
-          const q    = (purpose === 'submit') ? 0.80 : 0.75;
-          const r = await shrinkImage(f, edge, q);
-          if (r){ origBlob = r.blob; w = r.w; h = r.h; }
+        // 取り込み時に軽くする：写真は縮小（提出用1600px/社内1200px）、
+        //   PDF（大きめ）は各ページを提出品質のJPEGで作り直して圧縮（開きが速くなる）。
+        if (f.type.startsWith('image/') || /\.pdf$/i.test(f.name || '')){
+          $('prog').textContent = `${i+1} / ${list.length} 件目を軽くしています…（${f.name}）`;
         }
+        const prep = await prepUpload(f, {
+          edge:    (purpose === 'submit') ? 1600 : 1200,
+          quality: (purpose === 'submit') ? 0.80 : 0.75
+        });
+        let origBlob = prep.blob, w = prep.width, h = prep.height;
 
         const origPath = `${base}/orig/${stamp}_${nm}`;
         const up1 = await sb.storage.from(BUCKET)
-          .upload(origPath, origBlob, { contentType: f.type || 'application/octet-stream' });
+          .upload(origPath, origBlob, { contentType: origBlob.type || mimeOf(f) });
         if (up1.error) throw up1.error;
 
         // 表示用の絵（画像は縮小、PDFは1ページ目）

@@ -1,6 +1,6 @@
 /* ============================================================
    宗像総合管理システム  共通処理
-   BUILD: common.js v20260906A
+   BUILD: common.js v20260906B
    ============================================================ */
 
 /* ---------- 最新版をすぐ反映する（Service Worker・ネットワーク優先） ----------
@@ -326,6 +326,84 @@ async function makeThumb(file, maxEdge, quality){
   }
   if (file.type === 'application/pdf') return await pdfThumb(file, maxEdge);
   return null;
+}
+
+/* ---------- 取り込み時の圧縮（PDF）とMIME判定 ----------
+   PDF（特にスキャン・画像主体）は原本のままだと重く、開くのに時間がかかる。
+   取り込み時に各ページを提出品質(既定150dpi・JPEG)で作り直して小さくする。
+   テキスト/ベクタ主体で縮まないPDFは劣化を避けるため原本を使う（呼び出し側で判定）。
+------------------------------------------------------------------ */
+let _jspdfReady = null;
+function loadJsPdf(){
+  if (_jspdfReady) return _jspdfReady;
+  _jspdfReady = new Promise((res, rej) => {
+    if (window.jspdf && window.jspdf.jsPDF) return res(window.jspdf.jsPDF);
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload = () => (window.jspdf && window.jspdf.jsPDF) ? res(window.jspdf.jsPDF) : rej(new Error('jsPDFの読み込みに失敗しました'));
+    s.onerror = () => rej(new Error('jsPDFの読み込みに失敗しました'));
+    document.head.appendChild(s);
+  });
+  return _jspdfReady;
+}
+
+/* 拡張子・種類からMIMEを決める（アップロードのcontent-type用。PDFを application/pdf で
+   保存しておくと、開いたとき即ストリーム表示できる＝真っ黒/待ちを防ぐ）。 */
+function mimeOf(file){
+  if (file.type) return file.type;
+  const n = (file.name || '').toLowerCase();
+  if (/\.pdf$/.test(n)) return 'application/pdf';
+  if (/\.jpe?g$/.test(n)) return 'image/jpeg';
+  if (/\.png$/.test(n))  return 'image/png';
+  if (/\.gif$/.test(n))  return 'image/gif';
+  if (/\.webp$/.test(n)) return 'image/webp';
+  return 'application/octet-stream';
+}
+
+/* PDFを提出品質に圧縮。成功で Blob、失敗や対象外は null（原本を使う）。 */
+async function compressPdf(file, dpi, quality){
+  dpi = dpi || 150; quality = quality || 0.72;
+  try {
+    const lib = await loadPdfLib();
+    const jsPDF = await loadJsPdf();
+    const buf = await file.arrayBuffer();
+    const doc = await lib.getDocument({ data: buf }).promise;
+    let out = null;
+    for (let i = 1; i <= doc.numPages; i++){
+      const page = await doc.getPage(i);
+      const vp = page.getViewport({ scale: dpi / 72 });
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round(vp.width));
+      cv.height = Math.max(1, Math.round(vp.height));
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      const img = cv.toDataURL('image/jpeg', quality);
+      const wPt = cv.width * 72 / dpi, hPt = cv.height * 72 / dpi;
+      if (!out) out = new jsPDF({ unit: 'pt', format: [wPt, hPt], compress: true });
+      else out.addPage([wPt, hPt]);
+      out.addImage(img, 'JPEG', 0, 0, wPt, hPt);
+      cv.width = cv.height = 0;
+    }
+    return out ? out.output('blob') : null;
+  } catch (e){ console.error('compressPdf failed', e); return null; }
+}
+
+/* 取り込むファイルを保存用に整える。画像は縮小、PDF（大きめ）は圧縮を試し、
+   縮んだときだけ採用する。戻り値 { blob, width, height }。 */
+async function prepUpload(file, opts){
+  opts = opts || {};
+  const edge = opts.edge || 1600, q = opts.quality || 0.80;
+  if (file.type && file.type.startsWith('image/')){
+    const r = await shrinkImage(file, edge, q);
+    return r ? { blob: r.blob, width: r.w, height: r.h } : { blob: file, width: null, height: null };
+  }
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+  if (isPdf && file.size > 1200000){
+    const c = await compressPdf(file, opts.pdfDpi || 150, opts.pdfQuality || 0.72);
+    if (c && c.size < file.size * 0.85) return { blob: c, width: null, height: null };
+  }
+  return { blob: file, width: null, height: null };
 }
 
 /* ---------- 写真に記録された位置と撮影日時 ---------- */
