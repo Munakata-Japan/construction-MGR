@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260906I -->
+<!-- BUILD: handover (竣工図書) v20260906J -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -687,6 +687,12 @@
     render();
 
     try {
+      // 分類先(doc_category)をDBへ保存する。applyChapterNames は並び順とファイル名しか
+      // 触らないため、これが無いと loadFiles() で元に戻ってしまう（＝移動できない）。
+      await Promise.all(moved.map(async x => {
+        const { error } = await sb.from('project_files').update({ doc_category: targetKey || null }).eq('id', x.id);
+        if (error) throw error;
+      }));
       // 章の採番＆ファイル名タグを付け直す（移動先／元の各章）
       await applyChapterNames(files, targetKey);
       for (const s of sources){ if (s !== targetKey) await applyChapterNames(files, s); }
