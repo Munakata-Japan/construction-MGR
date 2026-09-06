@@ -1957,18 +1957,28 @@ body > header.bar{ flex:0 0 auto; }
     $('osave').disabled = true; $('osave').textContent = '保存しています…';
     let error, orderId = oediting?.id;
     if (oediting){
-      ({ error } = await sb.from('phase_orders').update(body).eq('id', oediting.id));
+      // .select() で「実際に何行更新されたか」を確認する。RLS などで0行なら
+      // エラーが出ないまま保存されず、再度開くと元に戻る（サイレント失敗）ため明示的に検知。
+      const r = await sb.from('phase_orders').update(body).eq('id', oediting.id).select('id');
+      error = r.error;
+      if (!error && (!r.data || r.data.length === 0)){
+        error = { message: '更新できませんでした（権限が無いか、対象が見つかりません）。ページを再読み込みしてお試しください。' };
+      }
     } else {
+      body.is_active = true;   // 既定値に頼らず明示（既定が無いと再読込で一覧から消える）
       const r = await sb.from('phase_orders').insert(body).select('id').single();
       error = r.error; orderId = r.data?.id;
     }
 
     if (!error && orderId){
-      await sb.from('phase_order_items').delete().eq('phase_order_id', orderId);
+      const d = await sb.from('phase_order_items').delete().eq('phase_order_id', orderId);
       const rows = collectOiLines().map(x => ({ ...x, organization_id: me.organization_id, phase_order_id: orderId }));
       if (rows.length){
-        const r2 = await sb.from('phase_order_items').insert(rows);
-        if (r2.error) error = r2.error;
+        if (d.error) error = d.error;   // 明細を入れる予定があるのに消せない＝テーブル未作成等。黙って捨てない
+        else {
+          const r2 = await sb.from('phase_order_items').insert(rows);
+          if (r2.error) error = r2.error;
+        }
       }
     }
 
