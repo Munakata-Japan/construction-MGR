@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260906C -->
+<!-- BUILD: handover (竣工図書) v20260906D -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -67,6 +67,16 @@
   .row2 .nm .t2{ font-size:11.5px; color:var(--sub); font-family:var(--mono); line-height:1.5;
                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .row2 .mv{ font-size:11px; }
+  .row2.sel{ background:#E3EDF7; border-color:var(--ink); box-shadow:inset 0 0 0 2px var(--ink); }
+  .row2.multidrag{ opacity:.5; }
+  .selbar{ position:sticky; top:0; z-index:20; background:var(--ink); color:#EBEDE8;
+           border-radius:var(--radius); padding:8px 12px; margin-bottom:12px; display:flex; align-items:center;
+           gap:12px; flex-wrap:wrap; box-shadow:var(--shadow-2); font-size:13px; }
+  .selbar b{ font-family:var(--mono); font-size:15px; color:#fff; }
+  .selbar .hint2{ color:#B9C6F2; font-size:12px; }
+  .selbar button{ margin-left:auto; background:transparent; border:1px solid #6a82e0; color:#EBEDE8;
+                  border-radius:var(--radius-sm); padding:5px 10px; font-size:12.5px; cursor:pointer; font-family:var(--body); }
+  .selbar button:hover{ background:#204D7E; }
 
   .hint{ font-size:12.5px; color:var(--sub); margin:-4px 0 12px; line-height:1.7; }
 
@@ -167,9 +177,10 @@
 
   <div id="body" hidden>
     <div id="progress" class="prog2"></div>
+    <div id="selbar" class="selbar" hidden></div>
 
     <p class="sech">仕分け（受け皿 ⇄ 各章フォルダ・パソコンからD&Dで取り込み）</p>
-    <p class="hint">パソコンの写真・PDFを<b>章の枠へドラッグ＆ドロップ</b>すればその章へ、<b>枠の外や受け皿</b>へ落とせば未分類として取り込めます。すでにある資料は行の <b>⠿</b> をつかんで章の枠へ動かせます（その章へ移り受け皿から消えます）。</p>
+    <p class="hint">パソコンの写真・PDFを<b>章の枠へドラッグ＆ドロップ</b>すればその章へ、<b>枠の外や受け皿</b>へ落とせば未分類として取り込めます。すでにある資料は行の <b>⠿</b> をつかんで章の枠へ動かせます（その章へ移り受け皿から消えます）。<br><b>まとめて移動</b>：<b>Ctrl＋クリック</b>で1件ずつ選ぶ／<b>Shift＋クリック</b>で範囲を選ぶ → 選択したものを章の枠へドラッグ。</p>
     <div id="chaps"></div>
 
     <p class="sech">目次（集まり具合）</p>
@@ -218,6 +229,9 @@
 
   let projects = [], partners = [], phases = [], files = [], projId = null, curProj = null;
   let urlCache = {}, draggingId = null;
+  let selected = new Set(), anchorId = null, dragIds = [];   // 複数選択（Ctrl／Shift）
+  const bySort = (a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) ||
+                           ((a.taken_on || '') < (b.taken_on || '') ? 1 : -1);
 
   const isPhoto = f => f.file_kind === 'photo' || (f.mime_type || '').startsWith('image/');
   const NONE = '__none__';
@@ -363,6 +377,20 @@
         ? `<div class="pgdone">✓ すべて分類できました。目次・工事写真帳を印刷できます。</div>` : '');
   }
 
+  function paintSelection(){
+    // 消えたIDは選択から外す
+    [...selected].forEach(id => { if (!files.some(f => f.id === id)) selected.delete(id); });
+    const box = $('chaps');
+    box.querySelectorAll('.row2').forEach(r => r.classList.toggle('sel', selected.has(r.dataset.id)));
+    const n = selected.size, bar = $('selbar');
+    if (!n){ bar.hidden = true; bar.innerHTML = ''; return; }
+    bar.hidden = false;
+    bar.innerHTML = `<b>${n}</b>件を選択中` +
+      `<span class="hint2">選択したものを章の枠へドラッグ＝まとめて移動（Ctrl＝個別・Shift＝範囲・Escで解除）</span>` +
+      `<button type="button" id="selclear">選択を解除</button>`;
+    bar.querySelector('#selclear').onclick = () => { selected.clear(); anchorId = null; paintSelection(); };
+  }
+
   function renderChaps(map){
     let html = '';
     let no = 0;
@@ -392,6 +420,7 @@
       signedUrl(p).then(u => { if (u) box.innerHTML = `<img src="${u}" alt="" loading="lazy">`; });
     });
     if (isMgr) wireDrag();
+    paintSelection();
   }
 
   function render(){
@@ -487,15 +516,41 @@
     $('chaps').querySelectorAll('.dropbefore,.dropafter,.dragover')
       .forEach(el => el.classList.remove('dropbefore', 'dropafter', 'dragover'));
   }
+  function orderedIds(){ return [...$('chaps').querySelectorAll('.row2')].map(r => r.dataset.id); }
+
   function wireDrag(){
     const box = $('chaps');
     box.querySelectorAll('.row2').forEach(row => {
-      row.addEventListener('dragstart', e => {
-        draggingId = row.dataset.id; row.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        try { e.dataTransfer.setData('text/plain', row.dataset.id); } catch (_) {}
+      // クリックで選択（Windowsと同じ：通常＝単一／Ctrl＝個別追加・解除／Shift＝範囲）
+      row.addEventListener('click', e => {
+        if (e.target.closest('a')) return;   // 「開く」リンクは除外
+        const id = row.dataset.id, ord = orderedIds();
+        if (e.shiftKey && anchorId && ord.includes(anchorId)){
+          if (!(e.ctrlKey || e.metaKey)) selected.clear();
+          const a = ord.indexOf(anchorId), b = ord.indexOf(id), lo = Math.min(a, b), hi = Math.max(a, b);
+          for (let i = lo; i <= hi; i++) selected.add(ord[i]);
+        } else if (e.ctrlKey || e.metaKey){
+          if (selected.has(id)) selected.delete(id); else selected.add(id);
+          anchorId = id;
+        } else {
+          selected.clear(); selected.add(id); anchorId = id;
+        }
+        paintSelection();
       });
-      row.addEventListener('dragend', () => { row.classList.remove('dragging'); clearInd(); });
+      row.addEventListener('dragstart', e => {
+        const id = row.dataset.id;
+        // 未選択の行をドラッグしたら、それ1件だけの選択にする
+        if (!selected.has(id)){ selected.clear(); selected.add(id); anchorId = id; paintSelection(); }
+        dragIds = [...selected];
+        box.querySelectorAll('.row2').forEach(r => { if (selected.has(r.dataset.id)) r.classList.add('multidrag'); });
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', id); } catch (_) {}
+      });
+      row.addEventListener('dragend', () => {
+        box.querySelectorAll('.row2').forEach(r => r.classList.remove('multidrag', 'dragging'));
+        clearInd();
+      });
       row.addEventListener('dragover', e => {
         if (hasFiles(e)){ e.preventDefault(); return; }   // 外部ファイルは章の枠で受ける
         e.preventDefault(); clearInd();
@@ -510,7 +565,7 @@
         const r = row.getBoundingClientRect();
         const after = (e.clientY - r.top) > r.height / 2;
         clearInd();
-        await doMove(draggingId, chap ? (chap.dataset.key || '') : '', row.dataset.id, after);
+        await doMoveMany(dragIds.length ? dragIds : [row.dataset.id], chap ? (chap.dataset.key || '') : '', row.dataset.id, after);
       });
     });
     box.querySelectorAll('.chap').forEach(sec => {
@@ -523,38 +578,38 @@
         e.preventDefault(); e.stopPropagation();
         sec.classList.remove('dragover'); sec.classList.remove('fileover');
         if (hasFiles(e)){ if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, sec.dataset.key || ''); return; }
-        await doMove(draggingId, sec.dataset.key || '', null, false);
+        await doMoveMany(dragIds, sec.dataset.key || '', null, false);
       });
     });
   }
 
-  async function doMove(draggedId, targetKey, refId, after){
-    if (!draggedId) return;
-    if (refId && refId === draggedId) return;
-    const dragged = files.find(x => x.id === draggedId);
-    if (!dragged) return;
-
-    const sourceKey = dragged.doc_category || '';
-    const inSec = files
-      .filter(x => x.id !== draggedId && ((x.doc_category || '') === targetKey))
-      .sort((a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) ||
-                      ((a.taken_on || '') < (b.taken_on || '') ? 1 : -1));
+  async function doMoveMany(ids, targetKey, refId, after){
+    ids = [...new Set((ids || []).filter(Boolean))];
+    const moved = ids.map(id => files.find(x => x.id === id)).filter(Boolean);
+    if (!moved.length) return;
+    const idset = new Set(moved.map(x => x.id));
+    const sources = new Set(moved.map(x => x.doc_category || ''));
+    moved.sort(bySort);   // 移動する複数の相対順は今の並びを保つ
+    // 移動先の章（移動分を除く）に、参照位置へまとめて差し込む
+    const inSec = files.filter(x => !idset.has(x.id) && ((x.doc_category || '') === targetKey)).sort(bySort);
     let idx = inSec.length;
-    if (refId){ const i = inSec.findIndex(x => x.id === refId); if (i >= 0) idx = after ? i + 1 : i; }
-    inSec.splice(idx, 0, dragged);
-    // ローカルを先に更新（見た目を即反映）：分類先と並び順
-    dragged.doc_category = targetKey || null;
+    if (refId && !idset.has(refId)){ const i = inSec.findIndex(x => x.id === refId); if (i >= 0) idx = after ? i + 1 : i; }
+    inSec.splice(idx, 0, ...moved);
+    // ローカルを先に反映：分類先と並び順
+    moved.forEach(x => { x.doc_category = targetKey || null; });
     inSec.forEach((x, i) => { x.sort_order = (i + 1) * 10; });
     render();
 
     try {
-      // 章の採番＆ファイル名タグを付け直す（移動先／元の章）
+      // 章の採番＆ファイル名タグを付け直す（移動先／元の各章）
       await applyChapterNames(files, targetKey);
-      if (sourceKey !== targetKey){
-        await applyChapterNames(files, sourceKey);
+      for (const s of sources){ if (s !== targetKey) await applyChapterNames(files, s); }
+      if ([...sources].some(s => s !== targetKey)){
+        const from = [...sources].map(s => s ? chapterLabel(s) : '未分類').join('・');
         showMsg($('msg'),
-          `「${sourceKey ? chapterLabel(sourceKey) : '未分類'}」→「${targetKey ? chapterLabel(targetKey) : '未分類'}」へ移動しました。ファイル名のタグも付け直しました。`, 'ok');
+          `${moved.length}件を「${from}」→「${targetKey ? chapterLabel(targetKey) : '未分類'}」へ移動しました。ファイル名のタグも付け直しました。`, 'ok');
       }
+      selected.clear(); anchorId = null;
       await loadFiles(); render();
     } catch (err){
       showMsg($('msg'),
@@ -690,10 +745,16 @@
     window.addEventListener('dragend', () => { depth = 0; veil.classList.remove('on'); });
   })();
 
+  // Escで選択を解除
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && selected.size){ selected.clear(); anchorId = null; paintSelection(); }
+  });
+
   /* ---------- 工事切り替え ---------- */
   async function selectProject(id){
     projId = id || null;
     curProj = projects.find(x => x.id === projId) || null;
+    selected.clear(); anchorId = null;
     const u = new URL(location.href);
     if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
     history.replaceState(null, '', u);
