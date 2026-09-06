@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料調達計画表) v20260907E -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260907F -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -87,6 +87,22 @@
   .altag.ok{ color:var(--ok); background:#EAF2ED; }
   .altag .dl{ font-family:var(--mono); font-weight:500; display:block; font-size:10px; opacity:.9; }
 
+  /* その場編集パネル */
+  .epanel{ position:fixed; inset:0; z-index:60; background:rgba(15,20,30,.5); display:none; }
+  .epanel.open{ display:flex; align-items:center; justify-content:center; padding:14px; }
+  .epanel .ecard{ background:var(--card); border-radius:8px; width:min(94vw,470px); max-height:90vh;
+    overflow:auto; box-shadow:0 14px 44px rgba(0,0,0,.45); }
+  .epanel .ebody{ padding:14px 16px 18px; display:flex; flex-direction:column; gap:10px; }
+  .epanel .ename{ font-family:var(--disp); font-weight:700; font-size:15px; }
+  .epanel .erow{ display:flex; align-items:center; gap:10px; }
+  .epanel .erow > label{ flex:0 0 112px; font-size:13px; color:var(--sub); }
+  .epanel .erow select, .epanel .erow input{ flex:1 1 auto; min-height:38px; padding:4px 8px;
+    border:1px solid var(--rule); border-radius:var(--radius-sm); background:#fff; font-size:14px; font-family:var(--body); color:var(--ink); }
+  .epanel .erow > span{ flex:1 1 auto; display:inline-flex; align-items:center; gap:6px; }
+  .epanel .erow > span input{ flex:0 1 120px; }
+  .epanel .ebasis{ font-size:11.5px; color:var(--sub); line-height:1.5; background:#F1F3EF; border-radius:6px; padding:6px 10px; }
+  .epanel .efoot{ display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap; }
+
   @media (max-width:860px){
     /* 狭い画面ではカード表示になるため、通常のページスクロールに戻す */
     body{ height:auto; overflow:visible; display:block; }
@@ -110,7 +126,7 @@
 
 <div class="wrap">
   <p class="lead">
-    着工前原価台帳の材料（何を・どれだけ）と、工程の着工予定（いつまでに）を突き合わせ、<b>発注期限・リードタイム・納品予定</b>を一枚で可視化します。
+    着工前原価台帳の材料（何を・どれだけ）と、工程の着工予定（いつまでに）を突き合わせ、<b>発注期限・リードタイム・納品予定</b>を一枚で可視化します。行をクリックすると<b>現地納品予定日・リードタイム・工程</b>をその場で入力でき、「未設定のみ」で埋めるべき項目だけを絞り込めます。
   </p>
 
   <div class="ctl">
@@ -123,6 +139,7 @@
     <select id="fshow">
       <option value="risk">要対応のみ</option>
       <option value="all">未納品すべて</option>
+      <option value="unset">未設定のみ（要入力）</option>
     </select>
     <span class="sp"></span>
   </div>
@@ -134,6 +151,31 @@
   <p class="count" id="count"></p>
   <div id="atable"></div>
 </div>
+
+<div class="epanel" id="epanel"><div class="ecard">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1>材料の予定を入力</h1>
+    <button class="btn ghost sm barbtn" id="eclose">閉じる</button>
+  </header>
+  <div class="ebody">
+    <div id="emsg" class="msg"></div>
+    <div class="ename" id="e_name"></div>
+    <div class="erow"><label for="e_cat">費目</label>
+      <select id="e_cat"><option value="material">材料費</option><option value="labor">外注・労務費</option></select></div>
+    <div class="erow"><label for="e_phase">関わる工程</label><select id="e_phase"></select></div>
+    <div class="erow"><label for="e_sdd">現地納品予定日</label><input id="e_sdd" type="date"></div>
+    <div class="erow"><label for="e_lead">リードタイム</label>
+      <span><input id="e_lead" type="number" min="0" step="1" placeholder="0"><span id="e_leadhint" style="font-size:12px;color:var(--sub)">日</span></span></div>
+    <div class="ebasis" id="e_basis"></div>
+    <div class="efoot">
+      <a class="btn ghost sm" id="golink" href="#">この材料を発注・依頼で扱う →</a>
+      <span style="flex:1 1 auto"></span>
+      <button class="btn ghost sm" id="ecancel">やめる</button>
+      <button class="btn" id="esave">保存する</button>
+    </div>
+  </div>
+</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -281,6 +323,13 @@
     const amberN = rows.filter(o => o.a.level === 'amber').length;
 
     if (fs === 'risk') rows = rows.filter(o => o.a.level !== 'ok');
+    if (fs === 'unset') rows = rows.filter(o => {   // 現地納品予定日/リードタイム/工程 のどれかが未入力
+      const x = o.x;
+      const noPhase = !x.phase_id;
+      const noLead  = x.lead_time_days === null || x.lead_time_days === undefined || x.lead_time_days === '';
+      const noSdd   = x.category !== 'labor' && !x.scheduled_delivery_date;
+      return noPhase || noLead || noSdd;
+    });
 
     // 至急順 → 発注期限の早い順 → 納品予定の早い順
     rows.sort((a, b) => {
@@ -309,13 +358,13 @@
     </div>`;
     rows.forEach(({ x, phase, a }, i) => {
       const pj = pmap[x.project_id];
-      // 確認ページから、その品目の入力画面（実行予算）へ直接飛ばす
-      // 発注管理はこのページが本拠地。行から発注（作成・編集）へ直行（お金は実行予算で確認）
-      const href = isMgr ? `schedule.html?p=${x.project_id}&bitem=${x.id}` : `schedule.html?p=${x.project_id}`;
+      // 管理者は行クリックで「現地納品予定日・リードタイム・工程・費目」をその場で編集。
+      // 閲覧者は工程表を開くだけ。
+      const href = isMgr ? '#' : `schedule.html?p=${x.project_id}`;
       const projCell = isAll
         ? `<span class="nm"><span class="no">${pj ? esc(pj.project_no) : ''}</span>${pj ? esc(pj.name) : '（工事不明）'}</span>`
         : '';
-      h += `<a class="arow ${a.level === 'red' ? 'red' : ''}" href="${href}">
+      h += `<a class="arow ${a.level === 'red' ? 'red' : ''}" href="${href}"${isMgr ? ` data-eid="${x.id}"` : ''}>
         <span class="rno"><b class="mlbl">No. </b>${i + 1}</span>
         <span><span class="altag ${a.level}">${esc(a.text)}${a.dlNote && a.deadline ? `<span class="dl">発注期限 ${fmtShort(a.deadline)}</span>` : ''}</span></span>
         ${projCell}
@@ -331,7 +380,68 @@
     });
     h += `</div>`;
     $('atable').innerHTML = h;
+    if (isMgr){
+      $('atable').querySelectorAll('.arow[data-eid]').forEach(a =>
+        a.addEventListener('click', e => { e.preventDefault(); openEdit(a.dataset.eid); }));
+    }
   }
+
+  /* ===== その場編集：現地納品予定日・リードタイム・工程・費目を材料調達計画表で入力 ===== */
+  let editing = null;
+  function phaseOptions(projectId, sel){
+    return '<option value="">（工事全体・未設定）</option>' +
+      phases.filter(p => p.project_id === projectId)
+        .map(p => `<option value="${p.id}"${p.id === sel ? ' selected' : ''}>${esc(p.name)}${p.start_date ? '（着工 ' + fmtShort(p.start_date) + '）' : ''}</option>`).join('');
+  }
+  function updateEditCat(){
+    const isLabor = $('e_cat').value === 'labor';
+    const sddRow = $('e_sdd').closest('.erow');
+    if (sddRow) sddRow.hidden = isLabor;
+    const lh = $('e_leadhint'); if (lh) lh.textContent = isLabor ? '日（契約〜着手の段取り）' : '日（発注〜現地納品）';
+    const bh = $('e_basis');
+    if (bh){
+      const p = phases.find(x => x.id === $('e_phase').value);
+      bh.textContent = isLabor
+        ? (p && p.start_date ? `工事：工程の着工日 ${fmtShort(p.start_date)} を基準に判定` : '工事：対象工程の着工日を基準に判定')
+        : '材料：現地納品予定日が工程の着工に間に合うかを判定';
+    }
+  }
+  function openEdit(id){
+    const x = items.find(m => m.id === id); if (!x) return;
+    editing = x;
+    $('e_name').textContent = x.item_name || '（名称未設定）';
+    $('e_cat').value  = x.category || 'material';
+    $('e_phase').innerHTML = phaseOptions(x.project_id, x.phase_id || '');
+    $('e_sdd').value  = x.scheduled_delivery_date || '';
+    $('e_lead').value = (x.lead_time_days ?? '') === '' ? '' : x.lead_time_days;
+    showMsg($('emsg'), '');
+    updateEditCat();
+    $('epanel').classList.add('open');
+    $('golink').href = `schedule.html?p=${x.project_id}&bitem=${x.id}`;
+  }
+  function closeEdit(){ $('epanel').classList.remove('open'); editing = null; }
+  $('e_cat').addEventListener('change', updateEditCat);
+  $('e_phase').addEventListener('change', updateEditCat);
+  $('eclose').addEventListener('click', closeEdit);
+  $('ecancel').addEventListener('click', closeEdit);
+  $('esave').addEventListener('click', async () => {
+    if (!editing) return;
+    const isLabor = $('e_cat').value === 'labor';
+    const patch = {
+      category: $('e_cat').value,
+      phase_id: $('e_phase').value || null,
+      lead_time_days: $('e_lead').value === '' ? null : Number($('e_lead').value),
+      scheduled_delivery_date: isLabor ? null : ($('e_sdd').value || null)   // 工事に現地納品予定日は無い
+    };
+    $('esave').disabled = true; $('esave').textContent = '保存しています…';
+    const { error } = await sb.from('phase_budget_items').update(patch).eq('id', editing.id);
+    $('esave').disabled = false; $('esave').textContent = '保存する';
+    if (error){ showMsg($('emsg'), '保存できませんでした。' + error.message, 'err'); return; }
+    Object.assign(editing, patch);   // ローカルへ反映
+    closeEdit();
+    render();
+    showMsg($('msg'), '保存しました。', 'ok');
+  });
 
   $('fproj').addEventListener('change', () => { syncProjUrl(); render(); });
   $('fcat').addEventListener('change', render);
