@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: files (写真・書類) v20260906D -->
+<!-- BUILD: files (写真・書類) v20260906E -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -112,8 +112,13 @@
   .big.dxf{ background:#fff; }
   .big svg{ width:100%; height:52vh; }
   .big .dxferr{ color:#DDD; font-size:12.5px; padding:20px; text-align:center; }
-  .big.pdf{ background:#fff; height:70vh; max-height:70vh; }
+  .big.pdf{ background:#fff; height:70vh; max-height:70vh; overflow:auto; display:block;
+            align-items:stretch; justify-content:stretch; }
   .big iframe{ width:100%; height:100%; border:0; display:block; }
+  .big .pdfbox{ padding:10px; }
+  .big .pdfbox canvas{ width:100%; height:auto; display:block; margin:0 auto 8px; box-shadow:var(--shadow-1); }
+  .big .pdfmore{ text-align:center; color:var(--sub); font-size:12px; padding:8px; }
+  .big .pdfload{ color:#333; padding:22px; text-align:center; }
   .big.office{ background:#fff; height:70vh; max-height:70vh; align-items:stretch; justify-content:stretch; }
   .big .officebox{ width:100%; height:100%; overflow:auto; padding:14px 18px; box-sizing:border-box;
                     font-family:var(--body); font-size:13.5px; line-height:1.7; color:var(--ink); }
@@ -616,6 +621,39 @@
     return scriptPromises[src];
   }
 
+  // PDFは iframe だとブラウザ設定・配信ヘッダーで表示できない（真っ黒）ことがあるため、
+  // pdf.js で各ページを画像として確実に描画する（サムネイルと同じ仕組み）。
+  async function renderPdf(path){
+    const u = await signedUrl(path);
+    if (!u) return '<div class="dxferr">読み込めませんでした。</div>';
+    try {
+      const lib = await loadPdfLib();
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const doc = await lib.getDocument({ data: buf }).promise;
+      const N = Math.min(doc.numPages, 12);
+      const wrap = document.createElement('div'); wrap.className = 'pdfbox';
+      for (let i = 1; i <= N; i++){
+        const page = await doc.getPage(i);
+        const vp0 = page.getViewport({ scale: 1 });
+        const scale = Math.min(2, 1100 / vp0.width);
+        const vp = page.getViewport({ scale });
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+        const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        wrap.appendChild(cv);
+      }
+      if (doc.numPages > N){
+        const m = document.createElement('div'); m.className = 'pdfmore';
+        m.textContent = `… 残り ${doc.numPages - N} ページは「原本を開く」でご覧ください`;
+        wrap.appendChild(m);
+      }
+      return wrap;
+    } catch (e){
+      return `<div class="dxferr">この書類は表示できませんでした。${dxfEsc(e.message || '')}</div>`;
+    }
+  }
+
   async function renderXlsx(path){
     const u = await signedUrl(path);
     if (!u) return '<div class="dxferr">読み込めませんでした。</div>';
@@ -1062,12 +1100,15 @@
       $('big').hidden = false;
       renderDwg(f.storage_path).then(html => { if (editing === f) $('big').innerHTML = html; });
     } else if (f.mime_type === 'application/pdf' || /\.pdf$/i.test(f.original_name || '')){
-      const u = await signedUrl(f.storage_path);
-      if (u){
-        $('big').classList.add('pdf');
-        $('big').innerHTML = `<iframe src="${esc(u)}" title="${esc(f.original_name||'PDF')}"></iframe>`;
-        $('big').hidden = false;
-      }
+      $('big').classList.add('pdf');
+      $('big').innerHTML = '<div class="pdfload">書類を読み込んでいます…</div>';
+      $('big').hidden = false;
+      renderPdf(f.storage_path).then(node => {
+        if (editing !== f) return;
+        $('big').innerHTML = '';
+        if (typeof node === 'string') $('big').innerHTML = node;
+        else $('big').appendChild(node);
+      });
     } else if (/\.xlsx?$/i.test(f.original_name || '')){
       $('big').classList.add('office');
       $('big').innerHTML = '<div class="officebox">読み込んでいます…</div>';
@@ -1170,20 +1211,24 @@
     $('save').disabled = false; $('save').textContent = '保存する';
 
     if (error){ showMsg($('pmsg'), '保存できませんでした。' + error.message, 'err'); return; }
-    await loadFiles();
-    if (catChanged){
-      // 分類先（と元の章）の採番・ファイル名タグを付け直す
-      try {
-        await applyChapterNames(files, newCat);
-        if (oldCat !== newCat) await applyChapterNames(files, oldCat);
-      } catch (_){}
-      render();
-    }
+    // ローカルを更新して即反映（全件の再取得＝loadFiles はしない）
+    const lf = files.find(x => x.id === editing.id);
+    if (lf) Object.assign(lf, body);
+    paintAssigneeFilter();
+    render();
     closePanel();
     showMsg($('msg'),
       (catChanged && newCat) ? `「${chapterLabel(newCat)}」へ分類し、ファイル名にタグを付けました。`
       : (catChanged && !newCat) ? '未分類に戻し、ファイル名のタグを外しました。'
       : '保存しました。', 'ok');
+    // 分類が変わったときだけ、その章（と元の章）を裏で採番・ファイル名タグ付け直し
+    if (catChanged){
+      try {
+        await applyChapterNames(files, newCat);
+        if (oldCat !== newCat) await applyChapterNames(files, oldCat);
+        render();
+      } catch (_){}
+    }
   });
 
   /* ================= 削除 ================= */
