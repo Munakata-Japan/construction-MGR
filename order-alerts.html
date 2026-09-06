@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料調達計画表) v20260906C -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260906D -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -307,7 +307,8 @@
     rows.forEach(({ x, phase, a }, i) => {
       const pj = pmap[x.project_id];
       // 確認ページから、その品目の入力画面（実行予算）へ直接飛ばす
-      const href = isMgr ? `budget.html?p=${x.project_id}&item=${x.id}&focus=delivery` : `schedule.html?p=${x.project_id}`;
+      // 発注管理はこのページが本拠地。行から発注（作成・編集）へ直行（お金は実行予算で確認）
+      const href = isMgr ? `schedule.html?p=${x.project_id}&bitem=${x.id}` : `schedule.html?p=${x.project_id}`;
       const projCell = isAll
         ? `<span class="nm"><span class="no">${pj ? esc(pj.project_no) : ''}</span>${pj ? esc(pj.name) : '（工事不明）'}</span>`
         : '';

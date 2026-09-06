@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260906B -->
+<!-- BUILD: schedule (工程表) v20260906C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -2502,6 +2502,19 @@ body > header.bar{ flex:0 0 auto; }
   if (phaseId){
     const ph = phases.find(x => x.id === phaseId);
     if (ph) openPanel(ph);
+  }
+  // 材料調達計画表から材料を指定して来たら、その材料の発注を開く（発注管理の入口を一本化）
+  const bitem = qs.get('bitem');
+  if (bitem && projId){
+    openOrders(null);
+    const existing = orders.find(o => o.budget_item_id === bitem);
+    if (existing){ openOrderEdit(existing); }
+    else {
+      openOrderEdit(null);
+      const m = materials.find(x => x.id === bitem);
+      if (m){ $('o_title').value = m.item_name || ''; $('o_phase').value = m.phase_id || ''; updateMatNote(); }
+      $('o_budget').value = bitem;   // この台帳品目に紐づけて発注を作る
+    }
   }
 })();
 </script>
