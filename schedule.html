@@ -512,11 +512,9 @@ body > header.bar{ flex:0 0 auto; }
       </div>
       <div class="row">
         <label for="o_budget">対象の材料<br><span style="font-size:11px;color:var(--sub);font-weight:400">（原価台帳）</span></label>
-        <div class="fld" style="flex-direction:column;align-items:stretch;gap:6px">
-          <select id="o_budget"><option value="">（台帳の材料に紐づけない）</option></select>
-          <label style="font-size:12.5px;display:inline-flex;align-items:center;gap:6px">
-            <input type="checkbox" id="o_newmat" style="width:auto;min-height:0;transform:scale(1.2)">
-            台帳に無い材料を新規計上（副資材・突発として実行予算に追加）</label>
+        <div class="fld" style="flex-direction:column;align-items:stretch;gap:4px">
+          <select id="o_budget"><option value="">（自動で実行予算に新規計上）</option></select>
+          <span style="font-size:11.5px;color:var(--sub);line-height:1.5">既に台帳にある材料は選んで紐づけ。選ばなければ、保存時に<b>自動で実行予算（副資材・突発）へ計上</b>します。発注は必ず実行予算に載ります。</span>
         </div>
       </div>
       <div class="row">
@@ -1700,14 +1698,54 @@ body > header.bar{ flex:0 0 auto; }
     </button>`;
   }
 
+  // 既存の未紐づけ発注を、副資材・突発として実行予算へ一括計上して紐づける
+  async function backfillOrders(){
+    if (!canEdit) return;
+    const unlinked = orders.filter(o => !o.budget_item_id && o.status !== 'cancelled');
+    if (!unlinked.length) return;
+    if (!confirm(`未計上の発注 ${unlinked.length}件 を実行予算（副資材・突発）に計上して紐づけます。よろしいですか？`)) return;
+    let ok = 0, ng = 0;
+    for (const o of unlinked){
+      try {
+        const ins = await sb.from('phase_budget_items').insert({
+          organization_id: me.organization_id,
+          project_id     : projId,
+          phase_id       : o.phase_id || null,
+          category       : (o.scope === 'internal') ? 'labor' : 'material',
+          cost_stage     : 'extra',
+          item_name      : o.title || '（無題の発注）',
+          budget_amount  : o.total_amount ?? null,
+          status         : (o.status === 'ordered' || o.status === 'delivered') ? 'ordered' : 'estimate',
+          seq            : 999999,
+          created_by     : me.id
+        }).select('id').single();
+        if (ins.error) throw ins.error;
+        const up = await sb.from('phase_orders').update({ budget_item_id: ins.data.id }).eq('id', o.id);
+        if (up.error) throw up.error;
+        o.budget_item_id = ins.data.id;
+        ok++;
+      } catch (e){ ng++; console.error(e); }
+    }
+    await loadPhases();
+    paintOrders(null);
+    showMsg($('omsg'), `${ok}件を実行予算に反映しました。${ng ? `（${ng}件は失敗）` : ''}`, ng ? 'err' : 'ok');
+  }
+
   function paintOrders(focusPhase){
     const today = Math.round(Date.now() / DAY);
     const dated  = orders.filter(o => o.due_date).sort((a,b) => a.due_date.localeCompare(b.due_date));
     const undate = orders.filter(o => !o.due_date);
 
     let h = '';
+    // 紐づいていない既存発注を、まとめて実行予算へ計上できるようにする（工程表に出る発注は必ず予算に紐づく）
+    const unlinked = canEdit ? orders.filter(o => !o.budget_item_id && o.status !== 'cancelled') : [];
+    if (unlinked.length){
+      h += `<div class="obackfill" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#FBF0D4;border:1px solid #E7C866;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12.5px;color:#6B4E00">`
+        + `<b>未計上の発注 ${unlinked.length}件</b>が実行予算に紐づいていません。`
+        + `<button type="button" id="obackfillbtn" class="btn sm" style="margin-left:auto">実行予算に反映</button></div>`;
+    }
     if (!orders.length){
-      h = `<div class="empty"><b>発注・依頼がありません</b>${canEdit ? '右上の「追加」から登録してください。' : ''}</div>`;
+      h += `<div class="empty"><b>発注・依頼がありません</b>${canEdit ? '右上の「追加」から登録してください。' : ''}</div>`;
     } else {
       if (dated.length)
         h += `<div class="ogrp"><div class="t">期限が決まっているもの（${dated.length}件）</div>` +
@@ -1717,6 +1755,8 @@ body > header.bar{ flex:0 0 auto; }
              undate.map(o => orderRow(o, today)).join('') + `</div>`;
     }
     $('olist').innerHTML = h;
+    const bf = $('obackfillbtn');
+    if (bf) bf.addEventListener('click', backfillOrders);
     $('olist').querySelectorAll('.orow').forEach(b =>
       b.addEventListener('click', () => openOrderEdit(orders.find(x => x.id === b.dataset.id))));
 
@@ -1870,11 +1910,9 @@ body > header.bar{ flex:0 0 auto; }
     $('o_title').value  = o ? (o.title || '') : '';
     $('o_phase').value  = o ? (o.phase_id || '') : '';
     // 対象の材料（原価台帳品目）を選べるようにする
-    $('o_budget').innerHTML = '<option value="">（台帳の材料に紐づけない）</option>' +
+    $('o_budget').innerHTML = '<option value="">（自動で実行予算に新規計上）</option>' +
       materials.map(m => `<option value="${m.id}">${esc(m.item_name || '（名称未設定）')}${m.quantity ? '　' + m.quantity + (m.unit ? esc(m.unit) : '') : ''}</option>`).join('');
     $('o_budget').value = o ? (o.budget_item_id || '') : '';
-    $('o_newmat').checked = false;
-    $('o_budget').disabled = false;
     updateMatNote();
     $('o_partner').value= o ? (o.partner_id || '') : '';
     $('o_user').value   = o ? (o.assignee_user_id || '') : '';
@@ -1907,12 +1945,6 @@ body > header.bar{ flex:0 0 auto; }
     note.hidden = false;
   }
   $('o_phase').addEventListener('change', updateMatNote);
-  // 「台帳に無い材料を新規計上」ON時は、既存台帳品目への紐づけ選択を無効化（二者択一）
-  $('o_newmat').addEventListener('change', () => {
-    const on = $('o_newmat').checked;
-    $('o_budget').disabled = on;
-    if (on) $('o_budget').value = '';
-  });
 
   // バッジをクリック → 紐づく材料を一覧表示。行をクリック → その材料の詳細を開閉
   $('o_matnote').addEventListener('click', () => {
@@ -1975,16 +2007,17 @@ body > header.bar{ flex:0 0 auto; }
     if (!oediting) body.seq = (orders.length ? Math.max(...orders.map(o => o.seq||0)) : 0) + 10;
     body.total_amount = recalcOiTotal();
 
-    // 対象の材料（原価台帳品目）を解決。新規計上なら副資材・突発として台帳に作ってから紐づける
-    let bid = null;
-    if ($('o_newmat').checked){
+    // 発注は必ず実行予算に紐づく（担当者の記憶に頼らない）。台帳品目を選んでいればそれ、
+    // 選んでいなければ副資材・突発として自動で新規計上してから紐づける。
+    let bid = $('o_budget').value || null;
+    if (!bid){
       const first = collectOiLines()[0] || {};
       const bstat0 = ($('o_status').value === 'ordered' || $('o_status').value === 'delivered') ? 'ordered' : 'estimate';
       const ins = await sb.from('phase_budget_items').insert({
         organization_id: me.organization_id,
         project_id     : projId,
         phase_id       : $('o_phase').value || null,
-        category       : 'material',
+        category       : ($('o_scope').value === 'internal') ? 'labor' : 'material',
         cost_stage     : 'extra',
         item_name      : (first.item_name || t),
         quantity       : first.quantity ?? null,
@@ -1996,12 +2029,10 @@ body > header.bar{ flex:0 0 auto; }
         created_by     : me.id
       }).select('id').single();
       if (ins.error){
-        showMsg($('oemsg'), '実行予算（副資材・突発）への計上に失敗しました。' + ins.error.message, 'err');
+        showMsg($('oemsg'), '実行予算への自動計上に失敗しました。' + ins.error.message, 'err');
         return;
       }
       bid = ins.data?.id;
-    } else {
-      bid = $('o_budget').value || null;
     }
     body.budget_item_id = bid;
 
