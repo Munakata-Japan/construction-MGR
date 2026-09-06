@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260906F -->
+<!-- BUILD: handover (竣工図書) v20260906G -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -14,14 +14,16 @@
 <link rel="stylesheet" href="common.css">
 <style>
   .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
-  .ctl select{ width:auto; min-width:200px; max-width:420px; min-height:44px; flex:0 1 auto; }
-  .actrow{ display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
-  .actrow .btn{ flex:0 0 auto; }
+  .ctl{ margin-bottom:8px; }
+  .ctl select{ width:auto; min-width:200px; max-width:420px; min-height:38px; flex:0 1 auto; }
+  .actrow{ display:flex; gap:8px; flex-wrap:wrap; margin:0 0 8px; }
+  .actrow .btn{ flex:0 0 auto; min-height:36px; font-size:13px; padding:0 14px; }
 
   .summary{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-            box-shadow:var(--shadow-1); padding:10px 14px; margin-bottom:14px; font-size:13px; line-height:1.7; }
-  .summary .st{ font-family:var(--mono); font-size:11.5px; color:var(--sub); }
-  .summary b{ font-family:var(--disp); }
+            box-shadow:var(--shadow-1); padding:6px 12px; margin-bottom:8px; font-size:12.5px; line-height:1.5;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .summary .st{ font-family:var(--mono); font-size:11px; color:var(--sub); }
+  .summary b{ font-family:var(--disp); font-size:13px; }
 
   /* 目次チェックリスト */
   .toc{ margin-bottom:20px; }
@@ -119,35 +121,29 @@
     html, body{ height:100%; }
     body{ display:flex; flex-direction:column; overflow:hidden; }
     .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
-           overflow:hidden; max-width:1280px; padding:10px 16px; }
-    .ctl{ margin-bottom:7px; }
-    #summary{ padding:6px 12px; margin-bottom:7px; font-size:12px; line-height:1.5; }
-    .actrow{ margin:0 0 7px; }
-    #msg{ margin-bottom:7px; }
+           overflow:hidden; max-width:1280px; width:100%; margin:0 auto; padding:10px 16px; }
+    #msg{ margin-bottom:8px; }
     #rohint{ margin:0 0 6px; }
     #body{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
-    .prog2{ padding:7px 12px; margin-bottom:7px; }
-    .selbar{ margin-bottom:7px; }
+    .selbar{ margin-bottom:8px; }
     .sech{ margin:2px 0 4px; font-size:13px; }
-    .hint{ margin:-2px 0 7px; max-height:3em; overflow:auto; }
-    .explorer{ flex:1 1 auto; min-height:0; align-items:stretch; }
+    .explorer{ flex:1 1 auto; min-height:0; grid-template-rows:minmax(0,1fr); align-items:stretch; }
     .tree{ position:static; max-height:100%; overflow:auto; }
     .pane{ display:flex; flex-direction:column; max-height:100%; overflow:hidden; }
     .pane .items{ flex:1 1 auto; min-height:0; overflow:auto; }
   }
 
-  .hint{ font-size:12.5px; color:var(--sub); margin:-4px 0 12px; line-height:1.7; }
+  .hint{ font-size:12px; color:var(--sub); margin:2px 0 8px; line-height:1.6; }
 
-  /* 進捗バー */
-  .prog2{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-          box-shadow:var(--shadow-1); padding:11px 14px; margin-bottom:16px; }
-  .prog2 .pgtop{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; }
-  .prog2 .pgtop b{ font-family:var(--disp); font-size:14px; }
-  .prog2 .pgnum{ font-family:var(--mono); font-size:12.5px; color:var(--sub); }
+  /* 進捗バー（横1行：数値＋バー＋完了印） */
+  .prog2{ display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--rule);
+          border-radius:var(--radius); box-shadow:var(--shadow-1); padding:6px 12px; margin-bottom:8px; }
+  .prog2 .pgnum{ font-family:var(--mono); font-size:12px; color:var(--sub); white-space:nowrap; flex:0 0 auto; }
+  .prog2 .pgnum b{ color:var(--ok); }
   .prog2 .pgnum .rem{ color:#8A6400; font-weight:700; }
-  .prog2 .pgbar{ height:9px; background:var(--rule-2); border-radius:5px; overflow:hidden; margin-top:8px; }
+  .prog2 .pgbar{ flex:1 1 auto; height:7px; background:var(--rule-2); border-radius:4px; overflow:hidden; }
   .prog2 .pgbar > span{ display:block; height:100%; background:var(--ok); width:0; transition:width .3s ease; }
-  .prog2 .pgdone{ color:var(--ok); font-weight:700; font-size:13.5px; margin-top:7px; }
+  .prog2 .pgdone{ color:var(--ok); font-weight:700; font-size:12.5px; white-space:nowrap; flex:0 0 auto; }
 
   /* 受け皿（未分類）は目立たせ、章フォルダは埋まると緑に */
   .chap.pool{ border-color:var(--safety); box-shadow:0 0 0 1px var(--safety) inset, var(--shadow-1); }
@@ -355,16 +351,14 @@
     const term = [fmtDate(p.start_date), (p.end_date_actual || p.end_date_planned) ? fmtDate(p.end_date_actual || p.end_date_planned) : '']
       .filter(Boolean).join(' 〜 ');
     $('summary').hidden = false;
+    // 1行に圧縮（工事名を主、他は細字で続ける）
     $('summary').innerHTML =
-      `<span class="st">${esc(p.project_no || '')}${p.construction_type ? '　' + esc(p.construction_type) : ''}</span><br>` +
-      `<b>${esc(p.name || '')}</b><br>` +
-      [ clientName(p) ? '発注者 ' + esc(clientName(p)) : '',
-        term ? '工期 ' + esc(term) : '',
-        p.contract_amount != null ? '請負金額 ' + esc(money(p.contract_amount, p.tax_rate)) : '',
-        p.agent_name ? '現場代理人 ' + esc(p.agent_name) : '',
-        p.engineer_name ? '主任技術者 ' + esc(p.engineer_name) : '',
-        p.manager_name ? '現場担当 ' + esc(p.manager_name) : ''
-      ].filter(Boolean).join('　／　');
+      `<b>${esc(p.project_no || '')}　${esc(p.name || '')}</b>　<span class="st">` +
+      [ clientName(p) ? '発注 ' + esc(clientName(p)) : '',
+        term ? esc(term) : '',
+        p.agent_name ? '代理人 ' + esc(p.agent_name) : '',
+        p.engineer_name ? '主任 ' + esc(p.engineer_name) : ''
+      ].filter(Boolean).join('／') + `</span>`;
   }
 
   /* ---------- 章ごとの集計 ---------- */
@@ -429,11 +423,9 @@
     const done = total - none;
     const pct = total ? Math.round(done / total * 100) : 0;
     $('progress').innerHTML =
-      `<div class="pgtop"><b>分類の進み具合</b>` +
-      `<span class="pgnum">分類済 ${done} ／ <span class="rem">未分類 ${none}</span>（全 ${total} 点）</span></div>` +
+      `<span class="pgnum">分類 済 <b>${done}</b>／<span class="rem">未 ${none}</span>（全 ${total}）</span>` +
       `<div class="pgbar"><span style="width:${pct}%"></span></div>` +
-      (total > 0 && none === 0
-        ? `<div class="pgdone">✓ すべて分類できました。目次・工事写真帳を印刷できます。</div>` : '');
+      (total > 0 && none === 0 ? `<span class="pgdone">✓完了</span>` : '');
   }
 
   function paintSelection(){
