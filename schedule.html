@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260907F -->
+<!-- BUILD: schedule (工程表) v20260907G -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -252,6 +252,13 @@ body > header.bar{ flex:0 0 auto; }
 /* 材料が着工までに届かない見込みのときだけ、バー自体を赤く縁取る（名前欄の発注の丸とは別の見た目・別の場所） */
 .bar2.mat-risk{ box-shadow:0 0 0 2px var(--alert), 0 2px 4px rgba(22,50,79,.25), 0 1px 2px rgba(22,50,79,.18); }
 .bar-matwarn{ margin-right:3px; }
+
+/* ---------- 材料の現地納品予定日マーカー（工程行に▼で置く） ---------- */
+.gmark{ align-self:start; justify-self:center; width:0; height:0; margin-top:2px; z-index:3; cursor:help;
+        border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid var(--sub); }
+.gmark.od-ok{ border-top-color:var(--ok); }
+.gmark.od-pending{ border-top-color:#C08A00; }
+.gmark.od-over{ border-top-color:var(--alert); }
 
 /* ---------- 発注の付箋（図面の注記のように置く） ---------- */
 .gtable{ position:relative; }
@@ -576,7 +583,7 @@ body > header.bar{ flex:0 0 auto; }
       </div>
       <div class="row">
         <label for="o_alert">知らせ始め</label>
-        <div class="fld"><input id="o_alert" type="number" min="0" step="1" placeholder="14"><span style="font-size:13px;color:var(--sub)">日前から</span></div>
+        <div class="fld"><input id="o_alert" type="number" min="0" step="1" placeholder="7"><span style="font-size:13px;color:var(--sub)">日前から</span></div>
       </div>
     </div>
 
@@ -704,41 +711,10 @@ body > header.bar{ flex:0 0 auto; }
     <div style="height:14px"></div>
 
     <div class="sheet">
-      <div class="head">発注の管理</div>
-
-      <div class="row">
-        <label for="f_op">発注先</label>
-        <div class="fld"><select id="f_op"></select></div>
+      <div class="head">メモ</div>
+      <div class="row" style="font-size:12px;color:var(--sub);line-height:1.5">
+        発注は「発注・依頼」（右上の「発注」ボタン／メニュー）で管理します。ここでは扱いません。
       </div>
-
-      <div class="row">
-        <label for="f_oc">発注内容</label>
-        <div class="fld"><input id="f_oc" type="text" placeholder="重機手配・資材など"></div>
-      </div>
-
-      <div class="row">
-        <label for="f_od">発注期限</label>
-        <div class="fld"><input id="f_od" type="date"></div>
-      </div>
-
-      <div class="row">
-        <label for="f_oa">知らせ始め</label>
-        <div class="fld"><input id="f_oa" type="number" step="1" min="0" placeholder="7"><span style="font-size:13px;color:var(--sub);white-space:nowrap">日前から</span></div>
-      </div>
-
-      <div class="row">
-        <label for="f_ou">知らせる相手</label>
-        <div class="fld"><select id="f_ou"></select></div>
-      </div>
-
-      <div class="row">
-        <label for="f_done">発注済み</label>
-        <div class="fld">
-          <input id="f_done" type="checkbox" style="width:22px;height:22px;min-height:22px;flex:0 0 22px">
-          <span style="font-size:13.5px;color:var(--sub)">入れるとお知らせが止まります</span>
-        </div>
-      </div>
-
       <div class="row">
         <label for="f_note">備考</label>
         <div class="fld"><textarea id="f_note"></textarea></div>
@@ -836,15 +812,6 @@ body > header.bar{ flex:0 0 auto; }
     $('f_cat').innerHTML = '<option value="">（未設定）</option>' +
       cats.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
     $('f_wtcat').innerHTML = cats.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
-
-    $('f_op').innerHTML = '<option value="">（未設定）</option>' +
-      partners.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
-    setEmptyNote($('f_op'), partners.length === 0,
-      '取引先が登録されていません。先に取引先ページから登録してください。', 'partners.html', '取引先ページへ');
-    $('f_ou').innerHTML = '<option value="">（未設定）</option>' +
-      users.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
-    setEmptyNote($('f_ou'), users.length === 0,
-      '利用者が登録されていません。先に利用者ページから登録してください。', 'users.html', '利用者ページへ');
 
     const smp = projects.find(x => x.is_sample);
     if (smp){
@@ -1236,6 +1203,17 @@ body > header.bar{ flex:0 0 auto; }
              `style="grid-row:${r+2};grid-column:3 / 4;background:transparent;color:var(--sub);border:1px dashed var(--rule)">日程未設定</button>`;
       }
 
+      // 各材料の現地納品予定日を、この工程の行に▼で置く（工事の着工〜竣工はバーで表現済み）
+      materials.filter(m => m.phase_id === p.id && m.category !== 'labor'
+          && m.status !== 'cancelled' && m.status !== 'delivered' && m.status !== 'inspected'
+          && m.scheduled_delivery_date)
+        .forEach(m => {
+          const idx = wIdx(d2n(m.scheduled_delivery_date));
+          if (idx < 0 || idx >= W) return;
+          const rr = itemReadiness(m, p.start_date);
+          h += `<div class="gmark ${rr.cls}" style="grid-column:${idx+3};grid-row:${r+2}" ` +
+               `title="${esc(m.item_name || '材料')}：現地納品予定 ${fmtDate(m.scheduled_delivery_date)}（${esc(rr.text)}）"></div>`;
+        });
     });
 
     h += `<div class="olay"><svg id="olines"></svg><div id="onotes"></div></div>`;
@@ -1948,7 +1926,7 @@ body > header.bar{ flex:0 0 auto; }
     $('o_due').value    = o ? (o.due_date || '') : '';
     $('o_note2').value  = o ? (o.due_note || '') : '';
     $('o_lead').value   = (linked && linked.lead_time_days != null) ? linked.lead_time_days : (o && o.lead_days ? o.lead_days : '');
-    $('o_alert').value  = o ? (o.alert_days ?? 14) : 14;
+    $('o_alert').value  = o ? (o.alert_days ?? 7) : 7;
     $('o_status').value = o ? o.status : 'planned';
     $('o_odate').value  = o ? (o.ordered_on || '') : '';
     $('o_ddate').value  = o ? (o.delivered_on || '') : '';
@@ -2070,6 +2048,9 @@ body > header.bar{ flex:0 0 auto; }
     if (!t){ showMsg($('oemsg'), '内容を入れてください。', 'err'); $('o_title').focus(); return; }
 
     const phaseId  = $('o_phase').value || null;
+    if (!phaseId && !confirm('「関わる工程」が未設定です。工程を選ぶと、ガント・材料調達計画表に紐づいて「間に合うか」を判定できます。工事全体として、このまま保存しますか？')){
+      $('o_phase').focus(); return;
+    }
     const category = $('o_category').value || 'material';
     const sdd      = $('o_sdd').value || null;
     const lead     = $('o_lead').value === '' ? null : Number($('o_lead').value);
@@ -2092,7 +2073,7 @@ body > header.bar{ flex:0 0 auto; }
       due_date        : odue,
       due_note        : $('o_note2').value.trim() || null,
       lead_days       : lead,
-      alert_days      : $('o_alert').value === '' ? 14 : Number($('o_alert').value),
+      alert_days      : $('o_alert').value === '' ? 7 : Number($('o_alert').value),
       status          : ostatus,
       ordered_on      : odate,
       delivered_on    : ddate,
@@ -2335,12 +2316,6 @@ body > header.bar{ flex:0 0 auto; }
     $('f_end').value    = p ? (p.end_date || '') : '';
     $('f_md').value     = p && Number(p.planned_mandays) ? p.planned_mandays : '';
     $('f_status').value = p ? p.status : 'not_started';
-    $('f_op').value     = p ? (p.order_partner_id || '') : '';
-    $('f_oc').value     = p ? (p.order_content || '') : '';
-    $('f_od').value     = p ? (p.order_deadline || '') : '';
-    $('f_oa').value     = p ? (p.order_alert_days ?? 7) : 7;
-    $('f_ou').value     = p ? (p.order_alert_user_id || '') : '';
-    $('f_done').checked = !!(p && p.ordered_at);
     $('f_note').value   = p ? (p.note || '') : '';
     updatePhaseMatNote(p);
 
@@ -2494,12 +2469,6 @@ body > header.bar{ flex:0 0 auto; }
       end_date        : e || null,
       planned_mandays : $('f_md').value === '' ? 0 : Number($('f_md').value),
       status          : $('f_status').value,
-      order_partner_id: $('f_op').value || null,
-      order_content   : $('f_oc').value.trim() || null,
-      order_deadline  : $('f_od').value || null,
-      order_alert_days: $('f_oa').value === '' ? 7 : Number($('f_oa').value),
-      order_alert_user_id: $('f_ou').value || null,
-      ordered_at      : $('f_done').checked ? (editing?.ordered_at || new Date().toISOString()) : null,
       note            : $('f_note').value.trim() || null
     };
     if (!editing) body.seq = (phases.length ? Math.max(...phases.map(p => p.seq||0)) : 0) + 10;
@@ -2586,6 +2555,8 @@ body > header.bar{ flex:0 0 auto; }
     const ph = phases.find(x => x.id === phaseId);
     if (ph) openPanel(ph);
   }
+  // メニューの「発注・依頼」から来たら、発注一覧を開く（発注管理の独立入口）
+  if (qs.get('panel') === 'orders' && projId){ openOrders(null); }
   // 材料調達計画表から材料を指定して来たら、その材料の発注を開く（発注管理の入口を一本化）
   const bitem = qs.get('bitem');
   if (bitem && projId){
