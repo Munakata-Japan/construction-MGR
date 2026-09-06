@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料調達計画表) v20260906B -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260906C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -30,13 +30,14 @@
   .ctl select{ width:auto; min-width:150px; max-width:340px; min-height:38px; flex:0 1 auto; }
   .ctl .sp{ flex:1 1 0; }
 
-  .sumgrid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); margin-bottom:10px; }
+  .sumgrid{ display:grid; gap:6px; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); margin-bottom:8px; }
   .sumcard{
     background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-    box-shadow:var(--shadow-1); padding:8px 12px;
+    box-shadow:var(--shadow-1); padding:5px 10px;
+    display:flex; align-items:baseline; gap:8px;   /* ラベルと数値を1行に＝高さを詰める */
   }
-  .sumcard .t{ font-size:11px; color:var(--sub); margin-bottom:3px; }
-  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:19px; color:var(--ink); }
+  .sumcard .t{ font-size:11px; color:var(--sub); margin:0; }
+  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:15px; color:var(--ink); margin-left:auto; }
   .sumcard.red .v{ color:var(--alert); }
   .sumcard.amber .v{ color:#8A6200; }
 
