@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260906H -->
+<!-- BUILD: handover (竣工図書) v20260906I -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -76,6 +76,10 @@
            gap:12px; flex-wrap:wrap; box-shadow:var(--shadow-2); font-size:13px; }
   .selbar b{ font-family:var(--mono); font-size:15px; color:#fff; }
   .selbar .hint2{ color:#B9C6F2; font-size:12px; }
+  .selbar .hint2 .w{ color:#fff; }
+  /* 移動先として選べる状態のフォルダを強調 */
+  .tree.moving .folder{ cursor:copy; }
+  .tree.moving .folder:hover{ background:#FBF1D6; box-shadow:inset 4px 0 0 var(--safety); }
   .selbar button{ margin-left:auto; background:transparent; border:1px solid #6a82e0; color:#EBEDE8;
                   border-radius:var(--radius-sm); padding:5px 10px; font-size:12.5px; cursor:pointer; font-family:var(--body); }
   .selbar button:hover{ background:#204D7E; }
@@ -410,7 +414,7 @@
         <span class="t1">${esc(f.title || f.original_name || '（無題）')}</span>
         <span class="t2">${t2}</span>
       </span>
-      <span class="mv"><a class="btn ghost sm" href="files.html?p=${projId}" title="写真・書類画面で開く">開く</a></span>
+      <span class="mv"><a class="btn ghost sm open" href="#" data-id="${f.id}" title="原本を新しいタブで開く">開く</a></span>
     </div>`;
   }
 
@@ -434,13 +438,14 @@
     const box = $('pane');
     if (box) box.querySelectorAll('.row2').forEach(r => r.classList.toggle('sel', selected.has(r.dataset.id)));
     const n = selected.size, bar = $('selbar');
+    if ($('tree')) $('tree').classList.toggle('moving', n > 0);   // 移動先フォルダを強調
     if (!n){ bar.hidden = true; bar.innerHTML = ''; return; }
     bar.hidden = false;
     bar.innerHTML = `<b>${n}</b>件を選択中` +
-      `<label class="selmovel">移動先 <select id="selmove"><option value="__ph__" selected>選んで移動…</option>` +
+      `<span class="hint2">左の<b class="w">移動先フォルダをクリック</b>で移動</span>` +
+      `<label class="selmovel">または移動先 <select id="selmove"><option value="__ph__" selected>選んで移動…</option>` +
       folderList().map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('') +
       `</select></label>` +
-      `<span class="hint2">または左のフォルダへドラッグ（Escで解除）</span>` +
       `<button type="button" id="selclear">選択を解除</button>`;
     const sm = bar.querySelector('#selmove');
     sm.onchange = async () => {
@@ -468,9 +473,12 @@
       </div>`;
     }).join('');
     $('tree').querySelectorAll('.folder').forEach(el => {
-      el.addEventListener('click', () => {
-        if ((curFolder || '') === (el.dataset.key || '')) return;
-        curFolder = el.dataset.key; selected.clear(); anchorId = null; render();
+      el.addEventListener('click', async () => {
+        const key = el.dataset.key || '';
+        // 資料を選択中なら、そのフォルダをクリック＝まとめて移動（ドラッグ不要で確実）
+        if (isMgr && selected.size > 0){ await doMoveMany([...selected], key, null, false); return; }
+        if ((curFolder || '') === key) return;
+        curFolder = key; selected.clear(); anchorId = null; render();
       });
       if (isMgr) wireFolderDrop(el);
     });
@@ -593,10 +601,19 @@
   // 右ペインの行：選択（Ctrl／Shift）とドラッグ元
   function wirePaneRows(){
     const box = $('pane');
+    // 「開く」＝原本の署名URLを新しいタブで開く（ポップアップブロック回避で先にタブを開く）
+    box.querySelectorAll('a.open').forEach(a => a.addEventListener('click', async e => {
+      e.preventDefault(); e.stopPropagation();
+      const f = files.find(x => x.id === a.dataset.id); if (!f) return;
+      const w = window.open('', '_blank');
+      const u = await signedUrl(f.storage_path);
+      if (u && w){ w.location = u; }
+      else { if (w) w.close(); showMsg($('msg'), '原本を開けませんでした。', 'err'); }
+    }));
     box.querySelectorAll('.row2').forEach(row => {
-      // ドラッグ可能な行では click が拾えないことがあるため pointerdown で選択する
-      row.addEventListener('pointerdown', e => {
-        if (e.button !== 0) return;            // 左ボタンのみ
+      // 選択は click で（pointerdown はネイティブのドラッグ開始を妨げることがあるため）。
+      // ドラッグ時は click が発火しないので、選択とドラッグは両立する（genka と同方式）。
+      row.addEventListener('click', e => {
         if (e.target.closest('a')) return;     // 「開く」リンクは除外
         const id = row.dataset.id, ord = orderedIds();
         if (e.shiftKey && anchorId && ord.includes(anchorId)){
