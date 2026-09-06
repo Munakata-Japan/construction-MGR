@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260906G -->
+<!-- BUILD: handover (竣工図書) v20260906H -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -15,15 +15,13 @@
 <style>
   .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
   .ctl{ margin-bottom:8px; }
-  .ctl select{ width:auto; min-width:200px; max-width:420px; min-height:38px; flex:0 1 auto; }
-  .actrow{ display:flex; gap:8px; flex-wrap:wrap; margin:0 0 8px; }
-  .actrow .btn{ flex:0 0 auto; min-height:36px; font-size:13px; padding:0 14px; }
+  .ctl select{ width:auto; min-width:200px; max-width:420px; min-height:38px; flex:0 0 auto; }
+  .actrow{ display:flex; gap:8px 10px; flex-wrap:wrap; align-items:center; margin:0 0 8px; }
+  .actrow .btn{ flex:0 0 auto; min-height:34px; font-size:12.5px; padding:0 16px; }
 
-  .summary{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-            box-shadow:var(--shadow-1); padding:6px 12px; margin-bottom:8px; font-size:12.5px; line-height:1.5;
-            white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .summary .st{ font-family:var(--mono); font-size:11px; color:var(--sub); }
-  .summary b{ font-family:var(--disp); font-size:13px; }
+  /* 概要は工事選択の右に並ぶ細字（1行・縦中央・はみ出しは省略） */
+  .summary{ flex:1 1 auto; min-width:0; font-family:var(--mono); font-size:11.5px; color:var(--sub);
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.5; }
 
   /* 目次チェックリスト */
   .toc{ margin-bottom:20px; }
@@ -37,6 +35,7 @@
   /* 章別 整理エリア */
   .sech{ font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink);
          margin:22px 0 10px; padding-left:10px; border-left:4px solid var(--safety); }
+  .sech .subhint{ font-family:var(--body); font-weight:400; font-size:11.5px; color:var(--sub); margin-left:8px; }
   .chap{ border:1px solid var(--rule); border-radius:var(--radius); background:var(--card);
          box-shadow:var(--shadow-1); margin-bottom:12px; overflow:hidden; }
   .chap > .ch{ display:flex; align-items:center; gap:10px; padding:9px 13px;
@@ -135,9 +134,10 @@
 
   .hint{ font-size:12px; color:var(--sub); margin:2px 0 8px; line-height:1.6; }
 
-  /* 進捗バー（横1行：数値＋バー＋完了印） */
-  .prog2{ display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--rule);
-          border-radius:var(--radius); box-shadow:var(--shadow-1); padding:6px 12px; margin-bottom:8px; }
+  /* 進捗バー（ボタン行の右の空きに流し込む・数値＋バー＋完了印の1行） */
+  .prog2{ display:none; align-items:center; gap:10px; background:var(--card); border:1px solid var(--rule);
+          border-radius:var(--radius); box-shadow:var(--shadow-inset); padding:4px 12px; }
+  .prog2.on{ display:flex; flex:1 1 260px; min-width:220px; }
   .prog2 .pgnum{ font-family:var(--mono); font-size:12px; color:var(--sub); white-space:nowrap; flex:0 0 auto; }
   .prog2 .pgnum b{ color:var(--ok); }
   .prog2 .pgnum .rem{ color:#8A6400; font-weight:700; }
@@ -216,25 +216,23 @@
 <div class="wrap">
   <div class="ctl">
     <select id="proj"><option value="">工事を選んでください</option></select>
+    <div id="summary" class="summary" hidden></div>
   </div>
 
-  <div id="summary" class="summary" hidden></div>
-
   <div class="actrow" id="actrow" hidden>
-    <button class="btn ghost sm" id="printTocBtn" type="button">目次を印刷（PDF）</button>
-    <button class="btn ghost sm" id="printAlbumBtn" type="button">工事写真帳を印刷（PDF）</button>
-    <button class="btn ghost sm" id="allToAlbum" type="button">未分類の写真を工事写真帳へ</button>
+    <button class="btn sm" id="printTocBtn" type="button">目次を印刷（PDF）</button>
+    <button class="btn sm" id="printAlbumBtn" type="button">工事写真帳を印刷（PDF）</button>
+    <button class="btn sm" id="allToAlbum" type="button">未分類の写真を工事写真帳へ</button>
+    <div id="progress" class="prog2"></div>
   </div>
 
   <div id="msg" class="msg"></div>
   <p class="hint" id="rohint" hidden>整理（分類・並べ替え）は現場監督・管理者のみ行えます。</p>
 
   <div id="body" hidden>
-    <div id="progress" class="prog2"></div>
     <div id="selbar" class="selbar" hidden></div>
 
-    <p class="sech">仕分け（左のフォルダ構造へドラッグして移動）</p>
-    <p class="hint">右の資料を選ぶと上に<b>移動先の選択</b>が出ます（<b>左のフォルダへドラッグ</b>でも移動可）。移動すると元から消えます。<b>Ctrl／Shift＋クリック</b>で複数選択。フォルダや右の余白へファイルを<b>D&D</b>で取り込み。</p>
+    <p class="sech">仕分け<span class="subhint">右で選び「移動先」または左フォルダへドラッグで移動（Ctrl／Shiftで複数選択・空きへファイルをD&Dで取り込み）</span></p>
     <div class="explorer">
       <div class="tree" id="tree"></div>
       <div class="pane" id="pane"></div>
@@ -351,14 +349,13 @@
     const term = [fmtDate(p.start_date), (p.end_date_actual || p.end_date_planned) ? fmtDate(p.end_date_actual || p.end_date_planned) : '']
       .filter(Boolean).join(' 〜 ');
     $('summary').hidden = false;
-    // 1行に圧縮（工事名を主、他は細字で続ける）
+    // 工事名は選択欄にあるので、ここは発注・工期・担当だけを細字で（選択欄と同じ行）
     $('summary').innerHTML =
-      `<b>${esc(p.project_no || '')}　${esc(p.name || '')}</b>　<span class="st">` +
       [ clientName(p) ? '発注 ' + esc(clientName(p)) : '',
         term ? esc(term) : '',
         p.agent_name ? '代理人 ' + esc(p.agent_name) : '',
         p.engineer_name ? '主任 ' + esc(p.engineer_name) : ''
-      ].filter(Boolean).join('／') + `</span>`;
+      ].filter(Boolean).join('　／　');
   }
 
   /* ---------- 章ごとの集計 ---------- */
@@ -419,13 +416,16 @@
 
   function paintProgress(map){
     const total = files.length;
+    const el = $('progress');
+    if (!total){ el.classList.remove('on'); el.innerHTML = ''; return; }
     const none = (map.get(NONE) || []).length;
     const done = total - none;
-    const pct = total ? Math.round(done / total * 100) : 0;
-    $('progress').innerHTML =
+    const pct = Math.round(done / total * 100);
+    el.classList.add('on');
+    el.innerHTML =
       `<span class="pgnum">分類 済 <b>${done}</b>／<span class="rem">未 ${none}</span>（全 ${total}）</span>` +
       `<div class="pgbar"><span style="width:${pct}%"></span></div>` +
-      (total > 0 && none === 0 ? `<span class="pgdone">✓完了</span>` : '');
+      (none === 0 ? `<span class="pgdone">✓完了</span>` : '');
   }
 
   function paintSelection(){
@@ -830,6 +830,7 @@
     urlCache = {};
     showMsg($('msg'), '');
     paintSummary();
+    $('progress').classList.remove('on'); $('progress').innerHTML = '';   // files 読込後の render で再表示
     $('actrow').hidden = !projId;
     $('rohint').hidden = isMgr || !projId;
     if (!projId){
