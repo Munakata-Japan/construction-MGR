@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: files (写真・書類) v20260906G -->
+<!-- BUILD: files (写真・書類) v20260906H -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -163,7 +163,7 @@
       <button class="btn" id="cambtn" type="button">カメラで撮る</button>
       <button class="btn ghost" id="filebtn" type="button">保存済みから選ぶ</button>
       <input id="cam"  type="file" accept="image/*" capture="environment" hidden>
-      <input id="file" type="file" accept="image/*,.pdf" multiple hidden>
+      <input id="file" type="file" accept="image/*,.pdf,.dwg,.dxf,.jww,.jwc,.sfc,.sxf,.p21" multiple hidden>
     </div>
     <button type="button" class="dropzone" id="dropzone">
       <span class="dzt">ここに写真・PDFを <b>ドラッグ＆ドロップ</b></span>
@@ -869,17 +869,17 @@
   $('filebtn').addEventListener('click', () => $('file').click());
   $('dropzone').addEventListener('click', () => $('file').click());
 
-  // 取り込めるのは写真（画像）とPDFのみ
+  // 取り込めるのは写真（画像）・PDF・図面（CAD）
   function isAcceptable(f){
     return (f.type && (f.type.startsWith('image/') || f.type === 'application/pdf'))
-        || /\.(jpe?g|png|gif|webp|heic|heif|pdf)$/i.test(f.name || '');
+        || /\.(jpe?g|png|gif|webp|heic|heif|pdf|dwg|dxf|jww|jwc|sfc|sxf|p21)$/i.test(f.name || '');
   }
   // 入力・ドラッグ＆ドロップ共通の受け取り
   function acceptFiles(fileList){
     const all = [...fileList];
     const arr = all.filter(isAcceptable);
     if (!arr.length){
-      if (all.length) showMsg($('msg'), '取り込めるのは写真（画像）とPDFだけです。', 'err');
+      if (all.length) showMsg($('msg'), '取り込めるのは写真・PDF・図面（DWG/DXF/JWW/SFC）です。', 'err');
       return;
     }
     if ($('up').hidden){ $('up').hidden = false; askPosition(); }
@@ -887,7 +887,7 @@
     paintPicked();
     $('up').scrollIntoView({ behavior:'smooth', block:'start' });
     const skipped = all.length - arr.length;
-    if (skipped) showMsg($('msg'), `${skipped}件は写真・PDF以外のため除きました。`, 'err');
+    if (skipped) showMsg($('msg'), `${skipped}件は写真・PDF・図面(CAD)以外のため除きました。`, 'err');
   }
   function accept(e){ acceptFiles(e.target.files); e.target.value = ''; }
   $('u_tags').addEventListener('input', syncChips);
