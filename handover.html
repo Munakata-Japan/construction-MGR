@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260906J -->
+<!-- BUILD: handover (竣工図書) v20260906L -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -118,6 +118,18 @@
   .pane .items{ padding:8px; display:flex; flex-direction:column; gap:6px; min-height:70px; }
   .pane.fileover{ outline:2px dashed var(--safety); outline-offset:-3px; background:#FBF9F0; }
   .paneempty{ color:#9AA39C; font-size:13px; text-align:center; padding:24px 8px; }
+  /* 章の中のサブフォルダ */
+  .subfolder{ display:flex; align-items:center; gap:9px; padding:9px 11px; border:1px solid var(--rule);
+              border-radius:var(--radius-sm); background:#FBF6EA; cursor:pointer; box-shadow:var(--shadow-1); }
+  .subfolder:hover{ border-color:var(--ink); background:#FBF1D6; }
+  .subfolder.fileover{ outline:2px solid var(--safety); outline-offset:-2px; }
+  .subfolder .ic{ flex:0 0 auto; font-size:16px; }
+  .subfolder .fn{ flex:1 1 auto; font-family:var(--disp); font-weight:700; font-size:13.5px; color:#7a5a00;
+                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .subfolder .fc{ flex:0 0 auto; font-family:var(--mono); font-size:12px; color:var(--sub); }
+  .pane .paneh .crumbup{ color:var(--ink-2); text-decoration:none; }
+  .pane .paneh .crumbup:hover{ text-decoration:underline; }
+  .pane .paneh #mksub{ margin-left:2px; min-height:28px; padding:0 10px; font-size:12px; }
 
   /* ===== 上部をコンパクトに、作業（2ペイン）を全高＆各ペイン独立スクロール ===== */
   @media (min-width: 641px){
@@ -236,7 +248,7 @@
   <div id="body" hidden>
     <div id="selbar" class="selbar" hidden></div>
 
-    <p class="sech">仕分け<span class="subhint">右で選び「移動先」または左フォルダへドラッグで移動（Ctrl／Shiftで複数選択・空きへファイルをD&Dで取り込み）</span></p>
+    <p class="sech">仕分け<span class="subhint">右で選び→フォルダをクリックで移動（Ctrl／Shiftで複数）。章の中は「＋フォルダ」でサブフォルダに分けられます</span></p>
     <div class="explorer">
       <div class="tree" id="tree"></div>
       <div class="pane" id="pane"></div>
@@ -286,7 +298,8 @@
   let projects = [], partners = [], phases = [], files = [], projId = null, curProj = null;
   let urlCache = {}, draggingId = null;
   let selected = new Set(), anchorId = null, dragIds = [];   // 複数選択（Ctrl／Shift）
-  let curFolder = '';   // 右ペインに表示中のフォルダ（''＝未分類/受け皿）
+  let curFolder = '';   // 右ペインに表示中の章（''＝未分類/受け皿）
+  let curSub = '';      // 章の中のサブフォルダ（''＝章の直下）
   const bySort = (a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) ||
                            ((a.taken_on || '') < (b.taken_on || '') ? 1 : -1);
 
@@ -441,16 +454,22 @@
     if ($('tree')) $('tree').classList.toggle('moving', n > 0);   // 移動先フォルダを強調
     if (!n){ bar.hidden = true; bar.innerHTML = ''; return; }
     bar.hidden = false;
+    const opt = folderList().map(f => {
+      let o = `<option value="${esc(JSON.stringify({ c: f.key, s: '' }))}">${esc(f.label)}</option>`;
+      (f.key === '' ? [] : subFoldersOf(f.key)).forEach(s => {
+        o += `<option value="${esc(JSON.stringify({ c: f.key, s }))}">${esc(f.label)} / ${esc(s)}</option>`;
+      });
+      return o;
+    }).join('');
     bar.innerHTML = `<b>${n}</b>件を選択中` +
       `<span class="hint2">左の<b class="w">移動先フォルダをクリック</b>で移動</span>` +
-      `<label class="selmovel">または移動先 <select id="selmove"><option value="__ph__" selected>選んで移動…</option>` +
-      folderList().map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('') +
-      `</select></label>` +
+      `<label class="selmovel">または移動先 <select id="selmove"><option value="__ph__" selected>選んで移動…</option>${opt}</select></label>` +
       `<button type="button" id="selclear">選択を解除</button>`;
     const sm = bar.querySelector('#selmove');
     sm.onchange = async () => {
       if (sm.value === '__ph__') return;
-      await doMoveMany([...selected], sm.value, null, false);   // '' は未分類（受け皿）
+      let t; try { t = JSON.parse(sm.value); } catch (_){ return; }
+      await doMoveMany([...selected], t.c, t.s, null, false);
     };
     bar.querySelector('#selclear').onclick = () => { selected.clear(); anchorId = null; paintSelection(); };
   }
@@ -461,7 +480,16 @@
   }
   function folderCount(map, key){ return (map.get(key === '' ? NONE : key) || []).length; }
 
-  // 左：フォルダ構造（エクスプローラーのツリー）
+  function subFoldersOf(cat){
+    const set = new Set();
+    files.forEach(x => { if ((x.doc_category || '') === cat && x.doc_subcategory) set.add(x.doc_subcategory); });
+    return [...set].sort((a, b) => a.localeCompare(b, 'ja'));
+  }
+  function filesIn(cat, sub){
+    return files.filter(x => (x.doc_category || '') === cat && (x.doc_subcategory || '') === sub).slice().sort(bySort);
+  }
+
+  // 左：章のツリー
   function renderTree(map){
     $('tree').innerHTML = folderList().map(f => {
       const n = folderCount(map, f.key);
@@ -475,29 +503,54 @@
     $('tree').querySelectorAll('.folder').forEach(el => {
       el.addEventListener('click', async () => {
         const key = el.dataset.key || '';
-        // 資料を選択中なら、そのフォルダをクリック＝まとめて移動（ドラッグ不要で確実）
-        if (isMgr && selected.size > 0){ await doMoveMany([...selected], key, null, false); return; }
-        if ((curFolder || '') === key) return;
-        curFolder = key; selected.clear(); anchorId = null; render();
+        if (isMgr && selected.size > 0){ await doMoveMany([...selected], key, '', null, false); return; }  // 章の直下へ
+        if ((curFolder || '') === key && !curSub) return;
+        curFolder = key; curSub = ''; selected.clear(); anchorId = null; render();
       });
-      if (isMgr) wireFolderDrop(el);
+      if (isMgr) wireFolderDrop(el, el.dataset.key || '', '');
     });
   }
 
-  // 右：選択中フォルダの中身
+  // 右：選択中フォルダの中身（サブフォルダ＋資料）
   function renderPane(map){
-    const key = curFolder || '';
-    const arr = (map.get(key === '' ? NONE : key) || []).slice().sort(bySort);
-    const label = key === '' ? '未分類（受け皿）' : chapterLabel(key);
-    let rows = ''; arr.forEach((f, i) => { rows += itemRow(f, i + 1); });
+    const cat = curFolder || '', sub = curSub || '';
+    const catLabel = cat === '' ? '未分類（受け皿）' : chapterLabel(cat);
+    const subs = subFoldersOf(cat);
+    const arr = filesIn(cat, sub);
+    const crumb = sub
+      ? `<b><a href="#" class="crumbup">${cat === '' ? '🗂️' : '📂'} ${esc(catLabel)}</a> › 📁 ${esc(sub)}</b>`
+      : `<b>${cat === '' ? '🗂️ ' : '📂 '}${esc(catLabel)}</b>`;
+    const mkbtn = (isMgr && cat !== '' && !sub) ? `<button type="button" class="btn ghost sm" id="mksub">＋ フォルダ</button>` : '';
     $('pane').innerHTML =
-      `<div class="paneh"><b>${key === '' ? '🗂️ ' : '📂 '}${esc(label)}</b><span class="pc">${arr.length}件</span>` +
-      `<span class="panehint">${isMgr ? '左のフォルダへドラッグで移動／ここへ写真・PDFをD&Dで取り込み' : ''}</span></div>` +
-      `<div class="items" id="paneitems">${rows || ('<div class="paneempty">このフォルダは空です。' +
-        (isMgr ? '<br>左のフォルダから資料をここへ移すか、写真・PDFをドロップして取り込めます。' : '') + '</div>')}</div>`;
+      `<div class="paneh">${crumb}<span class="pc">${arr.length}件</span>${mkbtn}` +
+      `<span class="panehint">${isMgr ? '選択→フォルダをクリックで移動・ここへD&D取り込み' : ''}</span></div>` +
+      `<div class="items" id="paneitems">` +
+        ((sub === '' && subs.length) ? subs.map(s =>
+          `<div class="subfolder" data-sub="${esc(s)}"><span class="ic">📁</span><span class="fn">${esc(s)}</span><span class="fc">${filesIn(cat, s).length}</span></div>`).join('') : '') +
+        arr.map((f, i) => itemRow(f, i + 1)).join('') +
+        ((!arr.length && !(sub === '' && subs.length)) ? ('<div class="paneempty">このフォルダは空です。' +
+          (isMgr ? '<br>資料を選んでここへ移すか、写真・PDFをドロップして取り込めます。' : '') + '</div>') : '') +
+      `</div>`;
     $('pane').querySelectorAll('.th[data-p]').forEach(box => {
       const p = box.dataset.p; if (!p) return;
       signedUrl(p).then(u => { if (u) box.innerHTML = `<img src="${u}" alt="" loading="lazy">`; });
+    });
+    const up = $('pane').querySelector('.crumbup');
+    if (up) up.addEventListener('click', e => { e.preventDefault(); curSub = ''; selected.clear(); anchorId = null; render(); });
+    const mk = $('mksub');
+    if (mk) mk.addEventListener('click', async () => {
+      if (!selected.size){ showMsg($('msg'), 'フォルダへ入れる資料を先に選んでください。', 'err'); return; }
+      const name = (prompt('新しいフォルダ名（この章の中）') || '').trim();
+      if (!name) return;
+      await doMoveMany([...selected], cat, name, null, false);
+    });
+    $('pane').querySelectorAll('.subfolder').forEach(el => {
+      el.addEventListener('click', async () => {
+        const s = el.dataset.sub || '';
+        if (isMgr && selected.size > 0){ await doMoveMany([...selected], cat, s, null, false); return; }
+        curSub = s; selected.clear(); anchorId = null; render();
+      });
+      if (isMgr) wireFolderDrop(el, cat, el.dataset.sub || '');
     });
     if (isMgr){ wirePaneRows(); wirePaneDrop(); }
     paintSelection();
@@ -517,7 +570,7 @@
         || /\.(jpe?g|png|gif|webp|heic|heif|pdf)$/i.test(f.name || '');
   }
   let uploading = false;
-  async function uploadFiles(fileList, docCategory){
+  async function uploadFiles(fileList, docCategory, docSub){
     if (!isMgr){ return; }
     if (!projId){ showMsg($('msg'), '先に工事を選んでください。', 'err'); return; }
     if (uploading){ return; }
@@ -527,7 +580,7 @@
       return;
     }
     uploading = true;
-    const dc = docCategory || null;
+    const dc = docCategory || null, ds = docSub || undefined;   // サブは値がある時だけ送る（列未作成でも取り込みが壊れない）
     const devPos = await currentPosition(6000);
     // その章の末尾の並び順から続ける
     let base = dc ? Math.max(0, ...files.filter(x => x.doc_category === dc).map(x => x.sort_order || 0)) : 0;
@@ -536,16 +589,14 @@
       const f = all[i];
       showMsg($('msg'), `取り込み中… ${i + 1} / ${all.length}（${f.name}）`, '');
       try {
-        let origBlob = f, w = null, h = null;
-        if (f.type.startsWith('image/')){
-          const r = await shrinkImage(f, 1600, 0.80);   // 提出用（工事写真台帳の画質）
-          if (r){ origBlob = r.blob; w = r.w; h = r.h; }
-        }
+        showMsg($('msg'), `取り込み中… ${i + 1} / ${all.length}（${f.name}）を軽くしています`, '');
+        const prep = await prepUpload(f, { edge: 1600, quality: 0.80 });   // 写真は縮小・PDFは圧縮
+        let origBlob = prep.blob, w = prep.width, h = prep.height;
         const stamp = Date.now() + '_' + i;
         const baseP = `${me.organization_id}/${projId}`;
         const nm = (f.name || 'file').replace(/[^\w.\-]/g, '_').slice(-80);
         const origPath = `${baseP}/orig/${stamp}_${nm}`;
-        const up1 = await sb.storage.from(BUCKET).upload(origPath, origBlob, { contentType: f.type || 'application/octet-stream' });
+        const up1 = await sb.storage.from(BUCKET).upload(origPath, origBlob, { contentType: origBlob.type || mimeOf(f) });
         if (up1.error) throw up1.error;
         let thumbPath = null;
         const t = await makeThumb(f, 900, 0.75);
@@ -568,6 +619,7 @@
           byte_size      : origBlob.size,
           width_px       : w, height_px: h,
           doc_category   : dc,
+          doc_subcategory: ds,
           sort_order     : dc ? base : 0,
           taken_on       : (geo.at ? geo.at.slice(0, 10)
                             : new Date(f.lastModified || Date.now()).toISOString().slice(0, 10)),
@@ -645,19 +697,19 @@
     });
   }
 
-  // 左のフォルダ：資料の移動先（内部D&D）／OSファイルの取り込み先
-  function wireFolderDrop(el){
+  // フォルダ（章 or サブ）：資料の移動先（内部D&D）／OSファイルの取り込み先
+  function wireFolderDrop(el, cat, sub){
+    cat = cat || ''; sub = sub || '';
     el.addEventListener('dragover', e => { e.preventDefault(); try { e.dataTransfer.dropEffect = hasFiles(e) ? 'copy' : 'move'; } catch (_){} el.classList.add('fileover'); });
     el.addEventListener('dragleave', () => el.classList.remove('fileover'));
     el.addEventListener('drop', async e => {
       e.preventDefault(); e.stopPropagation(); el.classList.remove('fileover');
-      const key = el.dataset.key || '';
-      if (hasFiles(e)){ if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, key); return; }
-      await doMoveMany(dragIds, key, null, false);
+      if (hasFiles(e)){ if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, cat, sub); return; }
+      await doMoveMany(dragIds, cat, sub, null, false);
     });
   }
 
-  // 右ペイン：OSファイルを今のフォルダへ取り込み
+  // 右ペイン：OSファイルを今のフォルダ（章＋サブ）へ取り込み
   function wirePaneDrop(){
     const pane = $('pane');
     pane.addEventListener('dragover', e => { if (!hasFiles(e)) return; e.preventDefault(); pane.classList.add('fileover'); });
@@ -665,49 +717,49 @@
     pane.addEventListener('drop', async e => {
       if (!hasFiles(e)) return;
       e.preventDefault(); e.stopPropagation(); pane.classList.remove('fileover');
-      if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, curFolder || '');
+      if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, curFolder || '', curSub || '');
     });
   }
 
-  async function doMoveMany(ids, targetKey, refId, after){
+  async function doMoveMany(ids, targetCat, targetSub, refId, after){
     ids = [...new Set((ids || []).filter(Boolean))];
+    targetCat = targetCat || ''; targetSub = targetSub || '';
     const moved = ids.map(id => files.find(x => x.id === id)).filter(Boolean);
     if (!moved.length) return;
     const idset = new Set(moved.map(x => x.id));
     const sources = new Set(moved.map(x => x.doc_category || ''));
-    moved.sort(bySort);   // 移動する複数の相対順は今の並びを保つ
-    // 移動先の章（移動分を除く）に、参照位置へまとめて差し込む
-    const inSec = files.filter(x => !idset.has(x.id) && ((x.doc_category || '') === targetKey)).sort(bySort);
+    moved.sort(bySort);
+    // 移動先の章（サブ問わず）に、参照位置へまとめて差し込む
+    const inSec = files.filter(x => !idset.has(x.id) && ((x.doc_category || '') === targetCat)).sort(bySort);
     let idx = inSec.length;
     if (refId && !idset.has(refId)){ const i = inSec.findIndex(x => x.id === refId); if (i >= 0) idx = after ? i + 1 : i; }
     inSec.splice(idx, 0, ...moved);
-    // ローカルを先に反映：分類先と並び順
-    moved.forEach(x => { x.doc_category = targetKey || null; });
+    // ローカルを先に反映：分類先（章・サブ）と並び順
+    moved.forEach(x => { x.doc_category = targetCat || null; x.doc_subcategory = targetSub || null; });
     inSec.forEach((x, i) => { x.sort_order = (i + 1) * 10; });
     render();
 
     try {
-      // 分類先(doc_category)をDBへ保存する。applyChapterNames は並び順とファイル名しか
-      // 触らないため、これが無いと loadFiles() で元に戻ってしまう（＝移動できない）。
+      // 分類先(doc_category / doc_subcategory)をDBへ保存（これが無いと loadFiles で元に戻る）
       await Promise.all(moved.map(async x => {
-        const { error } = await sb.from('project_files').update({ doc_category: targetKey || null }).eq('id', x.id);
+        const { error } = await sb.from('project_files')
+          .update({ doc_category: targetCat || null, doc_subcategory: targetSub || null }).eq('id', x.id);
         if (error) throw error;
       }));
       // 章の採番＆ファイル名タグを付け直す（移動先／元の各章）
-      await applyChapterNames(files, targetKey);
-      for (const s of sources){ if (s !== targetKey) await applyChapterNames(files, s); }
-      if ([...sources].some(s => s !== targetKey)){
-        const from = [...sources].map(s => s ? chapterLabel(s) : '未分類').join('・');
-        showMsg($('msg'),
-          `${moved.length}件を「${from}」→「${targetKey ? chapterLabel(targetKey) : '未分類'}」へ移動しました。ファイル名のタグも付け直しました。`, 'ok');
-      }
+      await applyChapterNames(files, targetCat);
+      for (const s of sources){ if (s !== targetCat) await applyChapterNames(files, s); }
+      const label = (targetCat ? chapterLabel(targetCat) : '未分類') + (targetSub ? ' / ' + targetSub : '');
+      showMsg($('msg'), `${moved.length}件を「${label}」へ移動しました。`, 'ok');
       selected.clear(); anchorId = null;
       await loadFiles(); render();
     } catch (err){
       showMsg($('msg'),
-        /doc_category|sort_order|column|schema cache/i.test(err.message || '')
-          ? '保存に必要な項目がまだありません。Supabase で phase14_handover.sql を実行してください。'
-          : '保存できませんでした。' + (err.message || ''), 'err');
+        /doc_subcategory|column|schema cache/i.test(err.message || '')
+          ? 'サブフォルダに必要な項目がまだありません。Supabase で phase15_subfolder.sql を実行してください。'
+          : /doc_category|sort_order/i.test(err.message || '')
+            ? '保存に必要な項目がまだありません。Supabase で phase14_handover.sql を実行してください。'
+            : '保存できませんでした。' + (err.message || ''), 'err');
     }
   }
 
@@ -832,7 +884,7 @@
       e.preventDefault(); depth = 0; veil.classList.remove('on');
       if (!isMgr || !projId) return;
       // 章の枠に落ちたものは stopPropagation 済みでここへは来ない → 未分類（受け皿）へ
-      if (e.dataTransfer.files && e.dataTransfer.files.length) await uploadFiles(e.dataTransfer.files, '');
+      if (e.dataTransfer.files && e.dataTransfer.files.length) await uploadFiles(e.dataTransfer.files, '', '');
     });
     window.addEventListener('dragend', () => { depth = 0; veil.classList.remove('on'); });
   })();
@@ -846,7 +898,7 @@
   async function selectProject(id){
     projId = id || null;
     curProj = projects.find(x => x.id === projId) || null;
-    selected.clear(); anchorId = null;
+    selected.clear(); anchorId = null; curFolder = ''; curSub = '';
     const u = new URL(location.href);
     if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
     history.replaceState(null, '', u);
