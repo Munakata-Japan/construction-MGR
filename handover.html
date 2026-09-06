@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260906D -->
+<!-- BUILD: handover (竣工図書) v20260906E -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -67,7 +67,8 @@
   .row2 .nm .t2{ font-size:11.5px; color:var(--sub); font-family:var(--mono); line-height:1.5;
                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .row2 .mv{ font-size:11px; }
-  .row2.sel{ background:#E3EDF7; border-color:var(--ink); box-shadow:inset 0 0 0 2px var(--ink); }
+  .row2.sel{ background:#DCE9F7; border-color:var(--ink);
+             box-shadow:inset 4px 0 0 var(--safety), inset 0 0 0 1px var(--ink); }
   .row2.multidrag{ opacity:.5; }
   .selbar{ position:sticky; top:0; z-index:20; background:var(--ink); color:#EBEDE8;
            border-radius:var(--radius); padding:8px 12px; margin-bottom:12px; display:flex; align-items:center;
@@ -77,6 +78,38 @@
   .selbar button{ margin-left:auto; background:transparent; border:1px solid #6a82e0; color:#EBEDE8;
                   border-radius:var(--radius-sm); padding:5px 10px; font-size:12.5px; cursor:pointer; font-family:var(--body); }
   .selbar button:hover{ background:#204D7E; }
+
+  /* エクスプローラー風の2ペイン */
+  .explorer{ display:grid; grid-template-columns:250px 1fr; gap:12px; align-items:start; }
+  @media (max-width:640px){ .explorer{ grid-template-columns:1fr; } }
+  .tree{ border:1px solid var(--rule); border-radius:var(--radius); background:var(--card);
+         box-shadow:var(--shadow-1); overflow:hidden; position:sticky; top:8px; }
+  .folder{ display:flex; align-items:center; gap:9px; padding:10px 11px; border-bottom:1px solid var(--rule-2);
+           cursor:pointer; user-select:none; }
+  .folder:last-child{ border-bottom:none; }
+  .folder:hover{ background:#F1F5FA; }
+  .folder .ic{ flex:0 0 auto; font-size:16px; line-height:1; }
+  .folder .fn{ flex:1 1 auto; font-family:var(--disp); font-weight:700; font-size:13.5px;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .folder .fc{ flex:0 0 auto; font-family:var(--mono); font-size:12px; color:var(--sub);
+               min-width:22px; text-align:right; }
+  .folder.cur{ background:#E3EDF7; box-shadow:inset 4px 0 0 var(--ink); }
+  .folder.cur .fn{ color:var(--ink); }
+  .folder.pool .fn{ color:#8A6400; }
+  .folder.pool .fc{ color:#8A6400; font-weight:700; }
+  .folder.filled .fc{ color:var(--ok); }
+  .folder.fileover{ outline:2px solid var(--safety); outline-offset:-2px; background:#FBF6EA; }
+
+  .pane{ border:1px solid var(--rule); border-radius:var(--radius); background:var(--card);
+         box-shadow:var(--shadow-1); overflow:hidden; min-height:140px; }
+  .pane .paneh{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding:9px 13px;
+                background:#F1F3EF; border-bottom:1px solid var(--rule-2); }
+  .pane .paneh b{ font-family:var(--disp); font-size:14.5px; }
+  .pane .paneh .pc{ font-family:var(--mono); font-size:12px; color:var(--sub); }
+  .pane .paneh .panehint{ font-size:11.5px; color:var(--sub); margin-left:auto; }
+  .pane .items{ padding:8px; display:flex; flex-direction:column; gap:6px; min-height:70px; }
+  .pane.fileover{ outline:2px dashed var(--safety); outline-offset:-3px; background:#FBF9F0; }
+  .paneempty{ color:#9AA39C; font-size:13px; text-align:center; padding:24px 8px; }
 
   .hint{ font-size:12.5px; color:var(--sub); margin:-4px 0 12px; line-height:1.7; }
 
@@ -179,12 +212,12 @@
     <div id="progress" class="prog2"></div>
     <div id="selbar" class="selbar" hidden></div>
 
-    <p class="sech">仕分け（受け皿 ⇄ 各章フォルダ・パソコンからD&Dで取り込み）</p>
-    <p class="hint">パソコンの写真・PDFを<b>章の枠へドラッグ＆ドロップ</b>すればその章へ、<b>枠の外や受け皿</b>へ落とせば未分類として取り込めます。すでにある資料は行の <b>⠿</b> をつかんで章の枠へ動かせます（その章へ移り受け皿から消えます）。<br><b>まとめて移動</b>：<b>Ctrl＋クリック</b>で1件ずつ選ぶ／<b>Shift＋クリック</b>で範囲を選ぶ → 選択したものを章の枠へドラッグ。</p>
-    <div id="chaps"></div>
-
-    <p class="sech">目次（集まり具合）</p>
-    <div class="list toc" id="toc"></div>
+    <p class="sech">仕分け（左のフォルダ構造へドラッグして移動）</p>
+    <p class="hint">左が竣工図書の<b>フォルダ構造</b>です。フォルダをクリックすると<b>右にその中身</b>が出ます。右の資料を<b>左のフォルダへドラッグ</b>すると移動し、元のフォルダから消えます。パソコンのファイルは、左のフォルダ（または右の余白）へ<b>ドラッグ＆ドロップ</b>で取り込めます。<br><b>まとめて移動</b>：Ctrl＋クリックで1件ずつ／Shift＋クリックで範囲を選んでからドラッグ。</p>
+    <div class="explorer">
+      <div class="tree" id="tree"></div>
+      <div class="pane" id="pane"></div>
+    </div>
   </div>
 
   <div id="emptymsg"></div>
@@ -230,6 +263,7 @@
   let projects = [], partners = [], phases = [], files = [], projId = null, curProj = null;
   let urlCache = {}, draggingId = null;
   let selected = new Set(), anchorId = null, dragIds = [];   // 複数選択（Ctrl／Shift）
+  let curFolder = '';   // 右ペインに表示中のフォルダ（''＝未分類/受け皿）
   const bySort = (a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) ||
                            ((a.taken_on || '') < (b.taken_on || '') ? 1 : -1);
 
@@ -380,54 +414,67 @@
   function paintSelection(){
     // 消えたIDは選択から外す
     [...selected].forEach(id => { if (!files.some(f => f.id === id)) selected.delete(id); });
-    const box = $('chaps');
-    box.querySelectorAll('.row2').forEach(r => r.classList.toggle('sel', selected.has(r.dataset.id)));
+    const box = $('pane');
+    if (box) box.querySelectorAll('.row2').forEach(r => r.classList.toggle('sel', selected.has(r.dataset.id)));
     const n = selected.size, bar = $('selbar');
     if (!n){ bar.hidden = true; bar.innerHTML = ''; return; }
     bar.hidden = false;
     bar.innerHTML = `<b>${n}</b>件を選択中` +
-      `<span class="hint2">選択したものを章の枠へドラッグ＝まとめて移動（Ctrl＝個別・Shift＝範囲・Escで解除）</span>` +
+      `<span class="hint2">選択したものを<b>左のフォルダへドラッグ</b>＝まとめて移動（Ctrl＝個別・Shift＝範囲・Escで解除）</span>` +
       `<button type="button" id="selclear">選択を解除</button>`;
     bar.querySelector('#selclear').onclick = () => { selected.clear(); anchorId = null; paintSelection(); };
   }
 
-  function renderChaps(map){
-    let html = '';
-    let no = 0;
-    // 受け皿（未分類）を一番上に。分類すると各章フォルダへ移り、受け皿から消える
-    const secOrder = [NONE, ...HANDOVER_CHAPTERS.map(c => c.key)];
-    secOrder.forEach(key => {
-      const arr = map.get(key) || [];
-      const isPool = key === NONE;
-      // 受け皿は空でも常に表示（ドラッグ＆ドロップの一括取り込み口を兼ねる）
-      const label = isPool ? '未分類（受け皿）' : chapterLabel(key);
-      const cn = isPool ? '' : String(HANDOVER_CHAPTERS.findIndex(c => c.key === key) + 1).padStart(2, '0');
-      const cls = isPool ? 'pool' : ('folder ' + (arr.length ? 'filled' : 'empty'));
-      const cc = isPool ? `残り ${arr.length} 点` : `${arr.length} 点`;
-      let rows = '';
-      arr.forEach(f => { no++; rows += itemRow(f, no); });
-      html += `<div class="chap ${cls}" data-key="${isPool ? '' : key}">
-        <div class="ch"><span class="cn">${cn}</span><span class="cl">${esc(label)}</span>
-          <span class="cc">${cc}</span></div>
-        <div class="items">${rows}</div>
-      </div>`;
-    });
-    $('chaps').innerHTML = html;
+  function folderList(){
+    return [{ key:'', label:'未分類（受け皿）', pool:true },
+            ...HANDOVER_CHAPTERS.map((c, i) => ({ key:c.key, label:c.label, no:i + 1 }))];
+  }
+  function folderCount(map, key){ return (map.get(key === '' ? NONE : key) || []).length; }
 
-    // サムネイル遅延読み込み
-    $('chaps').querySelectorAll('.th[data-p]').forEach(box => {
+  // 左：フォルダ構造（エクスプローラーのツリー）
+  function renderTree(map){
+    $('tree').innerHTML = folderList().map(f => {
+      const n = folderCount(map, f.key);
+      const cur = (curFolder || '') === (f.key || '');
+      const cls = [ f.pool ? 'pool' : 'folder', cur ? 'cur' : '', (!f.pool && n > 0) ? 'filled' : '' ].filter(Boolean).join(' ');
+      const ic = f.pool ? '🗂️' : (cur ? '📂' : '📁');
+      return `<div class="folder ${cls}" data-key="${f.key}">
+        <span class="ic">${ic}</span><span class="fn">${esc(f.label)}</span><span class="fc">${n}</span>
+      </div>`;
+    }).join('');
+    $('tree').querySelectorAll('.folder').forEach(el => {
+      el.addEventListener('click', () => {
+        if ((curFolder || '') === (el.dataset.key || '')) return;
+        curFolder = el.dataset.key; selected.clear(); anchorId = null; render();
+      });
+      if (isMgr) wireFolderDrop(el);
+    });
+  }
+
+  // 右：選択中フォルダの中身
+  function renderPane(map){
+    const key = curFolder || '';
+    const arr = (map.get(key === '' ? NONE : key) || []).slice().sort(bySort);
+    const label = key === '' ? '未分類（受け皿）' : chapterLabel(key);
+    let rows = ''; arr.forEach((f, i) => { rows += itemRow(f, i + 1); });
+    $('pane').innerHTML =
+      `<div class="paneh"><b>${key === '' ? '🗂️ ' : '📂 '}${esc(label)}</b><span class="pc">${arr.length}件</span>` +
+      `<span class="panehint">${isMgr ? '左のフォルダへドラッグで移動／ここへ写真・PDFをD&Dで取り込み' : ''}</span></div>` +
+      `<div class="items" id="paneitems">${rows || ('<div class="paneempty">このフォルダは空です。' +
+        (isMgr ? '<br>左のフォルダから資料をここへ移すか、写真・PDFをドロップして取り込めます。' : '') + '</div>')}</div>`;
+    $('pane').querySelectorAll('.th[data-p]').forEach(box => {
       const p = box.dataset.p; if (!p) return;
       signedUrl(p).then(u => { if (u) box.innerHTML = `<img src="${u}" alt="" loading="lazy">`; });
     });
-    if (isMgr) wireDrag();
+    if (isMgr){ wirePaneRows(); wirePaneDrop(); }
     paintSelection();
   }
 
   function render(){
     const map = byChapter();
     paintProgress(map);
-    renderToc(map);
-    renderChaps(map);
+    renderTree(map);
+    renderPane(map);
   }
 
   /* ---------- 外部ファイルの取り込み（章の枠＝その章へ／枠外＝未分類へ） ---------- */
@@ -516,14 +563,16 @@
     $('chaps').querySelectorAll('.dropbefore,.dropafter,.dragover')
       .forEach(el => el.classList.remove('dropbefore', 'dropafter', 'dragover'));
   }
-  function orderedIds(){ return [...$('chaps').querySelectorAll('.row2')].map(r => r.dataset.id); }
+  function orderedIds(){ return [...$('pane').querySelectorAll('.row2')].map(r => r.dataset.id); }
 
-  function wireDrag(){
-    const box = $('chaps');
+  // 右ペインの行：選択（Ctrl／Shift）とドラッグ元
+  function wirePaneRows(){
+    const box = $('pane');
     box.querySelectorAll('.row2').forEach(row => {
-      // クリックで選択（Windowsと同じ：通常＝単一／Ctrl＝個別追加・解除／Shift＝範囲）
-      row.addEventListener('click', e => {
-        if (e.target.closest('a')) return;   // 「開く」リンクは除外
+      // ドラッグ可能な行では click が拾えないことがあるため pointerdown で選択する
+      row.addEventListener('pointerdown', e => {
+        if (e.button !== 0) return;            // 左ボタンのみ
+        if (e.target.closest('a')) return;     // 「開く」リンクは除外
         const id = row.dataset.id, ord = orderedIds();
         if (e.shiftKey && anchorId && ord.includes(anchorId)){
           if (!(e.ctrlKey || e.metaKey)) selected.clear();
@@ -532,6 +581,8 @@
         } else if (e.ctrlKey || e.metaKey){
           if (selected.has(id)) selected.delete(id); else selected.add(id);
           anchorId = id;
+        } else if (selected.has(id) && selected.size > 1){
+          // 複数選択の一部を押したときは保持（そのままグループでドラッグできる）
         } else {
           selected.clear(); selected.add(id); anchorId = id;
         }
@@ -539,7 +590,6 @@
       });
       row.addEventListener('dragstart', e => {
         const id = row.dataset.id;
-        // 未選択の行をドラッグしたら、それ1件だけの選択にする
         if (!selected.has(id)){ selected.clear(); selected.add(id); anchorId = id; paintSelection(); }
         dragIds = [...selected];
         box.querySelectorAll('.row2').forEach(r => { if (selected.has(r.dataset.id)) r.classList.add('multidrag'); });
@@ -549,37 +599,31 @@
       });
       row.addEventListener('dragend', () => {
         box.querySelectorAll('.row2').forEach(r => r.classList.remove('multidrag', 'dragging'));
-        clearInd();
-      });
-      row.addEventListener('dragover', e => {
-        if (hasFiles(e)){ e.preventDefault(); return; }   // 外部ファイルは章の枠で受ける
-        e.preventDefault(); clearInd();
-        const r = row.getBoundingClientRect();
-        row.classList.add((e.clientY - r.top) > r.height / 2 ? 'dropafter' : 'dropbefore');
-      });
-      row.addEventListener('drop', async e => {
-        e.preventDefault(); e.stopPropagation();
-        const chap = row.closest('.chap');
-        if (hasFiles(e)){ clearInd(); chap && chap.classList.remove('fileover');
-          if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, chap ? (chap.dataset.key || '') : ''); return; }
-        const r = row.getBoundingClientRect();
-        const after = (e.clientY - r.top) > r.height / 2;
-        clearInd();
-        await doMoveMany(dragIds.length ? dragIds : [row.dataset.id], chap ? (chap.dataset.key || '') : '', row.dataset.id, after);
       });
     });
-    box.querySelectorAll('.chap').forEach(sec => {
-      sec.addEventListener('dragover', e => {
-        e.preventDefault();
-        sec.classList.add(hasFiles(e) ? 'fileover' : 'dragover');
-      });
-      sec.addEventListener('dragleave', () => { sec.classList.remove('dragover'); sec.classList.remove('fileover'); });
-      sec.addEventListener('drop', async e => {
-        e.preventDefault(); e.stopPropagation();
-        sec.classList.remove('dragover'); sec.classList.remove('fileover');
-        if (hasFiles(e)){ if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, sec.dataset.key || ''); return; }
-        await doMoveMany(dragIds, sec.dataset.key || '', null, false);
-      });
+  }
+
+  // 左のフォルダ：資料の移動先（内部D&D）／OSファイルの取り込み先
+  function wireFolderDrop(el){
+    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('fileover'); });
+    el.addEventListener('dragleave', () => el.classList.remove('fileover'));
+    el.addEventListener('drop', async e => {
+      e.preventDefault(); e.stopPropagation(); el.classList.remove('fileover');
+      const key = el.dataset.key || '';
+      if (hasFiles(e)){ if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, key); return; }
+      await doMoveMany(dragIds, key, null, false);
+    });
+  }
+
+  // 右ペイン：OSファイルを今のフォルダへ取り込み
+  function wirePaneDrop(){
+    const pane = $('pane');
+    pane.addEventListener('dragover', e => { if (!hasFiles(e)) return; e.preventDefault(); pane.classList.add('fileover'); });
+    pane.addEventListener('dragleave', e => { if (e.target === pane) pane.classList.remove('fileover'); });
+    pane.addEventListener('drop', async e => {
+      if (!hasFiles(e)) return;
+      e.preventDefault(); e.stopPropagation(); pane.classList.remove('fileover');
+      if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, curFolder || '');
     });
   }
 
