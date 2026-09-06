@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: budget (実行予算) v20260906B -->
+<!-- BUILD: budget (実行予算) v20260906C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -663,7 +663,11 @@
     if (!confirm(`「${editing.item_name}」を削除します。`)) return;
     const removed = { ...editing };
     delete removed.amount;   // 金額は自動計算の列なので入れ直せない
-    const { error } = await sb.from('phase_budget_items').delete().eq('id', editing.id);
+    const id = editing.id;
+    // この品目を参照している発注のリンクを先に外す（外部キー制約でハード削除が
+    // ブロックされる＝「削除できない」対策）。外れた発注は未計上バナーで拾える。
+    try { await sb.from('phase_orders').update({ budget_item_id: null }).eq('budget_item_id', id); } catch (_){}
+    const { error } = await sb.from('phase_budget_items').delete().eq('id', id);
     if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
     closePanel();
     await loadItems();
