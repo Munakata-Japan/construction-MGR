@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料発注アラート) v20260904A -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260906B -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>材料発注アラート ｜ 宗像総合管理システム</title>
+<title>材料調達計画表 ｜ 宗像総合管理システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -71,6 +71,9 @@
   .cat{ font-size:10.5px; font-weight:700; padding:1px 5px; border-radius:var(--radius-sm); margin-right:5px; }
   .cat.material{ background:#E3EBF3; color:var(--ink-2); }
   .cat.labor{ background:#FBF1EF; color:#8C2A1D; }
+  .proc{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:999px; margin-left:6px;
+         background:#EDEFEA; color:var(--sub); white-space:nowrap; }
+  .proc.hot{ background:#FBF0D4; color:#6B4E00; border:1px solid #E7C866; }  /* 受注生産・輸入＝要注意 */
 
   .stag{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:var(--radius-sm); white-space:nowrap; color:var(--sub); background:#EDEFEA; }
   .stag.est{ color:#8C2A1D; background:#FBF1EF; }
@@ -100,13 +103,13 @@
 
 <header class="bar">
   <span class="mark" aria-hidden="true"></span>
-  <h1>材料発注アラート</h1>
+  <h1>材料調達計画表</h1>
   <div class="who" id="who"></div>
 </header>
 
 <div class="wrap">
   <p class="lead">
-    各工程の着工予定と、材料の納品タイミングを照らし合わせ、発注・リードタイム・納品予定を照らし合わせを行います。
+    着工前原価台帳の材料（何を・どれだけ）と、工程の着工予定（いつまでに）を突き合わせ、<b>発注期限・リードタイム・納品予定</b>を一枚で可視化します。受注生産・海外輸入は納期が読みにくいため早めに警告し、危険を担当者任せにせず関係者全員で共有します。
   </p>
 
   <div class="ctl">
@@ -178,7 +181,7 @@
       sb.from('project_phases').select('id,project_id,name,start_date')
         .eq('is_active', true).order('seq'),
       sb.from('phase_budget_items')
-        .select('id,project_id,phase_id,category,item_name,quantity,unit,status,scheduled_delivery_date,delivered_on,lead_time_days')
+        .select('id,project_id,phase_id,category,item_name,quantity,unit,status,scheduled_delivery_date,delivered_on,lead_time_days,procurement_type,is_import')
     ]);
     if (pr.error){ showMsg($('msg'), '読み込めませんでした。' + pr.error.message, 'err'); return; }
     if (bi.error){
@@ -228,6 +231,11 @@
                     ? null : Number(x.lead_time_days);
     const deadline = (dd && lead !== null) ? addDaysYMD(dd, -lead) : null;
     const est = (x.status === 'estimate');
+    // 受注生産・海外輸入は納期が読みにくいので、通常より早めに警告（余裕を上乗せ）
+    const buf = WARN_DAYS
+      + (x.is_import ? 14 : 0)
+      + (x.procurement_type === 'made_to_order' ? 7 : 0);
+    const warnLimit = addDaysYMD(TODAY, buf);
 
     // 納品予定が着工日より後 → 発注済みでも間に合わない（最重要）
     if (dd && start && dd > start)
@@ -235,9 +243,9 @@
     // 見積中で、発注期限を過ぎている
     if (est && deadline && deadline < TODAY)
       return { level:'red', rank:1, text:'発注期限を過ぎています', deadline, dd, start, dlNote:true };
-    // 見積中で、発注期限が近い
-    if (est && deadline && deadline <= WARN_LIMIT)
-      return { level:'amber', rank:2, text:'まもなく発注期限', deadline, dd, start, dlNote:true };
+    // 見積中で、発注期限が近い（受注生産・輸入は早めに黄色）
+    if (est && deadline && deadline <= warnLimit)
+      return { level:'amber', rank:2, text: (buf > WARN_DAYS ? 'まもなく発注期限（早め手配）' : 'まもなく発注期限'), deadline, dd, start, dlNote:true };
     // 納品予定日が未定 → 間に合うか判断できない
     if (!dd)
       return { level:'amber', rank:3, text:'納品予定日が未定', deadline, dd, start, dlNote:false };
@@ -309,6 +317,7 @@
         <span><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '工事全体'}</span>${phase && phase.start_date ? `<span class="sub">着工 ${fmtShort(phase.start_date)}</span>` : ''}</span>
         <span><span class="cat ${x.category}">${x.category === 'labor' ? '工' : '材'}</span>
           <span class="nm" style="display:inline;font-size:12px">${esc(x.item_name)}</span>
+          ${(x.procurement_type || x.is_import) ? `<span class="proc${x.procurement_type === 'made_to_order' || x.is_import ? ' hot' : ''}">${x.procurement_type === 'made_to_order' ? '受注生産' : (x.procurement_type === 'stock' ? '在庫品' : '')}${x.is_import ? (x.procurement_type ? '・輸入' : '輸入') : ''}</span>` : ''}
           <span class="sub">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</span></span>
         <span class="num"><b class="mlbl">納品予定 </b>${x.scheduled_delivery_date ? fmtShort(x.scheduled_delivery_date) : '—'}</span>
         <span class="num"><b class="mlbl">発注期限 </b>${a.deadline ? fmtShort(a.deadline) : '—'}</span>
