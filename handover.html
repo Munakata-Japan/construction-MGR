@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260906M -->
+<!-- BUILD: handover (竣工図書) v20260906N -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -113,6 +113,9 @@
   .selbar .selmovel{ display:inline-flex; align-items:center; gap:6px; color:#EBEDE8; font-size:12.5px; }
   .selbar select{ min-height:34px; padding:4px 8px; border-radius:var(--radius-sm); border:1px solid #6a82e0;
                   background:#fff; color:var(--ink); font-family:var(--body); font-size:13px; max-width:200px; }
+  .selbar #seldel{ margin-left:auto; border-color:#e08a6a; color:#ffdccf; }
+  .selbar #seldel:hover{ background:#7e2a20; border-color:#e08a6a; }
+  .selbar #selclear{ margin-left:8px; }
 
   /* エクスプローラー風の2ペイン */
   .explorer{ display:grid; grid-template-columns:250px 1fr; gap:12px; align-items:start; }
@@ -328,8 +331,12 @@
   let selected = new Set(), anchorId = null, dragIds = [];   // 複数選択（Ctrl／Shift）
   let curFolder = '';   // 右ペインに表示中の章（''＝未分類/受け皿）
   let curSub = '';      // 章の中のサブフォルダ（''＝章の直下）
+  let qsortDir = 'asc'; // 「名前で並べ替え」の向き（押すたびに反転）
   const bySort = (a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) ||
                            ((a.taken_on || '') < (b.taken_on || '') ? 1 : -1);
+  // ファイル名の自然順（1,2,…,10 の順。番号付き同種ファイルがきれいに並ぶ）
+  const natCmp = (a, b) => (a.original_name || a.title || '').localeCompare(
+    b.original_name || b.title || '', 'ja', { numeric: true, sensitivity: 'base' });
 
   const isPhoto = f => f.file_kind === 'photo' || (f.mime_type || '').startsWith('image/');
   const isPdf = f => (f.mime_type || '').includes('pdf') || /\.pdf$/i.test(f.original_name || '');
@@ -495,6 +502,7 @@
     bar.innerHTML = `<b>${n}</b>件を選択中` +
       `<span class="hint2">左の<b class="w">移動先フォルダをクリック</b>で移動</span>` +
       `<label class="selmovel">または移動先 <select id="selmove"><option value="__ph__" selected>選んで移動…</option>${opt}</select></label>` +
+      (isMgr ? `<button type="button" id="seldel">🗑 削除</button>` : '') +
       `<button type="button" id="selclear">選択を解除</button>`;
     const sm = bar.querySelector('#selmove');
     sm.onchange = async () => {
@@ -502,6 +510,8 @@
       let t; try { t = JSON.parse(sm.value); } catch (_){ return; }
       await doMoveMany([...selected], t.c, t.s, null, false);
     };
+    const sd = bar.querySelector('#seldel');
+    if (sd) sd.onclick = () => deleteSelected();
     bar.querySelector('#selclear').onclick = () => { selected.clear(); anchorId = null; paintSelection(); };
   }
 
@@ -553,8 +563,9 @@
       ? `<b><a href="#" class="crumbup">${cat === '' ? '🗂️' : '📂'} ${esc(catLabel)}</a> › 📁 ${esc(sub)}</b>`
       : `<b>${cat === '' ? '🗂️ ' : '📂 '}${esc(catLabel)}</b>`;
     const mkbtn = (isMgr && cat !== '' && !sub) ? `<button type="button" class="btn ghost sm" id="mksub">＋ フォルダ</button>` : '';
+    const sortbtn = (isMgr && cat !== '' && arr.length >= 2) ? `<button type="button" class="btn ghost sm" id="sortname" title="ファイル名の番号順に自動で並べ替え（もう一度押すと逆順）">名前で並べ替え</button>` : '';
     $('pane').innerHTML =
-      `<div class="paneh">${crumb}<span class="pc">${arr.length}件</span>${mkbtn}` +
+      `<div class="paneh">${crumb}<span class="pc">${arr.length}件</span>${mkbtn}${sortbtn}` +
       `<span class="panehint">${isMgr ? '選択→フォルダをクリックで移動・ここへD&D取り込み' : ''}</span></div>` +
       `<div class="items" id="paneitems">` +
         ((sub === '' && subs.length) ? subs.map(s =>
@@ -580,6 +591,8 @@
       if (!name) return;
       await doMoveMany([...selected], cat, name, null, false);
     });
+    const sbtn = $('sortname');
+    if (sbtn) sbtn.addEventListener('click', () => sortFolderByName());
     $('pane').querySelectorAll('.subfolder').forEach(el => {
       el.addEventListener('click', async () => {
         const s = el.dataset.sub || '';
@@ -940,7 +953,25 @@
         try { e.dataTransfer.setData('text/plain', id); } catch (_) {}
       });
       row.addEventListener('dragend', () => {
-        box.querySelectorAll('.row2').forEach(r => r.classList.remove('multidrag', 'dragging'));
+        box.querySelectorAll('.row2').forEach(r => r.classList.remove('multidrag', 'dragging', 'dropbefore', 'dropafter'));
+      });
+      // 工程表と同じ手動並び替え：行の上/下半分で「前/後」に差し込む
+      row.addEventListener('dragover', e => {
+        if (hasFiles(e) || !dragIds.length || dragIds.includes(row.dataset.id)) return;
+        e.preventDefault(); e.stopPropagation();
+        const r = row.getBoundingClientRect();
+        const after = (e.clientY - r.top) > r.height / 2;
+        box.querySelectorAll('.row2').forEach(x => x.classList.remove('dropbefore', 'dropafter'));
+        row.classList.add(after ? 'dropafter' : 'dropbefore');
+      });
+      row.addEventListener('dragleave', () => row.classList.remove('dropbefore', 'dropafter'));
+      row.addEventListener('drop', async e => {
+        if (hasFiles(e) || !dragIds.length || dragIds.includes(row.dataset.id)){ row.classList.remove('dropbefore', 'dropafter'); return; }
+        e.preventDefault(); e.stopPropagation();
+        const r = row.getBoundingClientRect();
+        const after = (e.clientY - r.top) > r.height / 2;
+        row.classList.remove('dropbefore', 'dropafter');
+        await doMoveMany(dragIds, curFolder || '', curSub || '', row.dataset.id, after);
       });
     });
   }
@@ -1008,6 +1039,56 @@
           : /doc_category|sort_order/i.test(err.message || '')
             ? '保存に必要な項目がまだありません。Supabase で phase14_handover.sql を実行してください。'
             : '保存できませんでした。' + (err.message || ''), 'err');
+    }
+  }
+
+  /* ---------- 名前で自動整列（同種の番号付きファイルがきれいに並ぶ） ---------- */
+  async function sortFolderByName(){
+    const cat = curFolder || '';
+    if (cat === '' || !isMgr) return;
+    const arr = files.filter(x => (x.doc_category || '') === cat);
+    if (arr.length < 2) return;
+    const dir = qsortDir;
+    arr.sort((a, b) => natCmp(a, b) * (dir === 'desc' ? -1 : 1));
+    arr.forEach((x, i) => { x.sort_order = (i + 1) * 10; });
+    qsortDir = dir === 'asc' ? 'desc' : 'asc';   // 次回は逆順
+    render();
+    try {
+      await applyChapterNames(files, cat);       // sort_order と No. タグを保存
+      await loadFiles(); render();
+      showMsg($('msg'), `「${chapterLabel(cat)}」を名前${dir === 'asc' ? '昇順' : '降順'}で並べ替えました。`, 'ok');
+    } catch (err){
+      showMsg($('msg'), '並べ替えを保存できませんでした。' + (err.message || ''), 'err');
+    }
+  }
+
+  /* ---------- 選択したファイルを削除（原本は消さず一覧から隠す・元に戻せる） ---------- */
+  async function deleteSelected(){
+    if (!isMgr) return;
+    const targets = [...selected].map(id => files.find(x => x.id === id)).filter(Boolean);
+    if (!targets.length) return;
+    if (!confirm(`選択した ${targets.length} 件を削除します。よろしいですか？\n（原本は消さず一覧から隠します。「元に戻す」で復元できます）`)) return;
+    const cats = new Set(targets.map(x => x.doc_category || ''));
+    try {
+      await Promise.all(targets.map(async x => {
+        const { error } = await sb.from('project_files').update({ is_active: false }).eq('id', x.id);
+        if (error) throw error;
+      }));
+      selected.clear(); anchorId = null;
+      await loadFiles();
+      for (const c of cats){ if (c) await applyChapterNames(files, c); }   // 欠番のNo.を詰め直す
+      await loadFiles(); render();
+      showUndo($('msg'), `${targets.length} 件を削除しました。`, async () => {
+        await Promise.all(targets.map(async x => {
+          const { error } = await sb.from('project_files').update({ is_active: true }).eq('id', x.id);
+          if (error) throw error;
+        }));
+        await loadFiles();
+        for (const c of cats){ if (c) await applyChapterNames(files, c); }
+        await loadFiles(); render();
+      });
+    } catch (err){
+      showMsg($('msg'), '削除できませんでした。' + (err.message || ''), 'err');
     }
   }
 
