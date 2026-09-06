@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: reports (日報) v20260723K -->
+<!-- BUILD: reports (日報) v20260906A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -13,8 +13,8 @@
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <style>
-  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
-  .ctl select{ width:auto; min-width:170px; max-width:380px; min-height:44px; flex:0 1 auto; }
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .ctl select{ width:auto; min-width:170px; max-width:380px; min-height:38px; flex:0 1 auto; }
   .ctl .sp{ flex:1 1 0; }
 
   .rstat{ font-size:12px; font-weight:700; padding:4px 9px; border-radius:2px;
@@ -72,9 +72,9 @@
       <option value="received">情報部受領</option>
       <option value="rejected">差戻し</option>
     </select>
-    <button class="btn ghost sm" id="lkbtn" hidden>外注先へのURL</button>
+    <button class="btn sm" id="lkbtn" hidden>外注先へのURL</button>
   </div>
-  <p id="pmgr" hidden style="font-size:12.5px;color:var(--sub);margin:-6px 0 14px"></p>
+  <p id="pmgr" hidden style="font-size:12.5px;color:var(--sub);margin:2px 0 8px"></p>
 
   <div id="msg" class="msg"></div>
 
