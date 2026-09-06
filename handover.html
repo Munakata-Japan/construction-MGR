@@ -64,6 +64,8 @@
   .row2 .th .ext{ font-family:var(--mono); font-size:10px; color:var(--sub); }
   .row2 .th.clk{ cursor:zoom-in; }
   .row2 .th.clk:hover{ outline:2px solid var(--safety); outline-offset:-1px; }
+  /* 通知バナーは細く（移動確認などは一時的な表示） */
+  #msg{ padding:7px 12px; margin-bottom:10px; line-height:1.5; font-size:13px; box-shadow:none; }
   /* その場プレビュー（1ページ目・別ページへ飛ばない） */
   #qv{ position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; }
   #qv .qv-back{ position:absolute; inset:0; background:rgba(15,20,30,.78); }
@@ -534,6 +536,7 @@
         const key = el.dataset.key || '';
         if (isMgr && selected.size > 0){ await doMoveMany([...selected], key, '', null, false); return; }  // 章の直下へ
         if ((curFolder || '') === key && !curSub) return;
+        showMsg($('msg'), '');   // 別フォルダへ移ったら前の通知を消す
         curFolder = key; curSub = ''; selected.clear(); anchorId = null; render();
       });
       if (isMgr) wireFolderDrop(el, el.dataset.key || '', '');
@@ -569,7 +572,7 @@
       box.addEventListener('click', e => { e.stopPropagation(); openQuick(box.dataset.qv); });
     });
     const up = $('pane').querySelector('.crumbup');
-    if (up) up.addEventListener('click', e => { e.preventDefault(); curSub = ''; selected.clear(); anchorId = null; render(); });
+    if (up) up.addEventListener('click', e => { e.preventDefault(); showMsg($('msg'), ''); curSub = ''; selected.clear(); anchorId = null; render(); });
     const mk = $('mksub');
     if (mk) mk.addEventListener('click', async () => {
       if (!selected.size){ showMsg($('msg'), 'フォルダへ入れる資料を先に選んでください。', 'err'); return; }
@@ -581,6 +584,7 @@
       el.addEventListener('click', async () => {
         const s = el.dataset.sub || '';
         if (isMgr && selected.size > 0){ await doMoveMany([...selected], cat, s, null, false); return; }
+        showMsg($('msg'), '');   // 別フォルダへ移ったら前の通知を消す
         curSub = s; selected.clear(); anchorId = null; render();
       });
       if (isMgr) wireFolderDrop(el, cat, el.dataset.sub || '');
