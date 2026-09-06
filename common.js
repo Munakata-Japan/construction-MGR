@@ -119,7 +119,14 @@ function showMsg(el, text, kind){
   if (!el) return;
   el.className = 'msg ' + (kind || '');
   el.textContent = text || '';
-  if (text) el.scrollIntoView({ block:'nearest' });
+  // 前回の自動消去タイマーを止める（要素ごとに1本だけ持つ）
+  if (el._msgTimer){ clearTimeout(el._msgTimer); el._msgTimer = null; }
+  if (text){
+    el.scrollIntoView({ block:'nearest' });
+    // 通知は一定時間で自動的に消す（古いエラー帯や案内が画面に残り続けないように）
+    el._msgTimer = setTimeout(() => { el.textContent = ''; el.className = 'msg'; el._msgTimer = null; },
+      kind === 'err' ? 9000 : 5000);
+  }
 }
 
 /* ---------- 削除の取り消し（元に戻す） ----------
