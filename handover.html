@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: handover (竣工図書) v20260906E -->
+<!-- BUILD: handover (竣工図書) v20260906F -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -78,6 +78,9 @@
   .selbar button{ margin-left:auto; background:transparent; border:1px solid #6a82e0; color:#EBEDE8;
                   border-radius:var(--radius-sm); padding:5px 10px; font-size:12.5px; cursor:pointer; font-family:var(--body); }
   .selbar button:hover{ background:#204D7E; }
+  .selbar .selmovel{ display:inline-flex; align-items:center; gap:6px; color:#EBEDE8; font-size:12.5px; }
+  .selbar select{ min-height:34px; padding:4px 8px; border-radius:var(--radius-sm); border:1px solid #6a82e0;
+                  background:#fff; color:var(--ink); font-family:var(--body); font-size:13px; max-width:200px; }
 
   /* エクスプローラー風の2ペイン */
   .explorer{ display:grid; grid-template-columns:250px 1fr; gap:12px; align-items:start; }
@@ -110,6 +113,28 @@
   .pane .items{ padding:8px; display:flex; flex-direction:column; gap:6px; min-height:70px; }
   .pane.fileover{ outline:2px dashed var(--safety); outline-offset:-3px; background:#FBF9F0; }
   .paneempty{ color:#9AA39C; font-size:13px; text-align:center; padding:24px 8px; }
+
+  /* ===== 上部をコンパクトに、作業（2ペイン）を全高＆各ペイン独立スクロール ===== */
+  @media (min-width: 641px){
+    html, body{ height:100%; }
+    body{ display:flex; flex-direction:column; overflow:hidden; }
+    .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+           overflow:hidden; max-width:1280px; padding:10px 16px; }
+    .ctl{ margin-bottom:7px; }
+    #summary{ padding:6px 12px; margin-bottom:7px; font-size:12px; line-height:1.5; }
+    .actrow{ margin:0 0 7px; }
+    #msg{ margin-bottom:7px; }
+    #rohint{ margin:0 0 6px; }
+    #body{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+    .prog2{ padding:7px 12px; margin-bottom:7px; }
+    .selbar{ margin-bottom:7px; }
+    .sech{ margin:2px 0 4px; font-size:13px; }
+    .hint{ margin:-2px 0 7px; max-height:3em; overflow:auto; }
+    .explorer{ flex:1 1 auto; min-height:0; align-items:stretch; }
+    .tree{ position:static; max-height:100%; overflow:auto; }
+    .pane{ display:flex; flex-direction:column; max-height:100%; overflow:hidden; }
+    .pane .items{ flex:1 1 auto; min-height:0; overflow:auto; }
+  }
 
   .hint{ font-size:12.5px; color:var(--sub); margin:-4px 0 12px; line-height:1.7; }
 
@@ -213,7 +238,7 @@
     <div id="selbar" class="selbar" hidden></div>
 
     <p class="sech">仕分け（左のフォルダ構造へドラッグして移動）</p>
-    <p class="hint">左が竣工図書の<b>フォルダ構造</b>です。フォルダをクリックすると<b>右にその中身</b>が出ます。右の資料を<b>左のフォルダへドラッグ</b>すると移動し、元のフォルダから消えます。パソコンのファイルは、左のフォルダ（または右の余白）へ<b>ドラッグ＆ドロップ</b>で取り込めます。<br><b>まとめて移動</b>：Ctrl＋クリックで1件ずつ／Shift＋クリックで範囲を選んでからドラッグ。</p>
+    <p class="hint">右の資料を選ぶと上に<b>移動先の選択</b>が出ます（<b>左のフォルダへドラッグ</b>でも移動可）。移動すると元から消えます。<b>Ctrl／Shift＋クリック</b>で複数選択。フォルダや右の余白へファイルを<b>D&D</b>で取り込み。</p>
     <div class="explorer">
       <div class="tree" id="tree"></div>
       <div class="pane" id="pane"></div>
@@ -420,8 +445,16 @@
     if (!n){ bar.hidden = true; bar.innerHTML = ''; return; }
     bar.hidden = false;
     bar.innerHTML = `<b>${n}</b>件を選択中` +
-      `<span class="hint2">選択したものを<b>左のフォルダへドラッグ</b>＝まとめて移動（Ctrl＝個別・Shift＝範囲・Escで解除）</span>` +
+      `<label class="selmovel">移動先 <select id="selmove"><option value="__ph__" selected>選んで移動…</option>` +
+      folderList().map(f => `<option value="${f.key}">${esc(f.label)}</option>`).join('') +
+      `</select></label>` +
+      `<span class="hint2">または左のフォルダへドラッグ（Escで解除）</span>` +
       `<button type="button" id="selclear">選択を解除</button>`;
+    const sm = bar.querySelector('#selmove');
+    sm.onchange = async () => {
+      if (sm.value === '__ph__') return;
+      await doMoveMany([...selected], sm.value, null, false);   // '' は未分類（受け皿）
+    };
     bar.querySelector('#selclear').onclick = () => { selected.clear(); anchorId = null; paintSelection(); };
   }
 
@@ -605,7 +638,7 @@
 
   // 左のフォルダ：資料の移動先（内部D&D）／OSファイルの取り込み先
   function wireFolderDrop(el){
-    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('fileover'); });
+    el.addEventListener('dragover', e => { e.preventDefault(); try { e.dataTransfer.dropEffect = hasFiles(e) ? 'copy' : 'move'; } catch (_){} el.classList.add('fileover'); });
     el.addEventListener('dragleave', () => el.classList.remove('fileover'));
     el.addEventListener('drop', async e => {
       e.preventDefault(); e.stopPropagation(); el.classList.remove('fileover');

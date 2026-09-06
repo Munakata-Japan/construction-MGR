@@ -1,6 +1,6 @@
 /* ============================================================
    宗像総合管理システム  共通スタイル
-   BUILD: common.css v20260724C
+   BUILD: common.css v20260906A
    設計方針: 工事現場の表示板を下敷きにした罫線グリッド。
              屋外・手袋での操作を想定し、文字とタップ領域を大きく。
    ============================================================ */
@@ -51,7 +51,7 @@ body{
   background:linear-gradient(180deg,#1B4574,var(--ink) 60%);
   color:#EBEDE8;
   padding:0 16px;
-  min-height:56px;
+  min-height:48px;
   display:flex;
   align-items:center;
   gap:12px;
@@ -72,7 +72,7 @@ body{
 }
 .bar .who b{ display:block; color:#EBEDE8; font-weight:500; font-size:13.5px; }
 
-.wrap{ max-width:960px; margin:0 auto; padding:20px 16px 96px; }
+.wrap{ max-width:960px; margin:0 auto; padding:14px 16px 96px; }
 
 /* ---------- ボタン ---------- */
 .btn{
