@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: profit (損益・粗利) v20260907A -->
+<!-- BUILD: profit (損益・粗利) v20260907B -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -177,9 +177,11 @@
   const TAGN = { fixed:'確定', committed:'暫定', planned:'見込み' };
 
   async function loadRefs(){
-    const { data } = await sb.from('projects')
-      .select('id,project_no,name,contract_amount,profit_closed_at')
+    // 工事一覧は最小列だけ取得する（損益用の列が未作成でも一覧が空にならないように）
+    const { data, error } = await sb.from('projects')
+      .select('id,project_no,name')
       .eq('is_active', true).order('project_no', { ascending:false });
+    if (error){ showMsg($('msg'), '工事一覧を読み込めませんでした。' + (error.message || ''), 'err'); }
     projects = data || [];
     $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
       projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
