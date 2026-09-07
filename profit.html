@@ -154,6 +154,7 @@
 
   let projects = [], items = [], projId = null, project = null;
   let editing = null;   // 検収入力中の itemId
+  let salesDelta = 0;   // 承認済み変更契約の売上増減合計（変更後請負金額に反映）
 
   const DISC = ['土木工事', '電気工事', '共通'];
   const NONE = '__none__';
@@ -189,6 +190,12 @@
     const pr = await sb.from('projects')
       .select('id,project_no,name,contract_amount,profit_closed_at,profit_closed_by').eq('id', projId).maybeSingle();
     project = pr.data || null;
+    // 承認済みの設計変更（売上増減）を売上に上乗せする（変更後請負金額）
+    salesDelta = 0;
+    try {
+      const co = await sb.from('project_change_orders').select('sales_delta,status').eq('project_id', projId);
+      if (!co.error) salesDelta = (co.data || []).filter(c => c.status === 'approved').reduce((s, c) => s + (Number(c.sales_delta) || 0), 0);
+    } catch (_){}
     const { data, error } = await sb.from('phase_budget_items')
       .select('id,phase_id,category,item_name,budget_amount,contract_amount,amount,unit_price,quantity,unit,status,cost_stage,discipline,sort_order,seq,actual_amount,inspected_on,estimate_partner_id')
       .eq('project_id', projId).order('seq');
@@ -222,7 +229,8 @@
 
   function renderSummary(){
     const rows = filtered();
-    const sales = project && project.contract_amount != null ? Number(project.contract_amount) : null;
+    const base = project && project.contract_amount != null ? Number(project.contract_amount) : null;
+    const sales = base != null ? base + salesDelta : (salesDelta ? salesDelta : null);
 
     let actualTotal = 0, fixedTotal = 0, fixedCount = 0, sMat = 0, sLab = 0;
     rows.forEach(x => {
@@ -239,9 +247,10 @@
 
     $('sumgrid').hidden = false;
     $('sumgrid').innerHTML = `
-      <div class="sumcard"><div class="t">売上（税抜請負）</div>
+      <div class="sumcard"><div class="t">売上（税抜請負・変更込）</div>
         <div class="v ${sales == null ? 'neg' : ''}">${sales == null ? '未登録' : fmtMoney(sales)}</div>
-        <div class="s">${sales == null ? '工事案件で請負金額を登録' : '&nbsp;'}</div></div>
+        <div class="s">${sales == null ? '工事案件で請負金額を登録'
+          : (salesDelta ? `当初 ${fmtMoney(base)} ${salesDelta > 0 ? '＋' : '−'} 変更 ${fmtMoney(Math.abs(salesDelta))}` : '&nbsp;')}</div></div>
       <div class="sumcard hero"><div class="t">実際原価（確定＋見込み）</div>
         <div class="v">${fmtMoney(actualTotal)}</div>
         <div class="s">材 ${fmtMoney(sMat)} ／ 工 ${fmtMoney(sLab)}</div></div>

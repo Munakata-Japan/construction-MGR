@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<!-- BUILD: changes (設計変更・追加工事) v20260907A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>設計変更・追加工事 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{ max-width:1180px; padding-top:10px; }
+  .lead{ color:var(--sub); font-size:12.5px; line-height:1.6; margin:0 0 10px; }
+  .lead b{ color:var(--ink); }
+
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .ctl select{ width:auto; min-width:180px; max-width:380px; min-height:38px; }
+  .ctl .sp{ flex:1 1 0; }
+
+  .sumgrid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); margin-bottom:12px; }
+  .sumcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:9px 12px; }
+  .sumcard.hero{ border-color:var(--ink-2); }
+  .sumcard .t{ font-size:11px; color:var(--sub); margin-bottom:3px; }
+  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:19px; color:var(--ink); }
+  .sumcard .v.pos{ color:var(--ok); } .sumcard .v.neg{ color:var(--alert); }
+  .sumcard .s{ font-size:10.5px; color:var(--sub); margin-top:3px; font-family:var(--mono); }
+
+  .clist{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); overflow:hidden; }
+  table.co{ border-collapse:separate; border-spacing:0; width:100%; font-size:12.5px; }
+  table.co th, table.co td{ padding:8px 10px; border-bottom:1px solid var(--rule-2); text-align:left; vertical-align:top; }
+  table.co thead th{ background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub); white-space:nowrap; }
+  table.co .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+  table.co thead th.num{ text-align:right; }
+  col.cno{ width:40px; } col.cnoo{ width:56px; } col.cmoney{ width:118px; } col.cst{ width:88px; } col.cdate{ width:104px; } col.cops{ width:150px; }
+  .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
+  .co .ttl{ font-weight:700; }
+  .co .num.neg{ color:var(--alert); }
+  .st{ font-size:10px; font-weight:700; padding:2px 7px; border-radius:var(--radius-sm); white-space:nowrap; display:inline-block; }
+  .st.estimate{ background:#EEF1EA; color:var(--sub); }
+  .st.approved{ background:#EAF4EC; color:#1F6B3B; }
+  .st.rejected{ background:#FBF1EF; color:#8C2A1D; }
+  .ops{ display:flex; flex-wrap:wrap; gap:4px; }
+  .ops button{ min-height:0; padding:4px 8px; font-size:11px; }
+  .trow{ cursor:pointer; }
+  .trow:hover{ background:#F5F7F3; }
+  .trow .caret{ display:inline-block; width:13px; color:var(--sub); }
+
+  /* 追加品目パネル */
+  .items{ background:#F7F8F5; border-bottom:1px solid var(--rule-2); padding:8px 10px 10px 34px; }
+  .items table{ width:100%; border-collapse:separate; border-spacing:0; font-size:12px; }
+  .items th, .items td{ padding:5px 7px; border-bottom:1px solid var(--rule-2); text-align:left; }
+  .items th{ font-size:10px; color:var(--sub); font-weight:700; }
+  .items .num{ font-family:var(--mono); text-align:right; }
+  .items .del{ color:var(--sub); cursor:pointer; font-weight:700; }
+  .items .del:hover{ color:var(--alert); }
+  .iadd{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+  .iadd input{ min-height:34px; }
+  .iadd input.nm{ flex:1 1 200px; min-width:0; }
+  .iadd input.amt{ width:130px; text-align:right; font-family:var(--mono); }
+  .iadd select{ width:auto; min-width:96px; min-height:34px; }
+  .cat{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:var(--radius-sm); display:inline-block; }
+  .cat.material{ background:#E3EBF3; color:var(--ink-2); }
+  .cat.labor{ background:#FBF1EF; color:#8C2A1D; }
+
+  /* 変更の追加/編集フォーム */
+  .cform{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:12px; margin-bottom:12px; }
+  .cform .row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .cform label{ display:flex; flex-direction:column; gap:3px; font-size:11px; color:var(--sub); font-weight:700; }
+  .cform label.grow{ flex:1 1 220px; }
+  .cform input, .cform select, .cform textarea{ min-height:38px; font-size:14px; }
+  .cform input.amt{ text-align:right; font-family:var(--mono); }
+  .cform textarea{ min-height:52px; }
+  .cform .fb{ display:flex; gap:8px; margin-top:10px; }
+  .toolbar{ display:flex; gap:8px; margin-bottom:10px; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>設計変更・追加工事</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<div class="wrap">
+  <p class="lead">
+    工事の途中で出る<b>設計変更・追加/減額</b>を、当初契約とは分けて記録します。
+    客先への<b>売上増減</b>と、それに伴う<b>追加原価</b>（この変更に紐づく品目）を持たせ、
+    <b>変更後の請負金額</b>を自動で出します。客先が承認したものだけが金額に反映されます。
+  </p>
+
+  <div class="ctl">
+    <select id="proj"><option value="">工事を選んでください</option></select>
+    <span class="sp"></span>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div class="sumgrid" id="sumgrid" hidden></div>
+
+  <div class="toolbar" id="toolbar" hidden>
+    <button class="btn sm" id="addBtn" type="button">＋ 変更を追加</button>
+  </div>
+
+  <div id="formHost"></div>
+
+  <p class="count" id="count"></p>
+  <div id="list"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isMgr = me.role === 'admin' || me.role === 'manager';
+
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  let projects = [], project = null, changes = [], xitems = [], projId = null;
+  let expanded = new Set();   // 展開中の変更
+  let formOpen = null;        // 'new' | change.id | null
+
+  const STAT = { estimate:'見積中', approved:'客先承認', rejected:'却下' };
+  const nz = v => Number(v) || 0;
+  const todayYMD = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+
+  async function loadRefs(){
+    const { data } = await sb.from('projects')
+      .select('id,project_no,name,contract_amount').eq('is_active', true).order('project_no', { ascending:false });
+    projects = data || [];
+    $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
+      projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+  }
+
+  async function loadProject(){
+    formOpen = null; expanded = new Set();
+    if (!projId){ project = null; changes = []; xitems = []; render(); return; }
+    project = projects.find(x => x.id === projId) || null;
+    const [co, it] = await Promise.all([
+      sb.from('project_change_orders').select('id,change_no,title,sales_delta,status,decided_on,note').eq('project_id', projId).order('change_no', { ascending:true }),
+      sb.from('phase_budget_items').select('id,change_order_id,category,item_name,amount,unit_price,quantity,unit,status').eq('project_id', projId).not('change_order_id', 'is', null)
+    ]);
+    if (co.error){
+      showMsg($('msg'),
+        /relation .* does not exist|schema cache/i.test(co.error.message || '')
+          ? '設計変更に必要な項目がまだありません。Supabase で phase19_change_orders.sql を実行してください。'
+          : '読み込めませんでした。' + co.error.message, 'err');
+      changes = [];
+    } else changes = co.data || [];
+    xitems = it.data || [];
+    render();
+  }
+
+  const itemsOf = cid => xitems.filter(x => x.change_order_id === cid);
+  const costOf = cid => itemsOf(cid).reduce((s, x) => s + nz(x.amount), 0);
+
+  function render(){
+    if (!projId){
+      $('sumgrid').hidden = true; $('toolbar').hidden = true;
+      $('formHost').innerHTML = ''; $('count').textContent = '';
+      $('list').innerHTML = `<div class="hold" style="height:180px"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、設計変更・追加工事の一覧が出ます。</div></div>`;
+      return;
+    }
+    renderSummary();
+    $('toolbar').hidden = !isMgr;
+    renderForm();
+    renderList();
+  }
+
+  function renderSummary(){
+    const base = project && project.contract_amount != null ? Number(project.contract_amount) : null;
+    const apprDelta = changes.filter(c => c.status === 'approved').reduce((s, c) => s + nz(c.sales_delta), 0);
+    const after = base != null ? base + apprDelta : (apprDelta || null);
+    const apprCost = changes.filter(c => c.status === 'approved').reduce((s, c) => s + costOf(c.id), 0);
+    const dcls = apprDelta === 0 ? '' : (apprDelta > 0 ? 'pos' : 'neg');
+
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML = `
+      <div class="sumcard"><div class="t">当初契約（税抜）</div>
+        <div class="v ${base == null ? 'neg' : ''}">${base == null ? '未登録' : fmtMoney(base)}</div>
+        <div class="s">${base == null ? '工事案件で請負金額を登録' : '&nbsp;'}</div></div>
+      <div class="sumcard"><div class="t">承認済み変更（売上増減）</div>
+        <div class="v ${dcls}">${apprDelta === 0 ? '±0' : (apprDelta > 0 ? '＋' : '−') + fmtMoney(Math.abs(apprDelta))}</div>
+        <div class="s">承認済み ${changes.filter(c => c.status === 'approved').length} 件</div></div>
+      <div class="sumcard hero"><div class="t">変更後 請負金額</div>
+        <div class="v">${after == null ? '—' : fmtMoney(after)}</div>
+        <div class="s">&nbsp;</div></div>
+      <div class="sumcard"><div class="t">変更の追加原価（承認済み）</div>
+        <div class="v">${fmtMoney(apprCost)}</div>
+        <div class="s">粗利の元は損益ページで確認</div></div>
+    `;
+  }
+
+  function renderForm(){
+    if (!isMgr || formOpen === null){ $('formHost').innerHTML = ''; return; }
+    const c = formOpen === 'new' ? null : changes.find(x => x.id === formOpen);
+    const v = c || { title:'', sales_delta:'', status:'estimate', decided_on:'', note:'' };
+    $('formHost').innerHTML = `
+      <div class="cform">
+        <div class="row">
+          <label class="grow">件名
+            <input id="f_title" type="text" placeholder="例：基礎追加・仕様変更" value="${esc(v.title || '')}"></label>
+          <label>売上増減（税抜・減額は−）
+            <input id="f_delta" class="amt" inputmode="numeric" placeholder="0" value="${v.sales_delta ?? ''}"></label>
+          <label>状態
+            <select id="f_status">
+              <option value="estimate" ${v.status === 'estimate' ? 'selected' : ''}>見積中</option>
+              <option value="approved" ${v.status === 'approved' ? 'selected' : ''}>客先承認</option>
+              <option value="rejected" ${v.status === 'rejected' ? 'selected' : ''}>却下</option>
+            </select></label>
+          <label>承認/却下日
+            <input id="f_decided" type="date" value="${v.decided_on || ''}"></label>
+        </div>
+        <div class="row">
+          <label class="grow">備考
+            <textarea id="f_note" placeholder="経緯・客先とのやり取りなど">${esc(v.note || '')}</textarea></label>
+        </div>
+        <div class="fb">
+          <button class="btn" id="f_save" type="button">${c ? '保存' : '追加'}</button>
+          <button class="btn ghost" id="f_cancel" type="button">取消</button>
+        </div>
+      </div>`;
+    $('f_save').addEventListener('click', () => saveChange(c ? c.id : null));
+    $('f_cancel').addEventListener('click', () => { formOpen = null; renderForm(); });
+  }
+
+  function renderList(){
+    $('count').textContent = `${changes.length} 件`;
+    if (!changes.length){
+      $('list').innerHTML = `<div class="empty"><b>変更はまだありません</b>「＋ 変更を追加」から、設計変更・追加/減額を登録します。</div>`;
+      return;
+    }
+    let h = `<div class="clist"><table class="co"><colgroup>
+      <col class="cno"><col class="cnoo"><col><col class="cmoney"><col class="cst"><col class="cdate"><col class="cmoney">${isMgr ? '<col class="cops">' : ''}</colgroup>
+      <thead><tr>
+        <th class="rno">NO</th><th>変更No</th><th>件名</th><th class="num">売上増減</th><th>状態</th><th>承認/却下日</th><th class="num">追加原価</th>${isMgr ? '<th>操作</th>' : ''}
+      </tr></thead><tbody>`;
+    changes.forEach((c, i) => {
+      const open = expanded.has(c.id);
+      const cost = costOf(c.id);
+      const d = nz(c.sales_delta);
+      h += `<tr class="trow" data-open="${c.id}">
+        <td class="rno">${i + 1}</td>
+        <td><span class="caret">${open ? '▾' : '▸'}</span>${c.change_no ?? ''}</td>
+        <td class="ttl">${esc(c.title || '（無題）')}</td>
+        <td class="num ${d < 0 ? 'neg' : ''}">${c.sales_delta == null || c.sales_delta === '' ? '—' : (d > 0 ? '＋' : (d < 0 ? '−' : '')) + fmtMoney(Math.abs(d))}</td>
+        <td><span class="st ${c.status}">${STAT[c.status] || c.status}</span></td>
+        <td>${c.decided_on ? fmtDate(c.decided_on) : '—'}</td>
+        <td class="num">${cost ? fmtMoney(cost) : '—'}</td>
+        ${isMgr ? `<td><div class="ops">
+          ${c.status !== 'approved' ? `<button class="btn ghost sm" data-appr="${c.id}">承認</button>` : ''}
+          ${c.status !== 'rejected' ? `<button class="btn ghost sm" data-rej="${c.id}">却下</button>` : ''}
+          <button class="btn ghost sm" data-edit="${c.id}">編集</button>
+          <button class="btn ghost sm" data-del="${c.id}">削除</button>
+        </div></td>` : ''}
+      </tr>`;
+      if (open){
+        const its = itemsOf(c.id);
+        h += `<tr><td colspan="${isMgr ? 8 : 7}" style="padding:0"><div class="items">
+          <table><thead><tr><th>区分</th><th>品名</th><th class="num">金額</th>${isMgr ? '<th></th>' : ''}</tr></thead><tbody>
+          ${its.length ? its.map(x => `<tr>
+            <td><span class="cat ${x.category}">${x.category === 'material' ? '材' : '工'}</span></td>
+            <td>${esc(x.item_name || '')}</td>
+            <td class="num">${fmtMoney(nz(x.amount))}</td>
+            ${isMgr ? `<td class="num"><span class="del" data-delitem="${x.id}" title="削除">×</span></td>` : ''}
+          </tr>`).join('') : `<tr><td colspan="${isMgr ? 4 : 3}" style="color:var(--sub)">追加原価はまだありません。</td></tr>`}
+          </tbody></table>
+          ${isMgr ? `<div class="iadd">
+            <select data-icat="${c.id}"><option value="material">材料費</option><option value="labor">外注・労務費</option></select>
+            <input class="nm" data-inm="${c.id}" type="text" placeholder="追加品目の品名">
+            <input class="amt" data-iamt="${c.id}" inputmode="numeric" placeholder="金額">
+            <button class="btn sm" data-iadd="${c.id}" type="button">＋計上</button>
+          </div>` : ''}
+        </div></td></tr>`;
+      }
+    });
+    h += `</tbody></table></div>`;
+    $('list').innerHTML = h;
+    wire();
+  }
+
+  function wire(){
+    const t = $('list');
+    t.querySelectorAll('.trow').forEach(tr => tr.addEventListener('click', e => {
+      if (e.target.closest('.ops')) return;   // 操作ボタンは展開しない
+      const id = tr.dataset.open;
+      if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+      renderList();
+    }));
+    t.querySelectorAll('[data-appr]').forEach(b => b.addEventListener('click', () => setStatus(b.dataset.appr, 'approved')));
+    t.querySelectorAll('[data-rej]').forEach(b => b.addEventListener('click', () => setStatus(b.dataset.rej, 'rejected')));
+    t.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => { formOpen = b.dataset.edit; renderForm(); $('formHost').scrollIntoView({ behavior:'smooth', block:'nearest' }); }));
+    t.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => delChange(b.dataset.del)));
+    t.querySelectorAll('[data-iadd]').forEach(b => b.addEventListener('click', () => addItem(b.dataset.iadd)));
+    t.querySelectorAll('[data-delitem]').forEach(b => b.addEventListener('click', () => delItem(b.dataset.delitem)));
+  }
+
+  async function saveChange(id){
+    const title = $('f_title').value.trim();
+    const deltaStr = $('f_delta').value.trim();
+    const delta = deltaStr === '' ? null : Number(deltaStr);
+    const status = $('f_status').value;
+    let decided = $('f_decided').value || null;
+    const note = $('f_note').value.trim() || null;
+    if (!title && delta == null){ showMsg($('msg'), '件名か売上増減のどちらかは入れてください。', 'err'); return; }
+    if ((status === 'approved' || status === 'rejected') && !decided) decided = todayYMD();
+
+    if (id){
+      const { error } = await sb.from('project_change_orders')
+        .update({ title, sales_delta: delta, status, decided_on: decided, note }).eq('id', id);
+      if (error){ showMsg($('msg'), '保存できませんでした。' + (error.message || ''), 'err'); return; }
+      const c = changes.find(x => x.id === id);
+      if (c) Object.assign(c, { title, sales_delta: delta, status, decided_on: decided, note });
+    } else {
+      const nextNo = Math.max(0, ...changes.map(c => c.change_no || 0)) + 1;
+      const { data, error } = await sb.from('project_change_orders').insert({
+        organization_id: me.organization_id, project_id: projId, change_no: nextNo,
+        title, sales_delta: delta, status, decided_on: decided, note, created_by: me.id
+      }).select('id,change_no,title,sales_delta,status,decided_on,note').maybeSingle();
+      if (error){ showMsg($('msg'), '追加できませんでした。' + (error.message || ''), 'err'); return; }
+      if (data){ changes.push(data); expanded.add(data.id); }
+    }
+    formOpen = null;
+    render();
+    showMsg($('msg'), '保存しました。', 'ok');
+  }
+
+  async function setStatus(id, status){
+    const decided = todayYMD();
+    const { error } = await sb.from('project_change_orders').update({ status, decided_on: decided }).eq('id', id);
+    if (error){ showMsg($('msg'), '保存できませんでした。' + (error.message || ''), 'err'); return; }
+    const c = changes.find(x => x.id === id);
+    if (c){ c.status = status; c.decided_on = decided; }
+    render();
+    showMsg($('msg'), status === 'approved' ? '客先承認にしました（変更後金額に反映）。' : '却下にしました。', 'ok');
+  }
+
+  async function delChange(id){
+    const c = changes.find(x => x.id === id);
+    const its = itemsOf(id);
+    if (!confirm(`変更「${c ? (c.title || '無題') : ''}」を削除します。${its.length ? `紐づく追加原価 ${its.length} 件は品目として残し、この変更との紐づけだけ外します。` : ''}よろしいですか？`)) return;
+    if (its.length){
+      await sb.from('phase_budget_items').update({ change_order_id: null }).eq('change_order_id', id);
+      xitems = xitems.filter(x => x.change_order_id !== id);
+    }
+    const { error } = await sb.from('project_change_orders').delete().eq('id', id);
+    if (error){ showMsg($('msg'), '削除できませんでした。' + (error.message || ''), 'err'); return; }
+    changes = changes.filter(x => x.id !== id);
+    render();
+  }
+
+  async function addItem(cid){
+    const cat = $('list').querySelector(`[data-icat="${cid}"]`).value;
+    const nm = $('list').querySelector(`[data-inm="${cid}"]`).value.trim();
+    const amtStr = $('list').querySelector(`[data-iamt="${cid}"]`).value.trim();
+    const amt = amtStr === '' ? null : Number(amtStr);
+    if (!nm){ showMsg($('msg'), '品名を入れてください。', 'err'); return; }
+    if (amt == null || isNaN(amt)){ showMsg($('msg'), '金額を入れてください。', 'err'); return; }
+    // amount は生成列（数量×単価）なので、数量1・単価=金額 で計上する
+    const { data, error } = await sb.from('phase_budget_items').insert({
+      organization_id: me.organization_id, project_id: projId,
+      category: cat, item_name: nm, quantity: 1, unit: '式', unit_price: amt, budget_amount: amt,
+      cost_stage: 'extra', change_order_id: cid, status: 'estimate'
+    }).select('id,change_order_id,category,item_name,amount,unit_price,quantity,unit,status').maybeSingle();
+    if (error){ showMsg($('msg'), '計上できませんでした。' + (error.message || ''), 'err'); return; }
+    if (data) xitems.push(data);
+    render();
+    showMsg($('msg'), '追加原価を計上しました（実行予算・損益に反映）。', 'ok');
+  }
+
+  async function delItem(id){
+    if (!confirm('この追加原価（品目）を削除します。よろしいですか？')) return;
+    const { error } = await sb.from('phase_budget_items').delete().eq('id', id);
+    if (error){ showMsg($('msg'), '削除できませんでした。' + (error.message || ''), 'err'); return; }
+    xitems = xitems.filter(x => x.id !== id);
+    render();
+  }
+
+  $('addBtn').addEventListener('click', () => { formOpen = 'new'; renderForm(); $('formHost').scrollIntoView({ behavior:'smooth', block:'nearest' }); });
+  $('proj').addEventListener('change', async () => {
+    projId = $('proj').value || null;
+    const u = new URL(location.href);
+    if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+    await loadProject();
+  });
+
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)){ $('proj').value = q; projId = q; await loadProject(); }
+  else render();
+})();
+</script>
+</body>
+</html>
