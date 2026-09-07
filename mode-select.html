@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: mode-select (セレクトモード) v20260907G -->
+<!-- BUILD: mode-select (セレクトモード) v20260907H -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -19,39 +19,38 @@
 
   .stage{
     flex:1 1 auto; display:flex;
-    padding:clamp(10px,2vh,22px) clamp(14px,2vw,26px);
+    padding:clamp(8px,1.4vh,16px) clamp(12px,1.6vw,22px);
   }
-  /* 画面幅を活かす：中央寄せの余白を抑えて広くゆったり使う */
+  /* 画面幅を活かす：中央寄せの余白を抑えて広く使う */
   .frame{ margin:auto; width:100%; max-width:min(1760px, 97vw); }
 
   /* 図面の枠に倣った二重線 */
   .frame .outer{ border:2px solid var(--ink); border-radius:4px; padding:6px; }
   .frame .inner{
     border:1px solid var(--rule); border-radius:3px;
-    padding:clamp(18px,2vw,32px);
+    padding:clamp(14px,1.5vw,22px);
   }
 
-  .frame .hud{ margin-bottom:18px; }
+  .frame .hud{ margin-bottom:12px; }
   .frame .grp:first-of-type{ margin-top:0; }
-  .frame .grp{ margin:20px 0 11px; }
-  /* タイルは一定幅で並べ、幅いっぱいに広げる（小さく詰めすぎない） */
-  /* タイル幅に上限をつけ、横に引き伸ばさない（間延び防止・左詰め） */
-  .frame .modes{ grid-template-columns:repeat(auto-fill, minmax(210px, 236px)); gap:12px; justify-content:start; }
-  .frame .foot{ margin:16px 0 0; }
+  .frame .grp{ margin:13px 0 7px; }
+  /* タイル幅を詰めて左詰め（間延び防止・横も締める。多く並ぶので段数も減る） */
+  .frame .modes{ grid-template-columns:repeat(auto-fill, minmax(182px, 208px)); gap:10px; justify-content:start; }
+  .frame .foot{ margin:9px 0 0; }
 
-  /* タイルをゆったり */
-  .frame .mode{ grid-template-columns:50px 1fr; min-height:60px; }
-  .frame .mode .mno{ font-size:15px; }
-  .frame .mode .mbody{ padding:11px 16px; }
-  .frame .mttl{ font-size:16px; line-height:1.35; }
-  .frame .msub{ font-size:12.5px; line-height:1.4; }
+  /* タイルは読みやすくコンパクトに */
+  .frame .mode{ grid-template-columns:46px 1fr; min-height:52px; }
+  .frame .mode .mno{ font-size:14px; }
+  .frame .mode .mbody{ padding:8px 13px; }
+  .frame .mttl{ font-size:15px; line-height:1.3; }
+  .frame .msub{ font-size:12px; line-height:1.35; }
 
-  /* HUD もゆったり読みやすく（幅を活かす） */
-  .frame .hcell{ padding:11px 18px; }
+  /* HUD */
+  .frame .hcell{ padding:8px 16px; }
   .frame .hlbl{ font-size:12px; }
-  .frame .hval{ font-size:19px; }
-  .frame .hcell.st .hval{ font-size:17px; }
-  .frame .grp h2{ font-size:17px; }
+  .frame .hval{ font-size:18px; }
+  .frame .hcell.st .hval{ font-size:16px; }
+  .frame .grp h2{ font-size:16px; }
 
   @media (max-width:760px){
     .stage{ padding:12px 10px; }
