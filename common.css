@@ -1,6 +1,6 @@
 /* ============================================================
    宗像総合管理システム  共通スタイル
-   BUILD: common.css v20260906B
+   BUILD: common.css v20260907A
    設計方針: 工事現場の表示板を下敷きにした罫線グリッド。
              屋外・手袋での操作を想定し、文字とタップ領域を大きく。
    ============================================================ */
@@ -50,27 +50,28 @@ body{
 .bar{
   background:linear-gradient(180deg,#1B4574,var(--ink) 60%);
   color:#EBEDE8;
-  padding:0 16px;
-  min-height:48px;
+  padding:0 12px;
+  min-height:32px;
   display:flex;
   align-items:center;
-  gap:12px;
+  gap:9px;
   position:sticky; top:0; z-index:50;
   box-shadow:var(--shadow-3);
 }
 .bar .mark{
-  width:12px; height:26px; background:var(--safety); flex:0 0 12px; border-radius:1px;
+  width:9px; height:17px; background:var(--safety); flex:0 0 9px; border-radius:1px;
 }
 .bar h1{
-  font-family:var(--disp); font-weight:700; font-size:17px;
+  font-family:var(--disp); font-weight:700; font-size:14px;
   letter-spacing:.06em; margin:0; flex:1; min-width:0;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .bar .who{
-  font-size:12.5px; color:#A9BFD4; text-align:right; line-height:1.4;
+  font-size:10.5px; color:#A9BFD4; text-align:right; line-height:1.25;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:40vw;
 }
-.bar .who b{ display:block; color:#EBEDE8; font-weight:500; font-size:13.5px; }
+.bar .who b{ display:block; color:#EBEDE8; font-weight:500; font-size:11.5px; }
+.bar .btn.sm{ min-height:26px; padding:0 10px; font-size:12px; }
 
 .wrap{ max-width:960px; margin:0 auto; padding:14px 16px 96px; }
 
@@ -380,14 +381,14 @@ select{ appearance:none; background-image:none; }
 
   /* 見出し帯：会社名と権限は省き、氏名だけ残す */
   .bar{ padding:0 10px; gap:8px; }
-  .bar h1{ font-size:15px; letter-spacing:.02em; }
+  .bar h1{ font-size:13px; letter-spacing:.02em; }
   .bar .who{ max-width:30vw; font-size:0; }
   .bar .who b{ font-size:12.5px; }
   .bar .btn.sm{ padding:0 9px; font-size:12.5px; }
 }
 
 @media (max-width:400px){
-  .bar h1{ font-size:14px; }
+  .bar h1{ font-size:12px; }
   .bar .who{ display:none; }
 }
 
