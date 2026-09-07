@@ -184,6 +184,7 @@ alter table public.partners add column if not exists tel text;
 alter table public.partners add column if not exists trade_start_on date;
 
 -- partner_contacts
+alter table public.partner_contacts add column if not exists app_user_id uuid;
 alter table public.partner_contacts add column if not exists email text;
 alter table public.partner_contacts add column if not exists is_active boolean;
 alter table public.partner_contacts add column if not exists is_primary boolean;
