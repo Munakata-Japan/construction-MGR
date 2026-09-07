@@ -61,6 +61,7 @@ alter table public.phase_budget_items add column if not exists actual_amount num
 alter table public.phase_budget_items add column if not exists amount numeric;
 alter table public.phase_budget_items add column if not exists budget_amount numeric;
 alter table public.phase_budget_items add column if not exists category text;
+alter table public.phase_budget_items add column if not exists change_order_id uuid;
 alter table public.phase_budget_items add column if not exists contract_amount numeric;
 alter table public.phase_budget_items add column if not exists cost_stage text;
 alter table public.phase_budget_items add column if not exists created_by uuid;
