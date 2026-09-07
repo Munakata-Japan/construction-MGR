@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料調達計画表) v20260907F -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260907G -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -389,9 +389,10 @@
   /* ===== その場編集：現地納品予定日・リードタイム・工程・費目を材料調達計画表で入力 ===== */
   let editing = null;
   function phaseOptions(projectId, sel){
+    // phases は seq 順で読み込み済み。案件で絞った並び＝工程表の左列NO（1始まり）と一致するので先頭に付ける
+    const list = phases.filter(p => p.project_id === projectId);
     return '<option value="">（工事全体・未設定）</option>' +
-      phases.filter(p => p.project_id === projectId)
-        .map(p => `<option value="${p.id}"${p.id === sel ? ' selected' : ''}>${esc(p.name)}${p.start_date ? '（着工 ' + fmtShort(p.start_date) + '）' : ''}</option>`).join('');
+      list.map((p, i) => `<option value="${p.id}"${p.id === sel ? ' selected' : ''}>No.${i + 1}　${esc(p.name)}${p.start_date ? '（着工 ' + fmtShort(p.start_date) + '）' : ''}</option>`).join('');
   }
   function updateEditCat(){
     const isLabor = $('e_cat').value === 'labor';
