@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料調達計画表) v20260907J -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260907K -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -20,7 +20,7 @@
   html, body{ height:100%; }
   body{ overflow:hidden; display:flex; flex-direction:column; }
   .bar{ flex:0 0 auto; }
-  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:6px; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:4px; }
   .lead, .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
   #atable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
 
@@ -32,6 +32,10 @@
   /* フィルタ＝操作の役割を明示。工事選択は起点なので強調 */
   .ctl .fl-lb{ font-size:10px; font-weight:800; color:var(--ink-2); letter-spacing:.06em;
     padding:3px 8px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; white-space:nowrap; }
+  /* 使い方（説明）は既定で畳んで一覧を最大化。押すと開く */
+  .fl-help{ font-size:10px; font-weight:700; color:var(--sub); background:transparent;
+    border:1px solid var(--rule-2); border-radius:999px; padding:3px 8px; cursor:pointer; white-space:nowrap; }
+  .fl-help:hover{ background:#EEF1EA; color:var(--ink-2); }
   #fproj{ font-weight:700; border-color:var(--ink-2); box-shadow:inset 0 0 0 1px rgba(37,90,145,.15); }
   /* ヘッダー＝ページの識別。役割アイコンを添える */
   .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
@@ -159,12 +163,13 @@
 </header>
 
 <div class="wrap">
-  <p class="lead">
+  <p class="lead" id="lead" hidden>
     着工前原価台帳の材料（何を・どれだけ）と、工程の着工予定（いつまでに）を突き合わせ、<b>発注期限・リードタイム・納品予定</b>を一枚で可視化します。行をクリックすると<b>現地納品予定日・リードタイム・工程</b>をその場で入力でき、「未設定のみ」で埋めるべき項目だけを絞り込めます。
   </p>
 
   <div class="ctl">
     <span class="fl-lb">絞り込み</span>
+    <button class="fl-help" id="helpBtn" type="button">？使い方 ▼</button>
     <select id="fproj"><option value="">すべての工事</option></select>
     <select id="fcat">
       <option value="">材工すべて</option>
@@ -227,6 +232,19 @@
   const isMgr = (me.role === 'admin' || me.role === 'manager');
 
   paintBar(me, await loadOrgName(me.organization_id));
+
+  // 使い方（説明）は既定で畳んで一覧を最大化。開閉は記憶する
+  const HELPKEY = 'oa_help_open';
+  function applyHelp(){
+    const open = localStorage.getItem(HELPKEY) === '1';
+    $('lead').hidden = !open;
+    $('helpBtn').textContent = open ? '？使い方 ▲' : '？使い方 ▼';
+  }
+  $('helpBtn').addEventListener('click', () => {
+    localStorage.setItem(HELPKEY, localStorage.getItem(HELPKEY) === '1' ? '0' : '1');
+    applyHelp();
+  });
+  applyHelp();
 
   /* ================= 日付の道具（工程表と同じ計算） ================= */
   function todayYMD(){
