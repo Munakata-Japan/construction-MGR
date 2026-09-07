@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: progress (出来高・進捗) v20260907B -->
+<!-- BUILD: progress (出来高・進捗) v20260907C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -225,7 +225,7 @@
            <div class="pbar"><span style="width:${pct}%"></span></div>`;
       h += `<tr>
         <td class="rno">${i + 1}</td>
-        <td><span class="nm">${esc(p.name || '（無題）')}</span>${isMgr ? stChip(pct) : ''}</td>
+        <td><span class="nm">${esc(p.name || '（無題）')}</span> <span class="pchip" id="chip_${p.id}">${isMgr ? stChip(pct) : ''}</span></td>
         <td>${p.start_date ? fmtShort(p.start_date) : '—'}</td>
         <td class="num">${b ? fmtMoney(b) : '—'}</td>
         <td>${prog}</td>
@@ -278,6 +278,7 @@
         p.progress_pct = v;
         const pv = $('pv_' + id); if (pv) pv.textContent = v + '%';
         const bar = $('pbar_' + id); if (bar) bar.style.width = v + '%';
+        const chip = $('chip_' + id); if (chip) chip.innerHTML = stChip(v);
         repaint();
       });
       r.addEventListener('change', () => savePct(id, clampPct(r.value)));
@@ -288,8 +289,7 @@
     const { error } = await sb.from('project_phases').update({ progress_pct: pct }).eq('id', id);
     if (error){ showMsg($('msg'), '進捗を保存できませんでした。' + (error.message || ''), 'err'); return; }
     const p = phases.find(x => x.id === id); if (p) p.progress_pct = pct;
-    // 状態チップ（完了/進行中/未着手）を更新するため、その行だけ軽く描き直す
-    renderTable();
+    // 全体を描き直さない（スクロールが先頭へ飛ぶのを防ぐ）。数値・バー・状態・出来高は input 時に更新済み。
   }
 
   $('proj').addEventListener('change', async () => {
