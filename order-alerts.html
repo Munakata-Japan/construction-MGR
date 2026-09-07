@@ -33,8 +33,8 @@
   .count{ margin:2px 0 4px; font-size:10.5px; color:var(--sub); }
 
   .sumgrid{ display:grid; gap:5px; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); margin-bottom:4px; }
-  /* サマリ（至急/注意/未納品）はフィルタ行の右側の余白に横並びで入れる */
-  .ctl .sumgrid{ flex:1 1 340px; margin:0; }
+  /* サマリ（至急/注意/未納品）はフィルタ行の右側の余白に横並び。3枚を必ず1行に */
+  .ctl .sumgrid{ flex:1 1 340px; margin:0; grid-template-columns:repeat(3, minmax(90px, 1fr)); }
   .sumcard{
     background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
     box-shadow:var(--shadow-1); padding:2px 9px;
