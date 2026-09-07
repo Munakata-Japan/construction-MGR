@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: progress (出来高・進捗) v20260907C -->
+<!-- BUILD: progress (出来高・進捗) v20260907D -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -18,28 +18,46 @@
   html, body{ height:100%; }
   body{ overflow:hidden; display:flex; flex-direction:column; }
   .bar{ flex:0 0 auto; }
-  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:10px; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:4px; }
   .lead, .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
   #ptable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
 
-  .lead{ color:var(--sub); font-size:12.5px; line-height:1.6; margin:0 0 10px; }
+  .lead{ color:var(--sub); font-size:10.5px; line-height:1.3; margin:0 0 4px; }
   .lead b{ color:var(--ink); }
 
-  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
-  .ctl select{ width:auto; min-width:180px; max-width:380px; min-height:38px; }
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:4px; }
+  .ctl select{ width:auto; min-width:180px; max-width:380px; min-height:30px; }
   .ctl .sp{ flex:1 1 0; }
+  .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
+  .ctl .fl-lb{ font-size:10px; font-weight:800; color:var(--ink-2); letter-spacing:.06em;
+    padding:3px 8px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; white-space:nowrap; }
+  .fl-help{ font-size:10px; font-weight:700; color:var(--sub); background:transparent;
+    border:1px solid var(--rule-2); border-radius:999px; padding:3px 8px; cursor:pointer; white-space:nowrap; }
+  .fl-help:hover{ background:#EEF1EA; color:var(--ink-2); }
+  #proj{ font-weight:700; border-color:var(--ink-2); box-shadow:inset 0 0 0 1px rgba(37,90,145,.15); }
 
-  .sumgrid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); margin-bottom:10px; }
-  .sumcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:9px 12px; }
+  /* ===== サマリ（出来高＝ヒーロー／未割付＝琥珀の注意） ===== */
+  .sumgrid{ display:grid; gap:6px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); margin-bottom:6px; }
+  .sumcard{ position:relative; background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:6px 12px; }
   .sumcard.hero{ border-color:var(--ink-2); }
-  .sumcard .t{ font-size:11px; color:var(--sub); margin-bottom:3px; }
-  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:20px; color:var(--ink); }
-  .sumcard .v.warn{ color:var(--alert); }
-  .sumcard .s{ font-size:10.5px; color:var(--sub); margin-top:3px; }
+  .sumcard .t{ font-size:10.5px; color:var(--sub); margin-bottom:1px; font-weight:700; }
+  .sumcard .v{ font-family:var(--mono); font-weight:800; font-size:19px; color:var(--ink); line-height:1.1; }
+  .sumcard .s{ font-size:10.5px; color:var(--sub); margin-top:1px; }
+  /* 未割付予算あり＝琥珀の注意（工程割付を促す） */
+  .sumcard.warn{ background:linear-gradient(180deg,#FBF3E2,var(--card)); border-color:#E7C866; padding-left:15px; }
+  .sumcard.warn::before{ content:""; position:absolute; left:0; top:5px; bottom:5px; width:4px; border-radius:2px; background:var(--safety); }
+  .sumcard.warn .v{ color:#8A6200; }
+  @media (prefers-reduced-motion:no-preference){
+    .sumgrid .sumcard{ animation:cardin .35s ease both; }
+    .sumgrid .sumcard:nth-child(2){ animation-delay:.05s; }
+    .sumgrid .sumcard:nth-child(3){ animation-delay:.10s; }
+    .sumgrid .sumcard:nth-child(4){ animation-delay:.15s; }
+    @keyframes cardin{ from{ opacity:0; transform:translateY(-5px); } to{ opacity:1; transform:none; } }
+  }
 
   .ptable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
            box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
-  table.pg{ border-collapse:separate; border-spacing:0; width:100%; min-width:760px; font-size:12.5px; }
+  table.pg{ border-collapse:separate; border-spacing:0; width:100%; min-width:760px; font-size:14px; }
   table.pg th, table.pg td{ padding:8px 10px; border-bottom:1px solid var(--rule-2); text-align:left; vertical-align:middle; }
   table.pg thead th{ position:sticky; top:0; z-index:6; background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
                      white-space:nowrap; border-bottom:1px solid var(--rule); }
@@ -80,12 +98,12 @@
 
 <header class="bar">
   <span class="mark" aria-hidden="true"></span>
-  <h1>出来高・進捗</h1>
+  <h1><span class="pgico" aria-hidden="true">📶</span>出来高・進捗</h1>
   <div class="who" id="who"></div>
 </header>
 
 <div class="wrap">
-  <p class="lead">
+  <p class="lead" id="lead" hidden>
     各工程の<b>進み具合（％）</b>を担当者が<b>自分で確認して入れる</b>、工程ごとの<b>自己確認</b>です。
     入れた％から<b>出来高＝予算 × ％</b>を積み上げ、工事全体の進捗を金額で見える化します（金額は<b>予算＝原価ベース</b>）。
     ％は自己申告なので、細かい正確さより<b>「終わった／まだ／途中」を全員で共有する</b>ことが目的です。
@@ -93,6 +111,8 @@
   </p>
 
   <div class="ctl">
+    <span class="fl-lb">絞り込み</span>
+    <button class="fl-help" id="helpBtn" type="button">？使い方 ▼</button>
     <select id="proj"><option value="">工事を選んでください</option></select>
     <span class="sp"></span>
   </div>
@@ -118,6 +138,19 @@
   const isMgr = me.role === 'admin' || me.role === 'manager';
 
   paintBar(me, await loadOrgName(me.organization_id));
+
+  // 使い方（説明）は既定で畳んで一覧を最大化。開閉は記憶する
+  const HELPKEY = 'progress_help_open';
+  function applyHelp(){
+    const open = localStorage.getItem(HELPKEY) === '1';
+    $('lead').hidden = !open;
+    $('helpBtn').textContent = open ? '？使い方 ▲' : '？使い方 ▼';
+  }
+  $('helpBtn').addEventListener('click', () => {
+    localStorage.setItem(HELPKEY, localStorage.getItem(HELPKEY) === '1' ? '0' : '1');
+    applyHelp();
+  });
+  applyHelp();
 
   let projects = [], phases = [], items = [], projId = null;
   const nz = v => Number(v) || 0;
@@ -197,8 +230,8 @@
         <div class="s">&nbsp;</div></div>
       <div class="sumcard"><div class="t">全体進捗</div><div class="v" id="s_pct">${t.pct.toFixed(1)}%</div>
         <div class="s">出来高 ÷ 総予算</div></div>
-      <div class="sumcard"><div class="t">未割付予算（要工程割付）</div>
-        <div class="v ${t.unassigned > 0 ? 'warn' : ''}" id="s_unassigned">${fmtMoney(t.unassigned)}</div>
+      <div class="sumcard ${t.unassigned > 0 ? 'warn' : ''}"><div class="t">未割付予算（要工程割付）</div>
+        <div class="v" id="s_unassigned">${fmtMoney(t.unassigned)}</div>
         <div class="s">${t.unassigned > 0 ? '出来高に入りません' : '&nbsp;'}</div></div>
     `;
   }
