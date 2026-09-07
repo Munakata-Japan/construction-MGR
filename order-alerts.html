@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料調達計画表) v20260907P -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260907Q -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -85,8 +85,8 @@
            box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
   .ahead, .arow{ display:grid; align-items:start; gap:8px; }
   /* 工事を1つ選んだとき（工事列なし）と、すべての工事（横断・工事列あり）で列を切り替える */
-  .m-one .ahead, .m-one .arow{ min-width:820px; grid-template-columns:40px 172px 1.2fr 1.9fr 96px 96px 80px; }
-  .m-all .ahead, .m-all .arow{ min-width:1050px; grid-template-columns:40px 172px 1.3fr 1.2fr 1.9fr 96px 96px 80px; }
+  .m-one .ahead, .m-one .arow{ min-width:820px; grid-template-columns:40px 110px 1.5fr 1.9fr 96px 96px 80px; }
+  .m-all .ahead, .m-all .arow{ min-width:1050px; grid-template-columns:40px 110px 1.3fr 1.2fr 1.9fr 96px 96px 80px; }
   .ahead{
     position:sticky; top:0; z-index:5;
     background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
@@ -126,6 +126,14 @@
   .altag.amber{ color:#6B4E00; background:#FBF0D4; border:1px solid #E7C866; }
   .altag.ok{ color:var(--ok); background:#EAF2ED; }
   .altag .dl{ font-family:var(--mono); font-weight:500; display:block; font-size:10px; opacity:.9; }
+
+  /* 着工予定日セル：状態で網掛け（至急=赤地白字／納品予定日未定=黄地／問題なし=緑字） */
+  .sdcell{ display:inline-block; font-family:var(--mono); font-weight:700; font-size:13.5px; white-space:nowrap;
+    padding:3px 9px; border-radius:var(--radius-sm); color:var(--ink); }
+  .sdcell.red{ background:var(--alert); color:#fff; }
+  .sdcell.amber{ background:#FBF0D4; color:var(--ink); border:1px solid #E7C866; }
+  .sdcell.ok{ color:var(--ok); padding-left:0; }
+  .sdcell.none{ color:var(--sub); padding-left:0; }
 
   /* その場編集パネル */
   .epanel{ position:fixed; inset:0; z-index:60; background:rgba(15,20,30,.5); display:none; }
@@ -413,7 +421,7 @@
     }
 
     let h = `<div class="atable ${isAll ? 'm-all' : 'm-one'}"><div class="ahead">
-      <span class="rno">NO</span><span>アラート</span>${isAll ? '<span>工事</span>' : ''}<span>工程</span><span>材料</span>
+      <span class="rno">NO</span><span>着工予定</span>${isAll ? '<span>工事</span>' : ''}<span>工程</span><span>材料</span>
       <span class="num">納品予定</span><span class="num">発注期限</span><span>状態</span>
     </div>`;
     rows.forEach(({ x, phase, a }, i) => {
@@ -426,9 +434,9 @@
         : '';
       h += `<a class="arow ${a.level === 'red' ? 'red' : ''}" href="${href}"${isMgr ? ` data-eid="${x.id}"` : ''}>
         <span class="rno"><b class="mlbl">No. </b>${i + 1}</span>
-        <span><span class="altag ${a.level}">${esc(a.text)}${a.dlNote && a.deadline ? `<span class="dl">発注期限 ${fmtShort(a.deadline)}</span>` : ''}</span></span>
+        <span><b class="mlbl">着工予定 </b><span class="sdcell ${a.level}" title="${esc(a.text)}">${phase && phase.start_date ? fmtShort(phase.start_date) : '—'}</span></span>
         ${projCell}
-        <span><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '工事全体'}</span>${phase && phase.start_date ? `<span class="sub">着工 ${fmtShort(phase.start_date)}</span>` : ''}</span>
+        <span><span class="nm" style="font-size:13px">${phase ? esc(phase.name) : '工事全体'}</span></span>
         <span><span class="cat ${x.category}">${x.category === 'labor' ? '工' : '材'}</span>
           <span class="nm" style="display:inline;font-size:12px">${esc(x.item_name)}</span>
           ${(x.procurement_type || x.is_import) ? `<span class="proc${x.procurement_type === 'made_to_order' || x.is_import ? ' hot' : ''}">${x.procurement_type === 'made_to_order' ? '受注生産' : (x.procurement_type === 'stock' ? '在庫品' : '')}${x.is_import ? (x.procurement_type ? '・輸入' : '輸入') : ''}</span>` : ''}
