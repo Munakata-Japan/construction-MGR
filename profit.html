@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: profit (損益・粗利) v20260907B -->
+<!-- BUILD: profit (損益・粗利) v20260907C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -18,25 +18,45 @@
   html, body{ height:100%; }
   body{ overflow:hidden; display:flex; flex-direction:column; }
   .bar{ flex:0 0 auto; }
-  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:10px; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:4px; }
   .lead, .ctl, #msg, .sumgrid, .pstrip, .count{ flex:0 0 auto; }
   #ptable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
 
-  .lead{ color:var(--sub); font-size:12.5px; line-height:1.6; margin:0 0 8px; }
+  .lead{ color:var(--sub); font-size:10.5px; line-height:1.3; margin:0 0 4px; }
   .lead b{ color:var(--ink); }
 
-  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
-  .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:38px; flex:0 1 auto; }
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:4px; }
+  .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:30px; flex:0 1 auto; }
   .ctl .sp{ flex:1 1 0; }
+  .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
+  .ctl .fl-lb{ font-size:10px; font-weight:800; color:var(--ink-2); letter-spacing:.06em;
+    padding:3px 8px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; white-space:nowrap; }
+  .fl-help{ font-size:10px; font-weight:700; color:var(--sub); background:transparent;
+    border:1px solid var(--rule-2); border-radius:999px; padding:3px 8px; cursor:pointer; white-space:nowrap; }
+  .fl-help:hover{ background:#EEF1EA; color:var(--ink-2); }
+  #proj{ font-weight:700; border-color:var(--ink-2); box-shadow:inset 0 0 0 1px rgba(37,90,145,.15); }
 
-  /* サマリ */
-  .sumgrid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); margin-bottom:8px; }
-  .sumcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:9px 12px; }
+  /* ===== サマリ＝損益の警報盤（粗利マイナス＝赤点滅アラート） ===== */
+  .sumgrid{ display:grid; gap:6px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); margin-bottom:6px; }
+  .sumcard{ position:relative; background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:6px 12px; }
   .sumcard.hero{ border-color:var(--ink-2); }
-  .sumcard .t{ font-size:11px; color:var(--sub); margin-bottom:3px; }
-  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:20px; color:var(--ink); }
+  .sumcard .t{ font-size:10.5px; color:var(--sub); margin-bottom:1px; font-weight:700; }
+  .sumcard .v{ font-family:var(--mono); font-weight:800; font-size:19px; color:var(--ink); line-height:1.1; }
   .sumcard .v.pos{ color:var(--ok); } .sumcard .v.neg{ color:var(--alert); }
-  .sumcard .s{ font-size:10.5px; color:var(--sub); margin-top:3px; font-family:var(--mono); }
+  .sumcard .s{ font-size:10.5px; color:var(--sub); margin-top:1px; font-family:var(--mono); }
+  .sumcard.profitok{ background:linear-gradient(180deg,#EDF6EF,var(--card)); border-color:#BFE0C7; }
+  .sumcard.loss{ background:linear-gradient(180deg,#C7412F,var(--alert)); border-color:#7E2417; box-shadow:0 3px 16px rgba(190,60,44,.45); }
+  .sumcard.loss .t, .sumcard.loss .v, .sumcard.loss .s{ color:#fff; }
+  .sumcard.loss::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:rgba(255,224,214,.65); opacity:0; }
+  @media (prefers-reduced-motion:no-preference){
+    .sumgrid .sumcard{ animation:cardin .35s ease both; }
+    .sumgrid .sumcard:nth-child(2){ animation-delay:.05s; }
+    .sumgrid .sumcard:nth-child(3){ animation-delay:.10s; }
+    .sumgrid .sumcard:nth-child(4){ animation-delay:.15s; }
+    @keyframes cardin{ from{ opacity:0; transform:translateY(-5px); } to{ opacity:1; transform:none; } }
+    .sumcard.loss::after{ animation:blinkfade .45s ease-in-out .3s 8 alternate both; }
+    @keyframes blinkfade{ from{ opacity:0; } to{ opacity:.7; } }
+  }
 
   .pstrip{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;
            background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:8px 12px; }
@@ -107,12 +127,12 @@
 
 <header class="bar">
   <span class="mark" aria-hidden="true"></span>
-  <h1>損益・粗利</h1>
+  <h1><span class="pgico" aria-hidden="true">📈</span>損益・粗利</h1>
   <div class="who" id="who"></div>
 </header>
 
 <div class="wrap">
-  <p class="lead">
+  <p class="lead" id="lead" hidden>
     発注確定・<b>検収</b>で品目ごとの<b>実際原価</b>を確定し、
     売上（税抜の請負金額）と突き合わせて<b>粗利</b>を締めます。
     未検収の品目は<b>決定額・予算で見込み</b>として仮に足し、締まり具合が分かるようにしています。
@@ -120,6 +140,8 @@
   </p>
 
   <div class="ctl">
+    <span class="fl-lb">絞り込み</span>
+    <button class="fl-help" id="helpBtn" type="button">？使い方 ▼</button>
     <select id="proj"><option value="">工事を選んでください</option></select>
     <select id="fcat">
       <option value="">材工すべて</option>
@@ -151,6 +173,19 @@
   const isMgr = me.role === 'admin' || me.role === 'manager';
 
   paintBar(me, await loadOrgName(me.organization_id));
+
+  // 使い方（説明）は既定で畳んで一覧を最大化。開閉は記憶する
+  const HELPKEY = 'profit_help_open';
+  function applyHelp(){
+    const open = localStorage.getItem(HELPKEY) === '1';
+    $('lead').hidden = !open;
+    $('helpBtn').textContent = open ? '？使い方 ▲' : '？使い方 ▼';
+  }
+  $('helpBtn').addEventListener('click', () => {
+    localStorage.setItem(HELPKEY, localStorage.getItem(HELPKEY) === '1' ? '0' : '1');
+    applyHelp();
+  });
+  applyHelp();
 
   let projects = [], items = [], projId = null, project = null;
   let editing = null;   // 検収入力中の itemId
@@ -253,12 +288,12 @@
         <div class="v ${sales == null ? 'neg' : ''}">${sales == null ? '未登録' : fmtMoney(sales)}</div>
         <div class="s">${sales == null ? '工事案件で請負金額を登録'
           : (salesDelta ? `当初 ${fmtMoney(base)} ${salesDelta > 0 ? '＋' : '−'} 変更 ${fmtMoney(Math.abs(salesDelta))}` : '&nbsp;')}</div></div>
-      <div class="sumcard hero"><div class="t">実際原価（確定＋見込み）</div>
+      <div class="sumcard"><div class="t">実際原価（確定＋見込み）</div>
         <div class="v">${fmtMoney(actualTotal)}</div>
         <div class="s">材 ${fmtMoney(sMat)} ／ 工 ${fmtMoney(sLab)}</div></div>
-      <div class="sumcard"><div class="t">粗利（売上−実際原価）</div>
+      <div class="sumcard hero ${gross == null ? '' : (gross >= 0 ? 'profitok' : 'loss')}"><div class="t">粗利（売上−実際原価）</div>
         <div class="v ${gcls}">${gross == null ? '—' : fmtMoney(gross)}</div>
-        <div class="s">&nbsp;</div></div>
+        <div class="s">${gross == null ? '&nbsp;' : (gross >= 0 ? '黒字' : '赤字')}</div></div>
       <div class="sumcard"><div class="t">粗利率</div>
         <div class="v ${gcls}">${rate == null ? '—' : rate.toFixed(1) + '%'}</div>
         <div class="s">&nbsp;</div></div>
