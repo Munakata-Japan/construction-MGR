@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料調達計画表) v20260907G -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260907H -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -20,24 +20,26 @@
   html, body{ height:100%; }
   body{ overflow:hidden; display:flex; flex-direction:column; }
   .bar{ flex:0 0 auto; }
-  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:10px; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:6px; }
   .lead, .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
   #atable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
 
-  .lead{ color:var(--sub); font-size:12.5px; line-height:1.6; margin:0 0 10px; }
+  .lead{ color:var(--sub); font-size:10.5px; line-height:1.28; margin:0 0 4px; }
 
-  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
-  .ctl select{ width:auto; min-width:150px; max-width:340px; min-height:38px; flex:0 1 auto; }
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:4px; }
+  .ctl select{ width:auto; min-width:150px; max-width:340px; min-height:30px; flex:0 1 auto; }
   .ctl .sp{ flex:1 1 0; }
 
-  .sumgrid{ display:grid; gap:6px; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); margin-bottom:8px; }
+  .count{ margin:2px 0 4px; font-size:10.5px; color:var(--sub); }
+
+  .sumgrid{ display:grid; gap:5px; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); margin-bottom:4px; }
   .sumcard{
     background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-    box-shadow:var(--shadow-1); padding:5px 10px;
+    box-shadow:var(--shadow-1); padding:2px 9px;
     display:flex; align-items:baseline; gap:8px;   /* ラベルと数値を1行に＝高さを詰める */
   }
-  .sumcard .t{ font-size:11px; color:var(--sub); margin:0; }
-  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:15px; color:var(--ink); margin-left:auto; }
+  .sumcard .t{ font-size:10.5px; color:var(--sub); margin:0; }
+  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:13.5px; color:var(--ink); margin-left:auto; }
   .sumcard.red .v{ color:var(--alert); }
   .sumcard.amber .v{ color:#8A6200; }
 
