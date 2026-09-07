@@ -44,8 +44,8 @@
   .vslot .vtot{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
   .vslot .vtot .t{ font-size:10.5px; color:var(--sub); }
   .vslot .vtot .v{ font-family:var(--mono); font-weight:700; font-size:16px; color:var(--ink); }
-  .vslot.low{ border-color:var(--forest); box-shadow:0 0 0 1px var(--forest) inset, var(--shadow-1); }
-  .vbadge{ font-size:9.5px; font-weight:700; color:#fff; background:var(--forest); border-radius:999px; padding:1px 7px; }
+  .vslot.low{ border-color:var(--ok); box-shadow:0 0 0 1px var(--ok) inset, var(--shadow-1); }
+  .vbadge{ font-size:9.5px; font-weight:700; color:#fff; background:var(--ok); border-radius:999px; padding:1px 7px; }
   .vfiles{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
   .vfiles .fchip{
     display:inline-flex; align-items:center; gap:4px; max-width:100%;
@@ -58,10 +58,10 @@
   /* ===== 大合計サマリ ===== */
   .sumgrid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); margin-bottom:10px; }
   .sumcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:8px 12px; }
-  .sumcard.pick{ border-color:var(--forest); }
+  .sumcard.pick{ border-color:var(--ok); }
   .sumcard .t{ font-size:11px; color:var(--sub); margin-bottom:3px; }
   .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:18px; color:var(--ink); }
-  .sumcard .v.warn{ color:var(--rust); }
+  .sumcard .v.warn{ color:var(--alert); }
 
   /* ===== 比較表（品目 × 見積先） ===== */
   .ctable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
@@ -89,7 +89,7 @@
   tr.disc td.dname .caret{ display:inline-block; width:14px; color:var(--sub); }
   tr.disc td.dname .gc{ font-weight:400; color:var(--sub); font-family:var(--mono); font-size:11px; margin-left:6px; }
   tr.disc td.num{ font-weight:700; }
-  tr.disc td.num .bulk{ display:block; font-size:10px; font-weight:700; color:var(--forest); cursor:pointer; margin-top:2px; }
+  tr.disc td.num .bulk{ display:block; font-size:10px; font-weight:700; color:var(--ok); cursor:pointer; margin-top:2px; }
   tr.disc td.num .bulk:hover{ text-decoration:underline; }
 
   /* 見積セル */
@@ -98,12 +98,12 @@
   td.vq .amt{ font-family:var(--mono); font-weight:700; }
   td.vq .up{ display:block; font-family:var(--mono); font-size:10.5px; color:var(--sub); }
   td.vq.empty{ color:var(--rule); }
-  td.vq.low .amt{ color:var(--forest); }
-  td.vq.low::after{ content:"最安"; float:left; font-size:9px; font-weight:700; color:var(--forest); }
-  td.vq.adopted{ background:#EAF4EC; box-shadow:inset 3px 0 0 var(--forest); }
-  td.vq.adopted .tick{ float:left; color:var(--forest); font-weight:700; }
+  td.vq.low .amt{ color:var(--ok); }
+  td.vq.low::after{ content:"最安"; float:left; font-size:9px; font-weight:700; color:var(--ok); }
+  td.vq.adopted{ background:#EAF4EC; box-shadow:inset 3px 0 0 var(--ok); }
+  td.vq.adopted .tick{ float:left; color:var(--ok); font-weight:700; }
   td.pick{ white-space:nowrap; }
-  td.pick .pn{ font-weight:700; color:var(--forest); }
+  td.pick .pn{ font-weight:700; color:var(--ok); }
   td.pick .none{ color:var(--sub); }
   td.pick .clr{ display:block; font-size:10px; color:var(--sub); cursor:pointer; margin-top:1px; }
   td.pick .clr:hover{ text-decoration:underline; }
@@ -427,7 +427,7 @@
           const v = dsub[pid];
           const low = v > 0 && v === dLow;
           const bulk = (isMgr && v > 0) ? `<span class="bulk" data-bulk="${pid}" data-disc="${sec === NONE ? '' : esc(sec)}">一括採用</span>` : '';
-          return `<td class="num" style="${low ? 'color:var(--forest)' : ''}">${v ? fmtMoney(v) : '—'}${bulk}</td>`;
+          return `<td class="num" style="${low ? 'color:var(--ok)' : ''}">${v ? fmtMoney(v) : '—'}${bulk}</td>`;
         }).join('')}
         <td></td></tr>`;
 
@@ -477,7 +477,7 @@
 
     h += `</tbody><tfoot><tr>
       <td colspan="4">大合計（各社）</td>
-      ${cols.map(pid => `<td class="num" style="${grand[pid] > 0 && grand[pid] === gLow ? 'color:var(--forest)' : ''}">${grand[pid] ? fmtMoney(grand[pid]) : '—'}</td>`).join('')}
+      ${cols.map(pid => `<td class="num" style="${grand[pid] > 0 && grand[pid] === gLow ? 'color:var(--ok)' : ''}">${grand[pid] ? fmtMoney(grand[pid]) : '—'}</td>`).join('')}
       <td></td></tr></tfoot></table></div>`;
 
     $('ctable').innerHTML = h;
