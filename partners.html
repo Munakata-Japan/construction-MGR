@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: partners (取引先) v20260906A -->
+<!-- BUILD: partners (取引先) v20260907A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -193,6 +193,11 @@
       <div class="full">
         <div class="cts" id="cts"></div>
         <button class="btn ghost sm" id="ctadd" type="button" style="margin-top:6px">＋ 担当者を足す</button>
+        <div id="ctinvite" hidden style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#F1F3EF;border-radius:6px;padding:8px 10px">
+          <span style="font-size:12px;color:var(--sub);font-weight:700">招待リンク（7日間有効・本人へ送ってください）</span>
+          <input id="ctinviteUrl" type="text" readonly style="flex:1 1 260px;min-width:0">
+          <button class="btn ghost sm" id="ctinviteCopy" type="button">コピー</button>
+        </div>
       </div>
 
       <div class="sh">備考</div>
@@ -229,6 +234,7 @@
   if (canEdit) $('dock').hidden = false;
 
   let partners = [], contacts = {}, editing = null;
+  let puMap = {};   // 招待用：この取引先に紐づく app_users（id → {invite_token, auth_user_id}）
 
   /* ================= 読み込み ================= */
   async function load(){
@@ -332,12 +338,15 @@
 
   /* ================= 担当者の行 ================= */
   function ctRow(c){
-    return `<div class="ctrow">
+    const cid = (c && c.id) || '';
+    const auid = (c && c.app_user_id) || '';
+    return `<div class="ctrow" data-cid="${cid}" data-auid="${auid}">
       <input class="cn c_name" type="text" placeholder="氏名" value="${esc((c&&c.name)||'')}">
       <input class="ct c_title" type="text" placeholder="役職" value="${esc((c&&c.title)||'')}">
       <input class="cp c_tel" type="text" placeholder="電話・携帯" value="${esc((c&&(c.tel||c.mobile))||'')}">
       <input class="cp c_mail" type="text" placeholder="メール" value="${esc((c&&c.email)||'')}">
       <label class="chk"><input class="c_pri" type="checkbox"${c&&c.is_primary?' checked':''}>主担当</label>
+      <span class="c_inv" style="display:inline-flex;align-items:center;gap:6px"></span>
       <button class="btn ghost sm c_rm" type="button">削除</button>
     </div>`;
   }
@@ -345,7 +354,78 @@
     $('cts').querySelectorAll('.c_rm').forEach(b => b.onclick = () => b.closest('.ctrow').remove());
   }
   $('ctadd').addEventListener('click', () => {
-    $('cts').insertAdjacentHTML('beforeend', ctRow(null)); bindCtRm();
+    $('cts').insertAdjacentHTML('beforeend', ctRow(null)); bindCtRm(); paintInvites();
+  });
+
+  /* ================= 担当者→システム招待（再入力なし） ================= */
+  // 各担当者行に「システムに招待／招待中／登録済み」を描く（経営者のみ）
+  function paintInvites(){
+    $('cts').querySelectorAll('.ctrow').forEach(row => {
+      const cell = row.querySelector('.c_inv');
+      if (!cell) return;
+      if (me.role !== 'admin'){ cell.innerHTML = ''; return; }
+      const cid = row.dataset.cid;
+      if (!cid){ cell.innerHTML = '<span style="font-size:11px;color:var(--sub)">保存後に招待できます</span>'; return; }
+      const u = row.dataset.auid ? puMap[row.dataset.auid] : null;
+      if (u && u.auth_user_id){ cell.innerHTML = '<span style="font-size:11px;font-weight:700;color:#1F6B3B">✓ 登録済み</span>'; return; }
+      if (u && u.invite_token){ cell.innerHTML = '<span style="font-size:11px;font-weight:700;color:#8A6D1B">招待中</span> <button class="btn ghost sm c_showlink" type="button">リンク表示</button>'; return; }
+      cell.innerHTML = '<button class="btn sm c_invite" type="button">システムに招待</button>';
+    });
+    $('cts').querySelectorAll('.c_invite').forEach(b => b.onclick = () => inviteContact(b.closest('.ctrow')));
+    $('cts').querySelectorAll('.c_showlink').forEach(b => b.onclick = () => inviteContact(b.closest('.ctrow')));
+  }
+
+  async function inviteContact(row){
+    const cid = row.dataset.cid;
+    if (!cid){ showMsg($('pmsg'), 'この担当者はまだ保存されていません。先に「保存する」を押してください。', 'err'); return; }
+    const name = row.querySelector('.c_name').value.trim();
+    const email = row.querySelector('.c_mail').value.trim();
+    const tel = row.querySelector('.c_tel').value.trim();
+    if (!name){ showMsg($('pmsg'), '担当者の氏名を入れてください。', 'err'); return; }
+
+    let auid = row.dataset.auid || null;
+    // まだログイン垢が無ければ、担当者の情報から app_users を作る（再入力なし）
+    if (!auid){
+      const ins = await sb.from('app_users').insert({
+        organization_id: me.organization_id, name, email: email || null, tel: tel || null,
+        is_external: true, partner_id: editing.id, employee_type: 'subcontractor', role: 'member', is_active: true
+      }).select('id').single();
+      if (ins.error){
+        showMsg($('pmsg'), ins.error.code === '42501'
+          ? '招待する権限がありません。経営者権限のアカウントでlog inし直してください。'
+          : 'ログイン用アカウントを作成できませんでした。' + ins.error.message, 'err');
+        return;
+      }
+      auid = ins.data.id;
+      row.dataset.auid = auid;
+      await sb.from('partner_contacts').update({ app_user_id: auid }).eq('id', cid);
+      const arr = contacts[editing.id] || []; const cc = arr.find(x => x.id === cid); if (cc) cc.app_user_id = auid;
+    }
+
+    // 既に招待中ならそのリンクを再表示、無ければ新規発行
+    let token = puMap[auid] && puMap[auid].invite_token;
+    if (!token){
+      token = crypto.randomUUID();
+      const expires = new Date(Date.now() + 7 * DAY).toISOString();
+      const up = await sb.from('app_users').update({ invite_token: token, invite_expires_at: expires }).eq('id', auid).select('id');
+      if (up.error || !(up.data && up.data.length)){
+        showMsg($('pmsg'), '招待リンクを発行できませんでした。経営者権限が必要です。', 'err');
+        return;
+      }
+      puMap[auid] = { ...(puMap[auid] || { id: auid }), invite_token: token };
+    }
+    const url = `${location.origin}${location.pathname.replace(/partners\.html$/, 'signup.html')}?token=${token}`;
+    $('ctinviteUrl').value = url;
+    $('ctinvite').hidden = false;
+    paintInvites();
+    showMsg($('pmsg'), '招待リンクを発行しました。コピーして本人へ送ってください。', 'ok');
+  }
+
+  $('ctinviteCopy').addEventListener('click', async () => {
+    const v = $('ctinviteUrl').value;
+    if (!v) return;
+    try { await navigator.clipboard.writeText(v); showMsg($('pmsg'), 'コピーしました。', 'ok'); }
+    catch (_){ $('ctinviteUrl').select(); document.execCommand('copy'); showMsg($('pmsg'), 'コピーしました。', 'ok'); }
   });
 
   /* ================= 編集 ================= */
@@ -356,7 +436,7 @@
   }
   $('f_sb').addEventListener('change', syncLicSec);
 
-  function openPanel(p){
+  async function openPanel(p){
     editing = p || null;
     showMsg($('pmsg'), '');
     $('ptitle').textContent = p ? '取引先の編集' : '取引先の登録';
@@ -389,6 +469,16 @@
     const cs = p ? (contacts[p.id] || []) : [];
     $('cts').innerHTML = cs.length ? cs.map(ctRow).join('') : ctRow(null);
     bindCtRm();
+
+    // 招待の状態（経営者のみ）：この取引先に紐づくログイン垢を読んで担当者行に反映
+    $('ctinvite').hidden = true;
+    puMap = {};
+    if (me.role === 'admin' && p){
+      const { data } = await sb.from('app_users')
+        .select('id,invite_token,auth_user_id').eq('partner_id', p.id);
+      (data || []).forEach(u => puMap[u.id] = u);
+    }
+    paintInvites();
 
     document.querySelectorAll('#panel input, #panel select, #panel textarea')
       .forEach(el => el.disabled = !canEdit);
@@ -465,22 +555,33 @@
       error = r.error; id = r.data ? r.data.id : null;
     }
 
-    // 担当者を入れ替える
+    // 担当者：ID保持で更新・追加・削除（招待リンク＝app_user_id を消さないため入れ替えにしない）
     if (!error && id){
-      await sb.from('partner_contacts').delete().eq('partner_id', id);
-      const rows = [...$('cts').querySelectorAll('.ctrow')].map((r,i) => ({
-        organization_id: me.organization_id,
-        partner_id     : id,
-        name           : r.querySelector('.c_name').value.trim(),
-        title          : r.querySelector('.c_title').value.trim() || null,
-        tel            : r.querySelector('.c_tel').value.trim() || null,
-        email          : r.querySelector('.c_mail').value.trim() || null,
-        is_primary     : r.querySelector('.c_pri').checked,
-        sort_order     : (i+1)*10
+      const uiRows = [...$('cts').querySelectorAll('.ctrow')].map((r,i) => ({
+        cid       : r.dataset.cid || null,
+        name      : r.querySelector('.c_name').value.trim(),
+        title     : r.querySelector('.c_title').value.trim() || null,
+        tel       : r.querySelector('.c_tel').value.trim() || null,
+        email     : r.querySelector('.c_mail').value.trim() || null,
+        is_primary: r.querySelector('.c_pri').checked,
+        sort_order: (i+1)*10
       })).filter(x => x.name);
-      if (rows.length){
-        const r2 = await sb.from('partner_contacts').insert(rows);
-        if (r2.error) error = r2.error;
+      const existing = contacts[id] || [];
+      const keep = new Set(uiRows.filter(x => x.cid).map(x => x.cid));
+      const del = existing.filter(e => !keep.has(e.id)).map(e => e.id);
+      if (del.length){
+        const rd = await sb.from('partner_contacts').delete().in('id', del);
+        if (rd.error) error = rd.error;
+      }
+      for (const x of uiRows){
+        const fields = { name:x.name, title:x.title, tel:x.tel, email:x.email, is_primary:x.is_primary, sort_order:x.sort_order };
+        if (x.cid){
+          const ru = await sb.from('partner_contacts').update(fields).eq('id', x.cid);
+          if (ru.error) error = ru.error;
+        } else {
+          const ri = await sb.from('partner_contacts').insert({ organization_id: me.organization_id, partner_id: id, ...fields });
+          if (ri.error) error = ri.error;
+        }
       }
     }
 
