@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: genka (着工前原価台帳) v20260906A -->
+<!-- BUILD: genka (相見積・原価決定) v20260907A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -7,105 +7,127 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>着工前原価台帳 ｜ 宗像総合管理システム</title>
+<title>相見積・原価決定 ｜ 宗像総合管理システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <style>
-  /* 横に長い表を扱うため、共通の960pxより広く使う */
-  .wrap{ max-width:1440px; }
+  /* 横に長い比較表を扱うため、共通の960pxより広く使う */
+  .wrap{ max-width:1560px; }
 
-  /* ページ自体はスクロールさせず、表の中だけをスクロールさせる（二重スクロール防止） */
+  /* ページ自体はスクロールさせず、比較表の中だけをスクロールさせる（二重スクロール防止） */
   html, body{ height:100%; }
   body{ overflow:hidden; display:flex; flex-direction:column; }
   .bar{ flex:0 0 auto; }
   .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:10px; }
-  .lead, .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
-  #gtable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+  .lead, .ctl, #msg, .vends, .sumgrid, .count{ flex:0 0 auto; }
+  #ctable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
 
   .lead{ color:var(--sub); font-size:12.5px; line-height:1.6; margin:0 0 8px; }
+  .lead b{ color:var(--ink); }
 
   .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
   .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:38px; flex:0 1 auto; }
   .ctl .sp{ flex:1 1 0; }
+  .ctl .tog{ display:flex; gap:6px; }
 
-  .sumgrid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); margin-bottom:10px; }
-  .sumcard{
+  /* ===== 見積先スロット（最大4社） ===== */
+  .vends{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); margin-bottom:10px; }
+  .vslot{
     background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-    box-shadow:var(--shadow-1); padding:8px 12px;
+    box-shadow:var(--shadow-1); padding:9px 11px; display:flex; flex-direction:column; gap:6px;
   }
+  .vslot .vh{ display:flex; align-items:center; gap:6px; }
+  .vslot .vn{ font-size:10.5px; color:var(--sub); font-weight:700; white-space:nowrap; }
+  .vslot select{ min-height:36px; width:100%; }
+  .vslot .vtot{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .vslot .vtot .t{ font-size:10.5px; color:var(--sub); }
+  .vslot .vtot .v{ font-family:var(--mono); font-weight:700; font-size:16px; color:var(--ink); }
+  .vslot.low{ border-color:var(--ok); box-shadow:0 0 0 1px var(--ok) inset, var(--shadow-1); }
+  .vbadge{ font-size:9.5px; font-weight:700; color:#fff; background:var(--ok); border-radius:999px; padding:1px 7px; }
+  .vfiles{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+  .vfiles .fchip{
+    display:inline-flex; align-items:center; gap:4px; max-width:100%;
+    font-size:11px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; padding:2px 6px;
+  }
+  .vfiles .fchip a{ color:var(--ink-2); text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; }
+  .vfiles .fchip .x{ cursor:pointer; color:var(--sub); font-weight:700; }
+  .vfiles .add{ font-size:11px; padding:3px 8px; min-height:0; }
+
+  /* ===== 大合計サマリ ===== */
+  .sumgrid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); margin-bottom:10px; }
+  .sumcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:8px 12px; }
+  .sumcard.pick{ border-color:var(--ok); }
   .sumcard .t{ font-size:11px; color:var(--sub); margin-bottom:3px; }
   .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:18px; color:var(--ink); }
+  .sumcard .v.warn{ color:var(--alert); }
 
-  .gtable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+  /* ===== 比較表（品目 × 見積先） ===== */
+  .ctable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
            box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
-  .ghead, .grow{
-    display:grid; align-items:start; gap:6px; min-width:980px;
-    grid-template-columns:40px 54px 2.2fr 1.4fr 1.1fr 78px 96px 116px;
+  table.cmp{ border-collapse:separate; border-spacing:0; width:100%; min-width:820px; font-size:12.5px; }
+  table.cmp th, table.cmp td{ padding:7px 9px; border-bottom:1px solid var(--rule-2); text-align:left; vertical-align:top; }
+  table.cmp thead th{
+    position:sticky; top:0; z-index:6; background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+    white-space:nowrap; border-bottom:1px solid var(--rule);
   }
-  .ghead{
-    position:sticky; top:0; z-index:5;
-    background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
-    white-space:nowrap; align-items:center; padding:6px 12px;
-    border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0;
-  }
-  .grow{
-    padding:9px 12px; border-top:1px solid var(--rule-2); background:var(--card);
-    font-size:12.5px; text-align:left; width:100%; font-family:var(--body); color:inherit;
-    text-decoration:none; cursor:pointer;
-  }
-  .grow:hover{ background:#F5F7F3; }
-  .grow .rno, .ghead .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
-  .grow .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
-  .ghead .num{ text-align:right; }
-  .grow .nm{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-weight:700; }
-  .grow .sub{ white-space:normal; overflow-wrap:break-word; line-height:1.4; color:var(--sub); }
-  .cat{ font-size:10.5px; font-weight:700; padding:2px 6px; border-radius:var(--radius-sm); text-align:center; }
+  table.cmp thead th.vend{ text-align:right; min-width:132px; }
+  table.cmp thead th.vend .vname{ display:block; color:var(--ink); font-size:11.5px; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
+  table.cmp .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+  table.cmp col.cno{ width:44px; } table.cmp col.ccat{ width:40px; } table.cmp col.cqty{ width:86px; } table.cmp col.cpick{ width:118px; }
+  .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
+  .cat{ font-size:10.5px; font-weight:700; padding:2px 6px; border-radius:var(--radius-sm); display:inline-block; }
   .cat.material{ background:#E3EBF3; color:var(--ink-2); }
   .cat.labor{ background:#FBF1EF; color:#8C2A1D; }
-  .gphase{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding:7px 12px; background:#E9ECE4; border-top:1px solid var(--rule);
-    font-size:11.5px; font-weight:700; color:var(--ink-2);
-  }
-  .gphase:first-child{ border-top:none; }
-  .gphase .gc{ font-weight:400; color:var(--sub); font-family:var(--mono); font-size:11px; }
-  .gfoot{
-    position:sticky; bottom:0; z-index:4;
-    display:grid; grid-template-columns:40px 54px 2.2fr 1.4fr 1.1fr 78px 96px 116px;
-    min-width:980px; gap:6px; padding:9px 12px; border-top:2px solid var(--ink);
-    font-weight:700; background:#F5F7F3;
-  }
-  .gfoot .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+  .nm{ font-weight:700; overflow-wrap:break-word; line-height:1.4; }
+  .nm .sub{ display:block; color:var(--sub); font-weight:400; font-size:11px; }
 
-  /* 工種セクション（ドラッグの受け皿）と行のドラッグ */
-  .gcat{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding:8px 12px; background:#E9ECE4; border-top:1px solid var(--rule);
-    font-size:12.5px; font-weight:700; color:var(--ink);
-  }
-  .gcat:first-child{ border-top:none; }
-  .gcat .gc{ font-weight:400; color:var(--sub); font-family:var(--mono); font-size:11px; }
-  .gcat.dragover{ background:#FBEFC9; outline:2px dashed var(--safety); outline-offset:-2px; }
-  .gh{ cursor:grab; color:#AAB1A9; user-select:none; margin-right:2px; }
-  .grow[draggable="true"]{ cursor:pointer; }
-  .grow.dragging{ opacity:.4; }
-  .grow.dropbefore{ box-shadow:inset 0 3px 0 var(--safety); }
-  .grow.dropafter{ box-shadow:inset 0 -3px 0 var(--safety); }
+  /* 工種の見出し（=小計行・クリックで展開/畳む） */
+  tr.disc td{ background:#E9ECE4; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); cursor:pointer; }
+  tr.disc td.dname{ font-weight:700; color:var(--ink); white-space:nowrap; }
+  tr.disc td.dname .caret{ display:inline-block; width:14px; color:var(--sub); }
+  tr.disc td.dname .gc{ font-weight:400; color:var(--sub); font-family:var(--mono); font-size:11px; margin-left:6px; }
+  tr.disc td.num{ font-weight:700; }
+  tr.disc td.num .bulk{ display:block; font-size:10px; font-weight:700; color:var(--ok); cursor:pointer; margin-top:2px; }
+  tr.disc td.num .bulk:hover{ text-decoration:underline; }
+
+  /* 見積セル */
+  td.vq{ cursor:pointer; }
+  td.vq:hover{ background:#F5F7F3; }
+  td.vq .amt{ font-family:var(--mono); font-weight:700; }
+  td.vq .up{ display:block; font-family:var(--mono); font-size:10.5px; color:var(--sub); }
+  td.vq.empty{ color:var(--rule); }
+  td.vq.low .amt{ color:var(--ok); }
+  td.vq.low::after{ content:"最安"; float:left; font-size:9px; font-weight:700; color:var(--ok); }
+  td.vq.adopted{ background:#EAF4EC; box-shadow:inset 3px 0 0 var(--ok); }
+  td.vq.adopted .tick{ float:left; color:var(--ok); font-weight:700; }
+  td.pick{ white-space:nowrap; }
+  td.pick .pn{ font-weight:700; color:var(--ok); }
+  td.pick .none{ color:var(--sub); }
+  td.pick .clr{ display:block; font-size:10px; color:var(--sub); cursor:pointer; margin-top:1px; }
+  td.pick .clr:hover{ text-decoration:underline; }
+
+  /* セル内インライン入力 */
+  .qedit{ display:flex; flex-direction:column; gap:4px; min-width:120px; }
+  .qedit input{ min-height:32px; width:100%; text-align:right; font-family:var(--mono); }
+  .qedit .qb{ display:flex; gap:4px; }
+  .qedit .qb button{ min-height:0; padding:4px 7px; font-size:11px; flex:1 1 auto; }
+
+  tfoot td{ position:sticky; bottom:0; z-index:5; background:#F5F7F3; border-top:2px solid var(--ink); font-weight:700; }
+  tfoot td.num{ font-family:var(--mono); }
+
+  /* 工程を割り当てる小さなセレクト（展開時のみ） */
+  .drow .discsel{ min-height:30px; font-size:11px; max-width:150px; margin-top:3px; }
+
   .addcat{ display:flex; gap:6px; align-items:center; margin-bottom:8px; }
   .addcat input{ width:auto; flex:0 1 220px; min-width:0; min-height:34px; }
 
   @media (max-width:820px){
-    /* 狭い画面ではカード表示になるため、通常のページスクロールに戻す */
     body{ height:auto; overflow:visible; display:block; }
     .wrap{ flex:none; height:auto; overflow:visible; display:block; }
-    #gtable{ display:block; }
-    .gtable{ flex:none; max-height:none; overflow:visible; }
-    .ghead, .gfoot{ display:none; }
-    .grow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
-    .grow .num{ text-align:left; }
-    .grow .rno{ text-align:left; }
+    #ctable{ display:block; }
+    .ctable{ flex:none; max-height:70vh; }
   }
 </style>
 </head>
@@ -113,16 +135,16 @@
 
 <header class="bar">
   <span class="mark" aria-hidden="true"></span>
-  <h1>着工前原価台帳</h1>
+  <h1>相見積・原価決定</h1>
   <div class="who" id="who"></div>
 </header>
 
 <div class="wrap">
   <p class="lead">
-    見積先から取った材工の見積を、工事ごとに1件ずつ明細で並べた
-    <b>着工前の原価</b>です。<b>行の左の ⠿ をつかんでドラッグ</b>すると、
-    「土木工事」「電気工事」などの工種へ振り分け・並べ替えができます。
-    工事が進む中で出てくる副資材や突発的な費用は「実行予算」に記録します。
+    複数の見積先（最大4社）の金額を並べて比べ、<b>業者を決めて＝その見積を「採用」</b>すると、
+    その品目の<b>着工前原価が確定</b>します。まずは<b>工種ごとの小計</b>で見比べ、
+    気になる工種は<b>クリックで品目別に展開</b>して細かく比較・採用できます。
+    採用した合計が下の<b>着工前原価</b>です。
   </p>
 
   <div class="ctl">
@@ -133,7 +155,13 @@
       <option value="labor">外注・労務費のみ</option>
     </select>
     <span class="sp"></span>
+    <div class="tog">
+      <button class="btn sm ghost" id="expandAll" type="button">すべて展開</button>
+      <button class="btn sm ghost" id="collapseAll" type="button">すべて畳む</button>
+    </div>
   </div>
+
+  <div class="vends" id="vends"></div>
 
   <div class="addcat">
     <input id="newcat" type="text" placeholder="工種を追加（例：塗装工事）">
@@ -145,8 +173,10 @@
   <div class="sumgrid" id="sumgrid" hidden></div>
 
   <p class="count" id="count"></p>
-  <div id="gtable"></div>
+  <div id="ctable"></div>
 </div>
+
+<input type="file" id="filepick" accept="application/pdf,image/*" hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -158,16 +188,27 @@
   const auth = await requireAuth();
   if (!auth) return;
   const me = auth.me;
+  const isMgr = me.role === 'admin' || me.role === 'manager';
 
   paintBar(me, await loadOrgName(me.organization_id));
 
   let projects = [], partners = [], phases = [], items = [], projId = null;
+  let quotes = [], qfiles = [];
+  const qmap = new Map();                 // `${itemId}|${pid}` -> quote row
+  let vendorSlots = ['', '', '', ''];     // 見積先スロット（最大4社）
+  const expanded = new Set();             // 展開中の工種
+  let editing = null;                     // { itemId, pid }
+  let uploadFor = null;                   // 見積書アップロード先の partner_id
 
-  // 工種：まず土木・電気・共通を用意。ユーザーが「＋工種を追加」で増やせる
   const DISC = ['土木工事', '電気工事', '共通'];
   let customCats = [];
-  let draggingId = null;
+  const NONE = '__none__';
 
+  const ptname = id => (partners.find(p => p.id === id) || {}).name || '';
+  const qkey = (itemId, pid) => itemId + '|' + pid;
+  const num = v => (v || v === 0) ? fmtMoney(v) : '—';
+
+  /* ================= 読み込み ================= */
   async function loadRefs(){
     const [pr, pt] = await Promise.all([
       sb.from('projects').select('id,project_no,name').eq('is_active', true).order('project_no', { ascending:false }),
@@ -187,63 +228,161 @@
   }
 
   async function loadItems(){
-    if (!projId){ items = []; render(); return; }
-    // 着工前の見積原価だけ（cost_stage=estimate）。中止は除く
+    if (!projId){ items = []; return; }
     const { data, error } = await sb.from('phase_budget_items')
       .select('id,phase_id,category,item_name,estimate_partner_id,quantity,unit,unit_price,amount,status,cost_stage,note,seq,discipline,sort_order')
       .eq('project_id', projId).order('seq');
     if (error){
       showMsg($('msg'),
         /column .* does not exist|schema cache|relation .* does not exist/i.test(error.message || '')
-          ? 'データベースに必要な項目がまだありません。Supabase の SQL Editor で phase3_budget.sql・phase8_cost_stage.sql・phase13_discipline.sql を実行してください。'
+          ? 'データベースに必要な項目がまだありません。Supabase で phase3_budget.sql・phase8_cost_stage.sql・phase13_discipline.sql を実行してください。'
           : '読み込めませんでした。' + error.message, 'err');
       items = [];
     } else {
       items = (data || []).filter(x => (x.cost_stage || 'estimate') === 'estimate' && x.status !== 'cancelled');
     }
-    render();
   }
 
-  function fmt(v){ return (v || v === 0) ? fmtMoney(v) : '—'; }
-
-  function render(){
-    if (!projId){
-      $('sumgrid').hidden = true;
-      $('count').textContent = '';
-      $('gtable').innerHTML = `<div class="hold" style="height:200px"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、着工前の見積原価が出ます。</div></div>`;
+  async function loadQuotes(){
+    qmap.clear(); quotes = [];
+    if (!projId) return;
+    const { data, error } = await sb.from('budget_item_quotes')
+      .select('id,budget_item_id,partner_id,unit_price,amount').eq('project_id', projId);
+    if (error){
+      if (/relation .* does not exist|schema cache/i.test(error.message || ''))
+        showMsg($('msg'), '相見積の項目がまだありません。Supabase で phase17_estimate_quotes.sql を実行してください。', 'err');
       return;
     }
+    quotes = data || [];
+    quotes.forEach(q => qmap.set(qkey(q.budget_item_id, q.partner_id), q));
+  }
 
-    const fc = $('fcat').value;
-    const rows = items.filter(x => !fc || x.category === fc);
-    const ptmap = Object.fromEntries(partners.map(p => [p.id, p.name]));
-    const phmap = Object.fromEntries(phases.map(p => [p.id, p.name]));
+  async function loadQuoteFiles(){
+    qfiles = [];
+    if (!projId) return;
+    const { data } = await sb.from('estimate_quote_files')
+      .select('id,partner_id,storage_path,original_name').eq('project_id', projId).order('created_at');
+    qfiles = data || [];
+  }
 
-    const sum = (arr, k) => arr.reduce((s, x) => s + (Number(x[k]) || 0), 0);
-    const sMat = sum(rows.filter(x => x.category === 'material'), 'amount');
-    const sLab = sum(rows.filter(x => x.category === 'labor'), 'amount');
-    const sAll = sMat + sLab;
+  /* 見積先スロットの初期値：保存済み→無ければ見積のある業者を最大4社 */
+  function initVendors(){
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('genka_vendors:' + projId) || 'null'); } catch (_){}
+    if (Array.isArray(saved) && saved.length === 4){ vendorSlots = saved; return; }
+    const seen = [];
+    quotes.forEach(q => { if (q.partner_id && !seen.includes(q.partner_id)) seen.push(q.partner_id); });
+    vendorSlots = [seen[0] || '', seen[1] || '', seen[2] || '', seen[3] || ''];
+  }
+  function saveVendors(){
+    try { localStorage.setItem('genka_vendors:' + projId, JSON.stringify(vendorSlots)); } catch (_){}
+  }
+  function activeVendors(){
+    const out = [];
+    vendorSlots.forEach(id => { if (id && !out.includes(id)) out.push(id); });
+    return out;
+  }
 
-    $('sumgrid').hidden = false;
-    $('sumgrid').innerHTML = `
-      <div class="sumcard"><div class="t">材料費（見積）</div><div class="v">${fmtMoney(sMat)}</div></div>
-      <div class="sumcard"><div class="t">労務・外注費（見積）</div><div class="v">${fmtMoney(sLab)}</div></div>
-      <div class="sumcard"><div class="t">着工前原価 合計</div><div class="v">${fmtMoney(sAll)}</div></div>
-    `;
-
-    $('count').textContent = `${rows.length} 件 ／ 全 ${items.length} 件`;
-
-    if (!rows.length){
-      $('gtable').innerHTML = `<div class="empty"><b>着工前原価の明細がありません</b>実行予算で見積を入れると、ここに着工前原価として出ます。</div>`;
-      return;
-    }
-
-    // 工種の並び（土木・電気・共通 → ユーザー追加 → データにある工種）。末尾に「未分類」
+  /* ================= 描画 ================= */
+  function sectionsOf(){
     const sections = [];
     const present = [...new Set(items.map(x => x.discipline).filter(Boolean))];
     [...DISC, ...customCats, ...present].forEach(s => { if (s && !sections.includes(s)) sections.push(s); });
+    return sections;
+  }
 
-    const NONE = '__none__';
+  function render(){
+    if (!projId){
+      $('vends').innerHTML = '';
+      $('sumgrid').hidden = true;
+      $('count').textContent = '';
+      $('ctable').innerHTML = `<div class="hold" style="height:200px"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、相見積の比較が出ます。</div></div>`;
+      return;
+    }
+    renderVendors();
+    renderSummary();
+    renderTable();
+  }
+
+  function renderVendors(){
+    const cols = activeVendors();
+    const grand = {};
+    cols.forEach(pid => grand[pid] = 0);
+    const fc = $('fcat').value;
+    items.filter(x => !fc || x.category === fc).forEach(x => {
+      cols.forEach(pid => { const q = qmap.get(qkey(x.id, pid)); if (q) grand[pid] += Number(q.amount) || 0; });
+    });
+    const vals = cols.map(pid => grand[pid]).filter(v => v > 0);
+    const lowVal = vals.length ? Math.min(...vals) : null;
+
+    const opts = sel => '<option value="">（未選択）</option>' +
+      partners.map(p => `<option value="${p.id}" ${p.id === sel ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+
+    $('vends').innerHTML = vendorSlots.map((pid, i) => {
+      const isLow = pid && grand[pid] > 0 && grand[pid] === lowVal;
+      const files = pid ? qfiles.filter(f => f.partner_id === pid) : [];
+      const fchips = files.map(f =>
+        `<span class="fchip"><a href="#" data-open="${f.id}" title="${esc(f.original_name || '見積書')}">${esc(f.original_name || '見積書')}</a>` +
+        (isMgr ? `<span class="x" data-delfile="${f.id}" title="削除">×</span>` : '') + `</span>`).join('');
+      return `<div class="vslot ${isLow ? 'low' : ''}">
+        <div class="vh"><span class="vn">見積先${i + 1}</span>${isLow ? '<span class="vbadge">最安</span>' : ''}</div>
+        <select data-slot="${i}" ${isMgr ? '' : 'disabled'}>${opts(pid)}</select>
+        <div class="vtot"><span class="t">大合計</span><span class="v">${pid ? fmtMoney(grand[pid]) : '—'}</span></div>
+        ${pid ? `<div class="vfiles">${fchips}${isMgr ? `<button class="btn ghost sm add" data-addfile="${pid}" type="button">＋見積書</button>` : ''}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    $('vends').querySelectorAll('select[data-slot]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        vendorSlots[Number(sel.dataset.slot)] = sel.value || '';
+        saveVendors(); render();
+      });
+    });
+    $('vends').querySelectorAll('[data-addfile]').forEach(b =>
+      b.addEventListener('click', () => { uploadFor = b.dataset.addfile; $('filepick').click(); }));
+    $('vends').querySelectorAll('[data-open]').forEach(a =>
+      a.addEventListener('click', e => { e.preventDefault(); openFile(a.dataset.open); }));
+    $('vends').querySelectorAll('[data-delfile]').forEach(x =>
+      x.addEventListener('click', () => delFile(x.dataset.delfile)));
+  }
+
+  function renderSummary(){
+    const fc = $('fcat').value;
+    const rows = items.filter(x => !fc || x.category === fc);
+    const adopted = rows.filter(x => x.estimate_partner_id);
+    const sum = (arr, pred) => arr.filter(pred).reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    const sMat = sum(adopted, x => x.category === 'material');
+    const sLab = sum(adopted, x => x.category === 'labor');
+    const notYet = rows.length - adopted.length;
+
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML = `
+      <div class="sumcard pick"><div class="t">着工前原価（採用計）</div><div class="v">${fmtMoney(sMat + sLab)}</div></div>
+      <div class="sumcard"><div class="t">└ 材料費</div><div class="v">${fmtMoney(sMat)}</div></div>
+      <div class="sumcard"><div class="t">└ 外注・労務費</div><div class="v">${fmtMoney(sLab)}</div></div>
+      <div class="sumcard"><div class="t">未採用（業者未決定）</div><div class="v ${notYet ? 'warn' : ''}">${notYet} 件</div></div>
+    `;
+  }
+
+  function renderTable(){
+    const cols = activeVendors();
+    const fc = $('fcat').value;
+    const rows = items.filter(x => !fc || x.category === fc);
+    const phmap = Object.fromEntries(phases.map(p => [p.id, p.name]));
+
+    $('count').textContent = `${rows.length} 件 ／ 見積先 ${cols.length} 社`;
+
+    if (!cols.length){
+      $('ctable').innerHTML = `<div class="empty"><b>見積先を選んでください</b>上の「見積先1〜4」で比べる業者を選ぶと、各社の金額が並びます。</div>`;
+      return;
+    }
+    if (!rows.length){
+      $('ctable').innerHTML = `<div class="empty"><b>見積の明細がありません</b>実行予算で品目（材工）を入れると、ここに相見積として並びます。</div>`;
+      return;
+    }
+
+    // 工種ごとに束ねる
+    const sections = sectionsOf();
     const byDisc = new Map();
     sections.forEach(s => byDisc.set(s, []));
     byDisc.set(NONE, []);
@@ -254,142 +393,263 @@
     });
     const ord = (a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) || ((a.seq || 0) - (b.seq || 0));
 
-    let h = `<div class="gtable"><div class="ghead">
-      <span class="rno">NO</span><span>区分</span><span>品名</span><span>見積先</span><span>工程</span>
-      <span class="num">数量</span><span class="num">単価</span><span class="num">見積金額</span>
-    </div>`;
+    // 各社の大合計
+    const grand = {}; cols.forEach(pid => grand[pid] = 0);
+    rows.forEach(x => cols.forEach(pid => { const q = qmap.get(qkey(x.id, pid)); if (q) grand[pid] += Number(q.amount) || 0; }));
+    const gvals = cols.map(pid => grand[pid]).filter(v => v > 0);
+    const gLow = gvals.length ? Math.min(...gvals) : null;
+
+    let h = `<div class="ctable"><table class="cmp"><colgroup>
+      <col class="cno"><col class="ccat"><col><col class="cqty">
+      ${cols.map(() => '<col>').join('')}<col class="cpick"></colgroup>
+      <thead><tr>
+        <th class="rno">NO</th><th>区分</th><th>品名</th><th class="num">数量</th>
+        ${cols.map(pid => `<th class="vend"><span class="vname" title="${esc(ptname(pid))}">${esc(ptname(pid))}</span></th>`).join('')}
+        <th>採用</th>
+      </tr></thead><tbody>`;
+
     let no = 0;
     const sectOrder = [...sections, NONE];
     sectOrder.forEach(sec => {
       const arr = (byDisc.get(sec) || []).slice().sort(ord);
-      // 既定・追加した工種セクションは空でも受け皿として表示。未分類は中身があるときだけ
       if (!arr.length && sec === NONE) return;
+      const isOpen = expanded.has(sec);
       const label = sec === NONE ? '未分類' : sec;
-      const dattr = sec === NONE ? '' : esc(sec);
-      h += `<div class="gcat" data-disc="${dattr}"><span>${esc(label)}</span>` +
-        `<span class="gc">${arr.length} 件 ・ ${fmtMoney(sum(arr, 'amount'))}</span></div>`;
+      // 工種の各社小計
+      const dsub = {}; cols.forEach(pid => dsub[pid] = 0);
+      arr.forEach(x => cols.forEach(pid => { const q = qmap.get(qkey(x.id, pid)); if (q) dsub[pid] += Number(q.amount) || 0; }));
+      const dvals = cols.map(pid => dsub[pid]).filter(v => v > 0);
+      const dLow = dvals.length ? Math.min(...dvals) : null;
+
+      h += `<tr class="disc" data-disc="${sec === NONE ? '' : esc(sec)}">
+        <td class="dname" colspan="4"><span class="caret">${isOpen ? '▾' : '▸'}</span>${esc(label)}<span class="gc">${arr.length}件</span></td>
+        ${cols.map(pid => {
+          const v = dsub[pid];
+          const low = v > 0 && v === dLow;
+          const bulk = (isMgr && v > 0) ? `<span class="bulk" data-bulk="${pid}" data-disc="${sec === NONE ? '' : esc(sec)}">一括採用</span>` : '';
+          return `<td class="num" style="${low ? 'color:var(--ok)' : ''}">${v ? fmtMoney(v) : '—'}${bulk}</td>`;
+        }).join('')}
+        <td></td></tr>`;
+
+      if (!isOpen) return;
       arr.forEach(x => {
         no++;
-        h += `<div class="grow" draggable="true" data-id="${x.id}" data-disc="${dattr}">
-          <span class="rno"><span class="gh" title="ドラッグして工種へ移動・並べ替え">⠿</span>${no}</span>
-          <span class="cat ${x.category}">${x.category === 'material' ? '材' : '工'}</span>
-          <span class="nm" title="${esc(x.item_name)}">${esc(x.item_name)}${x.note ? `<span class="sub">${esc(x.note)}</span>` : ''}</span>
-          <span>${esc(ptmap[x.estimate_partner_id] || '—')}</span>
-          <span>${esc(phmap[x.phase_id] || '（工事全体）')}</span>
-          <span class="num">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</span>
-          <span class="num">${fmt(x.unit_price)}</span>
-          <span class="num">${fmt(x.amount)}</span>
-        </div>`;
+        const adoptedPid = x.estimate_partner_id;
+        // この行の各社金額から最安を求める
+        const amts = cols.map(pid => { const q = qmap.get(qkey(x.id, pid)); return q ? Number(q.amount) || 0 : null; }).filter(v => v != null && v > 0);
+        const rLow = amts.length ? Math.min(...amts) : null;
+
+        h += `<tr class="drow" data-id="${x.id}">
+          <td class="rno">${no}</td>
+          <td><span class="cat ${x.category}">${x.category === 'material' ? '材' : '工'}</span></td>
+          <td><span class="nm">${esc(x.item_name)}${x.note ? `<span class="sub">${esc(x.note)}</span>` : ''}</span>
+              ${isMgr ? discSelect(x) : `<span class="sub">${esc(phmap[x.phase_id] || '（工事全体）')}</span>`}</td>
+          <td class="num">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</td>`;
+
+        cols.forEach(pid => {
+          if (editing && editing.itemId === x.id && editing.pid === pid){
+            const q = qmap.get(qkey(x.id, pid)) || {};
+            h += `<td class="vq"><div class="qedit" data-edit="1">
+              <input data-f="up" inputmode="numeric" placeholder="単価" value="${q.unit_price ?? ''}">
+              <input data-f="amt" inputmode="numeric" placeholder="金額" value="${q.amount ?? ''}">
+              <div class="qb"><button class="btn sm" data-act="adopt">採用</button>
+              <button class="btn ghost sm" data-act="save">保存</button>
+              <button class="btn ghost sm" data-act="cancel">×</button></div>
+            </div></td>`;
+          } else {
+            const q = qmap.get(qkey(x.id, pid));
+            const isAdopted = adoptedPid === pid;
+            const isLow = q && (Number(q.amount) || 0) > 0 && (Number(q.amount) || 0) === rLow;
+            const cls = ['vq']; if (!q) cls.push('empty'); if (isLow) cls.push('low'); if (isAdopted) cls.push('adopted');
+            h += `<td class="${cls.join(' ')}" data-cell="${x.id}|${pid}">
+              ${isAdopted ? '<span class="tick">✓</span>' : ''}
+              ${q ? `<span class="amt">${num(q.amount)}</span>${q.unit_price != null ? `<span class="up">@${fmtMoney(q.unit_price)}</span>` : ''}` : '<span>＋</span>'}
+            </td>`;
+          }
+        });
+
+        h += `<td class="pick">${adoptedPid
+          ? `<span class="pn">${esc(ptname(adoptedPid))}</span>${isMgr ? `<span class="clr" data-clear="${x.id}">採用解除</span>` : ''}`
+          : '<span class="none">未決定</span>'}</td>`;
+        h += `</tr>`;
       });
     });
-    h += `<div class="gfoot">
-      <span></span><span></span><span>着工前原価 合計</span><span></span><span></span>
-      <span></span><span></span><span class="num">${fmtMoney(sAll)}</span>
-    </div>`;
-    h += `</div>`;
-    $('gtable').innerHTML = h;
-    wireDrag();
+
+    h += `</tbody><tfoot><tr>
+      <td colspan="4">大合計（各社）</td>
+      ${cols.map(pid => `<td class="num" style="${grand[pid] > 0 && grand[pid] === gLow ? 'color:var(--ok)' : ''}">${grand[pid] ? fmtMoney(grand[pid]) : '—'}</td>`).join('')}
+      <td></td></tr></tfoot></table></div>`;
+
+    $('ctable').innerHTML = h;
+    wire();
   }
 
-  /* ================= ドラッグで工種へ振り分け・並べ替え ================= */
-  function clearInd(){
-    $('gtable').querySelectorAll('.dropbefore,.dropafter,.dragover')
-      .forEach(el => el.classList.remove('dropbefore', 'dropafter', 'dragover'));
+  function discSelect(x){
+    const sections = sectionsOf();
+    const cur = x.discipline || '';
+    const opts = '<option value="">工種：未分類</option>' +
+      sections.map(s => `<option value="${esc(s)}" ${s === cur ? 'selected' : ''}>${esc(s)}</option>`).join('');
+    return `<select class="discsel" data-discfor="${x.id}">${opts}</select>`;
   }
 
-  function wireDrag(){
-    const tbl = $('gtable');
-    tbl.querySelectorAll('.grow').forEach(row => {
-      row.addEventListener('click', () => {
-        // クリックはその品目の入力画面（実行予算）を開く（確認→入力の統一）
-        if (row.dataset.moved){ delete row.dataset.moved; return; }
-        location.href = `budget.html?p=${projId}&item=${row.dataset.id}`;
-      });
-      row.addEventListener('dragstart', e => {
-        draggingId = row.dataset.id;
-        row.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        try { e.dataTransfer.setData('text/plain', row.dataset.id); } catch (_) {}
-      });
-      row.addEventListener('dragend', () => { row.classList.remove('dragging'); clearInd(); });
-      row.addEventListener('dragover', e => {
-        e.preventDefault();
-        clearInd();
-        const rect = row.getBoundingClientRect();
-        const after = (e.clientY - rect.top) > rect.height / 2;
-        row.classList.add(after ? 'dropafter' : 'dropbefore');
-      });
-      row.addEventListener('drop', async e => {
-        e.preventDefault(); e.stopPropagation();
-        const rect = row.getBoundingClientRect();
-        const after = (e.clientY - rect.top) > rect.height / 2;
-        const targetDisc = row.dataset.disc || '';
-        const refId = row.dataset.id;
-        clearInd();
-        await doMove(draggingId, targetDisc, refId, after);
+  /* ================= 操作 ================= */
+  function wire(){
+    const t = $('ctable');
+    // 工種見出し＝展開/畳む
+    t.querySelectorAll('tr.disc').forEach(tr => {
+      tr.querySelector('td.dname').addEventListener('click', () => {
+        const d = tr.dataset.disc || NONE;
+        if (expanded.has(d)) expanded.delete(d); else expanded.add(d);
+        renderTable();
       });
     });
-    tbl.querySelectorAll('.gcat').forEach(sec => {
-      sec.addEventListener('dragover', e => { e.preventDefault(); sec.classList.add('dragover'); });
-      sec.addEventListener('dragleave', () => sec.classList.remove('dragover'));
-      sec.addEventListener('drop', async e => {
-        e.preventDefault();
-        sec.classList.remove('dragover');
-        await doMove(draggingId, sec.dataset.disc || '', null, false);
-      });
-    });
-  }
-
-  async function doMove(draggedId, targetDisc, refId, after){
-    if (!draggedId) return;
-    if (refId && refId === draggedId) return;   // 自分自身の上に落としたときは何もしない
-    const dragged = items.find(x => x.id === draggedId);
-    if (!dragged) return;
-    // ドラッグ後の誤クリック（入力画面へ飛ぶ）を1回抑制する
-    const el = $('gtable').querySelector(`.grow[data-id="${draggedId}"]`);
-    if (el) el.dataset.moved = '1';
-
-    // 移動先の工種にある行（自分を除く）を今の並びで取り出す
-    const inSec = items
-      .filter(x => x.id !== draggedId && ((x.discipline || '') === targetDisc))
-      .sort((a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) || ((a.seq || 0) - (b.seq || 0)));
-
-    let idx = inSec.length;
-    if (refId){
-      const i = inSec.findIndex(x => x.id === refId);
-      if (i >= 0) idx = after ? i + 1 : i;
-    }
-    inSec.splice(idx, 0, dragged);
-
-    // 並び順を振り直し、変わった行だけ保存する
-    const updates = [];
-    inSec.forEach((x, i) => {
-      const so = (i + 1) * 10;
-      if (x.id === draggedId){
-        const disc = targetDisc || null;
-        updates.push({ id: x.id, body: { sort_order: so, discipline: disc } });
-        x.sort_order = so; x.discipline = disc;
-      } else if ((x.sort_order || 0) !== so){
-        updates.push({ id: x.id, body: { sort_order: so } });
-        x.sort_order = so;
-      }
-    });
-
-    render();  // 見た目は先に反映（ローカルは更新済み）
-    if (!updates.length) return;
-    try {
-      await Promise.all(updates.map(async u => {
-        const { error } = await sb.from('phase_budget_items').update(u.body).eq('id', u.id);
-        if (error) throw error;
+    // 一括採用
+    t.querySelectorAll('[data-bulk]').forEach(b =>
+      b.addEventListener('click', e => { e.stopPropagation(); bulkAdopt(b.dataset.disc || NONE, b.dataset.bulk); }));
+    // 見積セルをクリック→入力
+    t.querySelectorAll('td.vq[data-cell]').forEach(td =>
+      td.addEventListener('click', () => {
+        const [itemId, pid] = td.dataset.cell.split('|');
+        editing = { itemId, pid }; renderTable();
+        const inp = $('ctable').querySelector('.qedit input[data-f="up"]'); if (inp) inp.focus();
       }));
-    } catch (err){
-      showMsg($('msg'),
-        /column .* does not exist|schema cache/i.test(err.message || '')
-          ? '工種の保存に必要な項目がまだありません。Supabase で phase13_discipline.sql を実行してください。'
-          : '並び順を保存できませんでした。' + (err.message || ''), 'err');
-    }
+    // セル内入力のボタン
+    t.querySelectorAll('.qedit').forEach(box => {
+      const td = box.closest('td.vq'); // data-cell は編集中は無いので editing を使う
+      box.querySelectorAll('button').forEach(btn => btn.addEventListener('click', async () => {
+        const act = btn.dataset.act;
+        if (act === 'cancel'){ editing = null; renderTable(); return; }
+        const up = box.querySelector('input[data-f="up"]').value.trim();
+        const amt = box.querySelector('input[data-f="amt"]').value.trim();
+        await saveQuote(editing.itemId, editing.pid, up, amt, act === 'adopt');
+      }));
+      box.querySelector('input[data-f="amt"]').addEventListener('keydown', e => {
+        if (e.key === 'Enter'){ box.querySelector('[data-act="save"]').click(); }
+      });
+    });
+    // 工種の割り当て
+    t.querySelectorAll('select[data-discfor]').forEach(sel =>
+      sel.addEventListener('change', () => setDiscipline(sel.dataset.discfor, sel.value || null)));
+    // 採用解除
+    t.querySelectorAll('[data-clear]').forEach(c =>
+      c.addEventListener('click', () => clearAdopt(c.dataset.clear)));
   }
 
+  async function saveQuote(itemId, pid, upStr, amtStr, adopt){
+    const item = items.find(i => i.id === itemId);
+    let unit = upStr === '' ? null : Number(upStr);
+    let amount = amtStr === '' ? null : Number(amtStr);
+    if (unit != null && isNaN(unit)) unit = null;
+    if (amount != null && isNaN(amount)) amount = null;
+    if (amount == null && unit != null && item && item.quantity != null) amount = unit * Number(item.quantity);
+
+    if (unit == null && amount == null){        // 空にしたら見積を消す
+      const q = qmap.get(qkey(itemId, pid));
+      if (q){ await sb.from('budget_item_quotes').delete().eq('id', q.id); qmap.delete(qkey(itemId, pid)); quotes = quotes.filter(z => z.id !== q.id); }
+      editing = null; render(); return;
+    }
+
+    const row = { organization_id: me.organization_id, project_id: projId, budget_item_id: itemId, partner_id: pid, unit_price: unit, amount };
+    const { data, error } = await sb.from('budget_item_quotes')
+      .upsert(row, { onConflict: 'budget_item_id,partner_id' }).select('id,budget_item_id,partner_id,unit_price,amount').maybeSingle();
+    if (error){ showMsg($('msg'), '見積を保存できませんでした。' + (error.message || ''), 'err'); return; }
+    if (data){
+      const existing = quotes.find(z => z.id === data.id);
+      if (existing) Object.assign(existing, data); else quotes.push(data);
+      qmap.set(qkey(itemId, pid), data);
+    }
+    editing = null;
+    if (adopt) await adoptItem(itemId, pid, true);
+    else { render(); showMsg($('msg'), '見積を保存しました。', 'ok'); }
+  }
+
+  async function adoptItem(itemId, pid, silent){
+    const q = qmap.get(qkey(itemId, pid));
+    if (!q){ showMsg($('msg'), 'この見積先の金額がまだありません。先に金額を入力してください。', 'err'); return; }
+    const { error } = await sb.from('phase_budget_items')
+      .update({ estimate_partner_id: pid, unit_price: q.unit_price, amount: q.amount }).eq('id', itemId).select('id').maybeSingle();
+    if (error){ showMsg($('msg'), '採用（原価確定）を保存できませんでした。' + (error.message || ''), 'err'); return; }
+    const item = items.find(i => i.id === itemId);
+    if (item){ item.estimate_partner_id = pid; item.unit_price = q.unit_price; item.amount = q.amount; }
+    render();
+    if (!silent) showMsg($('msg'), `${ptname(pid)} の見積を採用しました（着工前原価に反映）。`, 'ok');
+  }
+
+  async function bulkAdopt(disc, pid){
+    const target = items.filter(x => ((x.discipline || NONE) === disc) && qmap.has(qkey(x.id, pid)));
+    if (!target.length){ showMsg($('msg'), 'この工種にこの見積先の金額がありません。', 'err'); return; }
+    if (!confirm(`「${disc === NONE ? '未分類' : disc}」の ${target.length} 品目を ${ptname(pid)} の見積で採用します。よろしいですか？`)) return;
+    let ok = 0;
+    for (const x of target){
+      const q = qmap.get(qkey(x.id, pid));
+      const { error } = await sb.from('phase_budget_items')
+        .update({ estimate_partner_id: pid, unit_price: q.unit_price, amount: q.amount }).eq('id', x.id);
+      if (!error){ x.estimate_partner_id = pid; x.unit_price = q.unit_price; x.amount = q.amount; ok++; }
+    }
+    render();
+    showMsg($('msg'), `${ok} 品目を ${ptname(pid)} で採用しました（着工前原価に反映）。`, 'ok');
+  }
+
+  async function clearAdopt(itemId){
+    const { error } = await sb.from('phase_budget_items').update({ estimate_partner_id: null }).eq('id', itemId);
+    if (error){ showMsg($('msg'), '採用解除を保存できませんでした。' + (error.message || ''), 'err'); return; }
+    const item = items.find(i => i.id === itemId);
+    if (item) item.estimate_partner_id = null;
+    render();
+  }
+
+  async function setDiscipline(itemId, disc){
+    const { error } = await sb.from('phase_budget_items').update({ discipline: disc }).eq('id', itemId);
+    if (error){ showMsg($('msg'), '工種を保存できませんでした。' + (error.message || ''), 'err'); return; }
+    const item = items.find(i => i.id === itemId);
+    if (item) item.discipline = disc;
+    if (disc) expanded.add(disc);
+    renderTable();
+  }
+
+  /* ================= 見積書ファイル ================= */
+  $('filepick').addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f || !uploadFor || !projId) return;
+    const pid = uploadFor; uploadFor = null;
+    showMsg($('msg'), '見積書を取り込み中…', '');
+    try {
+      const nm = (f.name || 'quote').replace(/[^\w.\-]/g, '_').slice(-80);
+      const path = `${me.organization_id}/${projId}/quotes/${pid}/${Date.now()}_${nm}`;
+      const up = await sb.storage.from('project-files').upload(path, f, { contentType: f.type || 'application/octet-stream' });
+      if (up.error) throw up.error;
+      const { data, error } = await sb.from('estimate_quote_files').insert({
+        organization_id: me.organization_id, project_id: projId, partner_id: pid,
+        storage_path: path, original_name: f.name, byte_size: f.size, mime_type: f.type || null, uploaded_by: me.id
+      }).select('id,partner_id,storage_path,original_name').maybeSingle();
+      if (error) throw error;
+      if (data) qfiles.push(data);
+      renderVendors();
+      showMsg($('msg'), '見積書を取り込みました。', 'ok');
+    } catch (err){
+      showMsg($('msg'), '見積書を取り込めませんでした。' + (err.message || ''), 'err');
+    }
+  });
+
+  async function openFile(id){
+    const f = qfiles.find(x => x.id === id); if (!f) return;
+    const { data, error } = await sb.storage.from('project-files').createSignedUrl(f.storage_path, 3600);
+    if (error || !data){ showMsg($('msg'), '見積書を開けませんでした。', 'err'); return; }
+    window.open(data.signedUrl, '_blank');
+  }
+
+  async function delFile(id){
+    const f = qfiles.find(x => x.id === id); if (!f) return;
+    if (!confirm(`見積書「${f.original_name || ''}」を削除します。よろしいですか？`)) return;
+    await sb.storage.from('project-files').remove([f.storage_path]);
+    const { error } = await sb.from('estimate_quote_files').delete().eq('id', id);
+    if (error){ showMsg($('msg'), '削除できませんでした。' + (error.message || ''), 'err'); return; }
+    qfiles = qfiles.filter(x => x.id !== id);
+    renderVendors();
+  }
+
+  /* ================= 各種操作 ================= */
   $('addcat').addEventListener('click', () => {
     const v = $('newcat').value.trim();
     if (!v) return;
@@ -399,24 +659,32 @@
   });
   $('newcat').addEventListener('keydown', e => { if (e.key === 'Enter') $('addcat').click(); });
 
+  $('expandAll').addEventListener('click', () => { [...sectionsOf(), NONE].forEach(s => expanded.add(s)); renderTable(); });
+  $('collapseAll').addEventListener('click', () => { expanded.clear(); renderTable(); });
+
   $('fcat').addEventListener('change', render);
   $('proj').addEventListener('change', async () => {
     projId = $('proj').value || null;
-    // 選んだ工事をURLに残す（別ページから戻ってきても選択が残るように）
     const u = new URL(location.href);
     if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
     history.replaceState(null, '', u);
-    await loadPhases();
-    await loadItems();
+    editing = null; expanded.clear();
+    await loadProject();
   });
+
+  async function loadProject(){
+    if (!projId){ render(); return; }
+    await Promise.all([loadPhases(), loadItems(), loadQuotes(), loadQuoteFiles()]);
+    initVendors();
+    render();
+  }
 
   /* ================= 起動 ================= */
   await loadRefs();
   const q = new URL(location.href).searchParams.get('p');
   if (q && projects.some(x => x.id === q)){
     $('proj').value = q; projId = q;
-    await loadPhases();
-    await loadItems();
+    await loadProject();
   } else {
     render();
   }
