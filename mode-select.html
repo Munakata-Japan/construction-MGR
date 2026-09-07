@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: mode-select (セレクトモード) v20260907H -->
+<!-- BUILD: mode-select (セレクトモード) v20260907I -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -22,7 +22,8 @@
     padding:clamp(8px,1.4vh,16px) clamp(12px,1.6vw,22px);
   }
   /* 画面幅を活かす：中央寄せの余白を抑えて広く使う */
-  .frame{ margin:auto; width:100%; max-width:min(1760px, 97vw); }
+  /* 内容(最大7タイル)に合わせて幅を絞り、中央寄せ（右の空きで左寄せに見えるのを防ぐ） */
+  .frame{ margin:auto; width:100%; max-width:min(1560px, 96vw); }
 
   /* 図面の枠に倣った二重線 */
   .frame .outer{ border:2px solid var(--ink); border-radius:4px; padding:6px; }
