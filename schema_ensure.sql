@@ -238,6 +238,7 @@ alter table public.project_phases add column if not exists order_partner_id uuid
 alter table public.project_phases add column if not exists ordered_at timestamptz;
 alter table public.project_phases add column if not exists organization_id uuid;
 alter table public.project_phases add column if not exists planned_mandays numeric;
+alter table public.project_phases add column if not exists progress_pct integer;
 alter table public.project_phases add column if not exists project_id uuid;
 alter table public.project_phases add column if not exists seq integer;
 alter table public.project_phases add column if not exists start_date date;
