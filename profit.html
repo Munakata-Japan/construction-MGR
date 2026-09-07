@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<!-- BUILD: profit (損益・粗利) v20260907A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>損益・粗利 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{ max-width:1360px; }
+
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:10px; }
+  .lead, .ctl, #msg, .sumgrid, .pstrip, .count{ flex:0 0 auto; }
+  #ptable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
+  .lead{ color:var(--sub); font-size:12.5px; line-height:1.6; margin:0 0 8px; }
+  .lead b{ color:var(--ink); }
+
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:38px; flex:0 1 auto; }
+  .ctl .sp{ flex:1 1 0; }
+
+  /* サマリ */
+  .sumgrid{ display:grid; gap:8px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); margin-bottom:8px; }
+  .sumcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:9px 12px; }
+  .sumcard.hero{ border-color:var(--ink-2); }
+  .sumcard .t{ font-size:11px; color:var(--sub); margin-bottom:3px; }
+  .sumcard .v{ font-family:var(--mono); font-weight:700; font-size:20px; color:var(--ink); }
+  .sumcard .v.pos{ color:var(--ok); } .sumcard .v.neg{ color:var(--alert); }
+  .sumcard .s{ font-size:10.5px; color:var(--sub); margin-top:3px; font-family:var(--mono); }
+
+  .pstrip{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;
+           background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); padding:8px 12px; }
+  .pstrip .pi{ font-size:12px; color:var(--ink-2); }
+  .pstrip .pi b{ font-family:var(--mono); }
+  .pstrip .pi .warn{ color:var(--alert); font-weight:700; }
+  .pstrip .sp{ flex:1 1 0; }
+  .pstrip .closed{ font-size:12px; font-weight:700; color:var(--ok); }
+  .pstrip .open{ font-size:12px; color:var(--sub); }
+
+  .ptable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+           box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
+  table.pl{ border-collapse:separate; border-spacing:0; width:100%; min-width:760px; font-size:12.5px; }
+  table.pl th, table.pl td{ padding:7px 9px; border-bottom:1px solid var(--rule-2); text-align:left; vertical-align:top; }
+  table.pl thead th{ position:sticky; top:0; z-index:6; background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+                     white-space:nowrap; border-bottom:1px solid var(--rule); }
+  table.pl .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+  table.pl thead th.num{ text-align:right; }
+  col.cno{ width:44px; } col.ccat{ width:40px; } col.cmoney{ width:104px; } col.cact{ width:122px; } col.cst{ width:84px; } col.cins{ width:132px; }
+  .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
+  .cat{ font-size:10.5px; font-weight:700; padding:2px 6px; border-radius:var(--radius-sm); display:inline-block; }
+  .cat.material{ background:#E3EBF3; color:var(--ink-2); }
+  .cat.labor{ background:#FBF1EF; color:#8C2A1D; }
+  .nm{ font-weight:700; overflow-wrap:break-word; line-height:1.4; }
+  .nm .sub{ display:block; color:var(--sub); font-weight:400; font-size:11px; }
+  .xbadge{ font-size:9.5px; font-weight:700; color:var(--sub); background:#EEF1EA; border:1px solid var(--rule-2); border-radius:var(--radius-sm); padding:0 5px; margin-left:5px; }
+
+  /* 実際原価セルのタグ */
+  td.act .amt{ font-family:var(--mono); font-weight:700; }
+  td.act .tag{ display:inline-block; font-size:9px; font-weight:700; border-radius:999px; padding:0 6px; margin-left:5px; }
+  td.act.fixed{ background:#EAF4EC; box-shadow:inset 3px 0 0 var(--ok); }
+  td.act.fixed .tag{ color:#fff; background:var(--ok); }
+  td.act.committed .tag{ color:var(--ink-2); background:#E3EBF3; }
+  td.act.planned{ color:var(--ink-2); } td.act.planned .tag{ color:var(--sub); background:#EEF1EA; }
+
+  .st{ font-size:10px; font-weight:700; padding:2px 6px; border-radius:var(--radius-sm); white-space:nowrap; }
+  .st.estimate{ background:#EEF1EA; color:var(--sub); }
+  .st.ordered{ background:#FBF3E2; color:#8A6D1B; }
+  .st.delivered{ background:#E3EBF3; color:var(--ink-2); }
+  .st.inspected{ background:#EAF4EC; color:#1F6B3B; }
+
+  .ins{ font-size:11px; padding:4px 9px; min-height:0; }
+  .ins.done{ color:var(--ok); font-weight:700; }
+  .ins .clr{ display:block; font-size:10px; color:var(--sub); cursor:pointer; margin-top:2px; }
+  .ins .clr:hover{ text-decoration:underline; }
+  .iedit{ display:flex; flex-direction:column; gap:4px; min-width:118px; }
+  .iedit input{ min-height:32px; width:100%; text-align:right; font-family:var(--mono); }
+  .iedit .ib{ display:flex; gap:4px; }
+  .iedit .ib button{ min-height:0; padding:4px 7px; font-size:11px; flex:1 1 auto; }
+
+  tr.disc td{ background:#E9ECE4; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+  tr.disc td.dname{ font-weight:700; color:var(--ink); white-space:nowrap; }
+  tr.disc td.dname .gc{ font-weight:400; color:var(--sub); font-family:var(--mono); font-size:11px; margin-left:6px; }
+  tr.disc td.num{ font-weight:700; }
+
+  tfoot td{ position:sticky; bottom:0; z-index:5; background:#F5F7F3; border-top:2px solid var(--ink); font-weight:700; }
+  tfoot td.num{ font-family:var(--mono); }
+
+  @media (max-width:820px){
+    body{ height:auto; overflow:visible; display:block; }
+    .wrap{ flex:none; height:auto; overflow:visible; display:block; }
+    #ptable{ display:block; }
+    .ptable{ flex:none; max-height:70vh; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>損益・粗利</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<div class="wrap">
+  <p class="lead">
+    発注確定・<b>検収</b>で品目ごとの<b>実際原価</b>を確定し、
+    売上（税抜の請負金額）と突き合わせて<b>粗利</b>を締めます。
+    未検収の品目は<b>決定額・予算で見込み</b>として仮に足し、締まり具合が分かるようにしています。
+    ここは支払（振込・入金）は扱いません。
+  </p>
+
+  <div class="ctl">
+    <select id="proj"><option value="">工事を選んでください</option></select>
+    <select id="fcat">
+      <option value="">材工すべて</option>
+      <option value="material">材料費のみ</option>
+      <option value="labor">外注・労務費のみ</option>
+    </select>
+    <span class="sp"></span>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div class="sumgrid" id="sumgrid" hidden></div>
+  <div class="pstrip" id="pstrip" hidden></div>
+
+  <p class="count" id="count"></p>
+  <div id="ptable"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isMgr = me.role === 'admin' || me.role === 'manager';
+
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  let projects = [], items = [], projId = null, project = null;
+  let editing = null;   // 検収入力中の itemId
+
+  const DISC = ['土木工事', '電気工事', '共通'];
+  const NONE = '__none__';
+  const STATN = { estimate:'見積中', ordered:'発注済み', delivered:'納品済み', inspected:'検収済み', cancelled:'中止' };
+
+  const todayYMD = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const nz = v => Number(v) || 0;
+
+  // 実際原価の有効値（確定→暫定→見込みの順）
+  function eff(x){
+    const fixed = x.status === 'inspected' || x.actual_amount != null;
+    if (fixed){
+      const v = x.actual_amount != null ? Number(x.actual_amount) : nz(x.contract_amount ?? x.amount ?? x.budget_amount);
+      return { v: v || 0, k: 'fixed' };
+    }
+    const committed = x.status === 'ordered' || x.status === 'delivered';
+    const base = x.contract_amount ?? x.budget_amount ?? x.amount ?? 0;
+    return { v: nz(base), k: committed ? 'committed' : 'planned' };
+  }
+  const TAGN = { fixed:'確定', committed:'暫定', planned:'見込み' };
+
+  async function loadRefs(){
+    const { data } = await sb.from('projects')
+      .select('id,project_no,name,contract_amount,profit_closed_at')
+      .eq('is_active', true).order('project_no', { ascending:false });
+    projects = data || [];
+    $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
+      projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+  }
+
+  async function loadProject(){
+    if (!projId){ project = null; items = []; render(); return; }
+    const pr = await sb.from('projects')
+      .select('id,project_no,name,contract_amount,profit_closed_at,profit_closed_by').eq('id', projId).maybeSingle();
+    project = pr.data || null;
+    const { data, error } = await sb.from('phase_budget_items')
+      .select('id,phase_id,category,item_name,budget_amount,contract_amount,amount,unit_price,quantity,unit,status,cost_stage,discipline,sort_order,seq,actual_amount,inspected_on,estimate_partner_id')
+      .eq('project_id', projId).order('seq');
+    if (error){
+      showMsg($('msg'),
+        /column .* does not exist|schema cache/i.test(error.message || '')
+          ? '実績・損益に必要な項目がまだありません。Supabase で phase18_actual_cost.sql を実行してください。'
+          : '読み込めませんでした。' + error.message, 'err');
+      items = [];
+    } else {
+      items = (data || []).filter(x => x.status !== 'cancelled');
+    }
+    render();
+  }
+
+  function render(){
+    if (!projId){
+      $('sumgrid').hidden = true; $('pstrip').hidden = true;
+      $('count').textContent = '';
+      $('ptable').innerHTML = `<div class="hold" style="height:200px"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、実際原価と粗利が出ます。</div></div>`;
+      return;
+    }
+    renderSummary();
+    renderTable();
+  }
+
+  function filtered(){
+    const fc = $('fcat').value;
+    return items.filter(x => !fc || x.category === fc);
+  }
+
+  function renderSummary(){
+    const rows = filtered();
+    const sales = project && project.contract_amount != null ? Number(project.contract_amount) : null;
+
+    let actualTotal = 0, fixedTotal = 0, fixedCount = 0, sMat = 0, sLab = 0;
+    rows.forEach(x => {
+      const e = eff(x);
+      actualTotal += e.v;
+      if (e.k === 'fixed'){ fixedTotal += e.v; fixedCount++; }
+      if (x.category === 'material') sMat += e.v; else sLab += e.v;
+    });
+    const planTotal = actualTotal - fixedTotal;
+    const notYet = rows.length - fixedCount;
+    const gross = sales != null ? sales - actualTotal : null;
+    const rate = (sales && sales > 0 && gross != null) ? (gross / sales * 100) : null;
+    const gcls = gross == null ? '' : (gross >= 0 ? 'pos' : 'neg');
+
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML = `
+      <div class="sumcard"><div class="t">売上（税抜請負）</div>
+        <div class="v ${sales == null ? 'neg' : ''}">${sales == null ? '未登録' : fmtMoney(sales)}</div>
+        <div class="s">${sales == null ? '工事案件で請負金額を登録' : '&nbsp;'}</div></div>
+      <div class="sumcard hero"><div class="t">実際原価（確定＋見込み）</div>
+        <div class="v">${fmtMoney(actualTotal)}</div>
+        <div class="s">材 ${fmtMoney(sMat)} ／ 工 ${fmtMoney(sLab)}</div></div>
+      <div class="sumcard"><div class="t">粗利（売上−実際原価）</div>
+        <div class="v ${gcls}">${gross == null ? '—' : fmtMoney(gross)}</div>
+        <div class="s">&nbsp;</div></div>
+      <div class="sumcard"><div class="t">粗利率</div>
+        <div class="v ${gcls}">${rate == null ? '—' : rate.toFixed(1) + '%'}</div>
+        <div class="s">&nbsp;</div></div>
+    `;
+
+    // 締まり具合＋締め操作
+    const closed = project && project.profit_closed_at;
+    $('pstrip').hidden = false;
+    $('pstrip').innerHTML = `
+      <span class="pi">確定原価 <b>${fmtMoney(fixedTotal)}</b>（検収済 ${fixedCount}/${rows.length}件）</span>
+      <span class="pi">見込み残 <b>${fmtMoney(planTotal)}</b>（<span class="${notYet ? 'warn' : ''}">未検収 ${notYet}件</span>）</span>
+      <span class="sp"></span>
+      ${closed
+        ? `<span class="closed">✓ 締め済み ${fmtDate(project.profit_closed_at)}</span>${isMgr ? '<button class="btn ghost sm" id="reopenBtn" type="button">再オープン</button>' : ''}`
+        : `<span class="open">未締め</span>${isMgr ? '<button class="btn sm" id="closeBtn" type="button">損益を締める</button>' : ''}`}
+    `;
+    const cb = $('closeBtn'); if (cb) cb.addEventListener('click', closePL);
+    const rb = $('reopenBtn'); if (rb) rb.addEventListener('click', reopenPL);
+  }
+
+  function sectionsOf(){
+    const sections = [];
+    const present = [...new Set(items.map(x => x.discipline).filter(Boolean))];
+    [...DISC, ...present].forEach(s => { if (s && !sections.includes(s)) sections.push(s); });
+    return sections;
+  }
+
+  function renderTable(){
+    const rows = filtered();
+    $('count').textContent = `${rows.length} 件`;
+    if (!rows.length){
+      $('ptable').innerHTML = `<div class="empty"><b>明細がありません</b>実行予算で品目（材工）を入れると、ここに実際原価・粗利として集計されます。</div>`;
+      return;
+    }
+
+    const sections = sectionsOf();
+    const byDisc = new Map();
+    sections.forEach(s => byDisc.set(s, []));
+    byDisc.set(NONE, []);
+    rows.forEach(x => {
+      const key = (x.discipline && byDisc.has(x.discipline)) ? x.discipline : (x.discipline || NONE);
+      if (!byDisc.has(key)) byDisc.set(key, []);
+      byDisc.get(key).push(x);
+    });
+    const ord = (a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) || ((a.seq || 0) - (b.seq || 0));
+
+    let tBud = 0, tCon = 0, tAct = 0;
+    let h = `<div class="ptable"><table class="pl"><colgroup>
+      <col class="cno"><col class="ccat"><col><col class="cmoney"><col class="cmoney"><col class="cact"><col class="cst"><col class="cins"></colgroup>
+      <thead><tr>
+        <th class="rno">NO</th><th>区分</th><th>品名</th>
+        <th class="num">予算</th><th class="num">決定額</th><th class="num">実際原価</th><th>状態</th><th>検収</th>
+      </tr></thead><tbody>`;
+
+    let no = 0;
+    const sectOrder = [...sections, NONE];
+    sectOrder.forEach(sec => {
+      const arr = (byDisc.get(sec) || []).slice().sort(ord);
+      if (!arr.length) return;
+      const label = sec === NONE ? '未分類' : sec;
+      let dBud = 0, dCon = 0, dAct = 0;
+      arr.forEach(x => { dBud += nz(x.budget_amount); dCon += nz(x.contract_amount); dAct += eff(x).v; });
+      tBud += dBud; tCon += dCon; tAct += dAct;
+
+      h += `<tr class="disc">
+        <td class="dname" colspan="3"><span>${esc(label)}</span><span class="gc">${arr.length}件</span></td>
+        <td class="num">${dBud ? fmtMoney(dBud) : '—'}</td>
+        <td class="num">${dCon ? fmtMoney(dCon) : '—'}</td>
+        <td class="num">${fmtMoney(dAct)}</td>
+        <td></td><td></td></tr>`;
+
+      arr.forEach(x => {
+        no++;
+        const e = eff(x);
+        const st = x.status || 'estimate';
+        const isFixed = e.k === 'fixed';
+
+        let insCell;
+        if (editing === x.id){
+          const def = x.actual_amount != null ? x.actual_amount : (x.contract_amount != null ? x.contract_amount : (x.amount != null ? x.amount : ''));
+          insCell = `<div class="iedit">
+            <input data-f="amt" inputmode="numeric" placeholder="実際原価" value="${def}">
+            <div class="ib"><button class="btn sm" data-act="fix">確定</button>
+            <button class="btn ghost sm" data-act="cancel">×</button></div></div>`;
+        } else if (!isMgr){
+          insCell = isFixed ? `<span class="ins done">✓検収済</span>` : '<span class="sub" style="font-size:11px">—</span>';
+        } else if (isFixed){
+          insCell = `<span class="ins done">✓検収済 ${x.inspected_on ? fmtDate(x.inspected_on) : ''}</span><span class="clr" data-uninspect="${x.id}">検収解除</span>`;
+        } else {
+          insCell = `<button class="btn ghost sm ins" data-inspect="${x.id}" type="button">検収</button>`;
+        }
+
+        h += `<tr>
+          <td class="rno">${no}</td>
+          <td><span class="cat ${x.category}">${x.category === 'material' ? '材' : '工'}</span></td>
+          <td><span class="nm">${esc(x.item_name)}${x.cost_stage === 'extra' ? '<span class="xbadge">追加</span>' : ''}${x.note ? `<span class="sub">${esc(x.note)}</span>` : ''}</span></td>
+          <td class="num">${x.budget_amount != null ? fmtMoney(x.budget_amount) : '—'}</td>
+          <td class="num">${x.contract_amount != null ? fmtMoney(x.contract_amount) : '—'}</td>
+          <td class="act num ${e.k}"><span class="amt">${fmtMoney(e.v)}</span><span class="tag">${TAGN[e.k]}</span></td>
+          <td><span class="st ${st}">${STATN[st] || st}</span></td>
+          <td>${insCell}</td>
+        </tr>`;
+      });
+    });
+
+    h += `</tbody><tfoot><tr>
+      <td colspan="3">合計</td>
+      <td class="num">${fmtMoney(tBud)}</td>
+      <td class="num">${fmtMoney(tCon)}</td>
+      <td class="num">${fmtMoney(tAct)}</td>
+      <td colspan="2"></td></tr></tfoot></table></div>`;
+
+    $('ptable').innerHTML = h;
+    wire();
+  }
+
+  function wire(){
+    const t = $('ptable');
+    t.querySelectorAll('[data-inspect]').forEach(b =>
+      b.addEventListener('click', () => { editing = b.dataset.inspect; renderTable();
+        const inp = $('ptable').querySelector('.iedit input'); if (inp){ inp.focus(); inp.select(); } }));
+    t.querySelectorAll('[data-uninspect]').forEach(b =>
+      b.addEventListener('click', () => uninspect(b.dataset.uninspect)));
+    t.querySelectorAll('.iedit').forEach(box => {
+      box.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+        if (btn.dataset.act === 'cancel'){ editing = null; renderTable(); return; }
+        inspect(editing, box.querySelector('input[data-f="amt"]').value);
+      }));
+      box.querySelector('input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') box.querySelector('[data-act="fix"]').click();
+      });
+    });
+  }
+
+  async function inspect(itemId, amtStr){
+    const x = items.find(i => i.id === itemId); if (!x) return;
+    let amt = (amtStr || '').trim() === '' ? (x.contract_amount != null ? x.contract_amount : (x.amount != null ? x.amount : (x.budget_amount != null ? x.budget_amount : null))) : Number(amtStr);
+    if (amt != null && isNaN(amt)) amt = null;
+    const today = todayYMD();
+    const { error } = await sb.from('phase_budget_items')
+      .update({ actual_amount: amt, status: 'inspected', inspected_on: today }).eq('id', itemId).select('id').maybeSingle();
+    if (error){ showMsg($('msg'), '検収を保存できませんでした。' + (error.message || ''), 'err'); return; }
+    x.actual_amount = amt; x.status = 'inspected'; x.inspected_on = today;
+    editing = null; render();
+    showMsg($('msg'), '検収しました（実際原価に確定）。', 'ok');
+  }
+
+  async function uninspect(itemId){
+    const x = items.find(i => i.id === itemId); if (!x) return;
+    if (!confirm('検収を解除します。実際原価は見込みに戻ります。よろしいですか？')) return;
+    const back = x.contract_amount != null ? 'ordered' : 'estimate';
+    const { error } = await sb.from('phase_budget_items')
+      .update({ actual_amount: null, inspected_on: null, status: back }).eq('id', itemId);
+    if (error){ showMsg($('msg'), '検収解除を保存できませんでした。' + (error.message || ''), 'err'); return; }
+    x.actual_amount = null; x.inspected_on = null; x.status = back;
+    render();
+  }
+
+  async function closePL(){
+    if (!confirm('この工事の損益を締めます（締めた日を記録します）。よろしいですか？')) return;
+    const now = new Date().toISOString();
+    const { error } = await sb.from('projects').update({ profit_closed_at: now, profit_closed_by: me.id }).eq('id', projId);
+    if (error){ showMsg($('msg'), '締めを保存できませんでした。' + (error.message || ''), 'err'); return; }
+    if (project) project.profit_closed_at = now;
+    render();
+    showMsg($('msg'), '損益を締めました。', 'ok');
+  }
+
+  async function reopenPL(){
+    if (!confirm('締めを解除して再オープンします。よろしいですか？')) return;
+    const { error } = await sb.from('projects').update({ profit_closed_at: null, profit_closed_by: null }).eq('id', projId);
+    if (error){ showMsg($('msg'), '再オープンを保存できませんでした。' + (error.message || ''), 'err'); return; }
+    if (project) project.profit_closed_at = null;
+    render();
+  }
+
+  $('fcat').addEventListener('change', render);
+  $('proj').addEventListener('change', async () => {
+    projId = $('proj').value || null;
+    const u = new URL(location.href);
+    if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+    editing = null;
+    await loadProject();
+  });
+
+  /* ================= 起動 ================= */
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)){
+    $('proj').value = q; projId = q;
+    await loadProject();
+  } else {
+    render();
+  }
+})();
+</script>
+</body>
+</html>
