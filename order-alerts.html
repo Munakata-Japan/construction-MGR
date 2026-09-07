@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料調達計画表) v20260908E -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260908F -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -83,7 +83,10 @@
 
   .atable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
            box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
-  .ahead, .arow{ display:grid; align-items:start; gap:8px; }
+  .ahead, .arow{ display:grid; align-items:stretch; gap:8px; }
+  /* 列間の縦罫線（セルを縦いっぱいに伸ばして右側に線） */
+  .ahead > span, .arow > span{ border-right:1px solid var(--rule); padding-right:8px; }
+  .ahead > span:last-child, .arow > span:last-child{ border-right:none; padding-right:0; }
   /* 工事を1つ選んだとき（工事列なし）と、すべての工事（横断・工事列あり）で列を切り替える */
   /* 大画面で列が間延びしないよう最大幅を制限して中央寄せ（ヘッダー・行で同じ幅） */
   .ahead, .arow{ max-width:1440px; margin-inline:auto; box-sizing:border-box; }
@@ -92,7 +95,7 @@
   .ahead{
     position:sticky; top:0; z-index:5;
     background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
-    white-space:nowrap; align-items:center; padding:6px 12px;
+    white-space:nowrap; align-items:stretch; padding:6px 12px;
     border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0;
   }
   .arow{
@@ -161,6 +164,7 @@
     .ahead{ display:none; }
     .m-one .arow, .m-all .arow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
     .arow .num, .arow .rno, .arow > span:last-child, .arow .ctr{ text-align:left; }
+    .arow > span{ border-right:none; padding-right:0; }
     .mlbl{ display:inline; color:var(--sub); font-weight:700; font-size:11px; }
   }
 </style>
