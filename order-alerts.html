@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料調達計画表) v20260908D -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260908E -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -109,8 +109,13 @@
   .arow .sub{ font-size:12px; color:var(--sub); line-height:1.4; }
   .arow .num{ font-family:var(--mono); text-align:center; white-space:nowrap; font-size:12.5px; }
   .ahead .num{ text-align:center; }
-  /* 状態列（最終列）もヘッダー・中身をそろえて中央 */
-  .ahead > span:last-child, .arow > span:last-child{ text-align:center; }
+  /* ヘッダーは全列そろえて中央（見出し行の左寄りバラつきを解消） */
+  .ahead > span{ text-align:center; }
+  /* 状態列（最終列）は中身も中央 */
+  .arow > span:last-child{ text-align:center; }
+  /* アラート・工程は中身も中央にしてヘッダーとそろえる */
+  .arow .ctr{ text-align:center; }
+  .arow .ctr .altag{ text-align:left; }
 
   .mlbl{ display:none; }
   .cat{ font-size:10.5px; font-weight:700; padding:1px 5px; border-radius:var(--radius-sm); margin-right:5px; }
@@ -155,7 +160,7 @@
     .atable{ flex:none; max-height:none; overflow:visible; }
     .ahead{ display:none; }
     .m-one .arow, .m-all .arow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
-    .arow .num, .arow .rno, .arow > span:last-child{ text-align:left; }
+    .arow .num, .arow .rno, .arow > span:last-child, .arow .ctr{ text-align:left; }
     .mlbl{ display:inline; color:var(--sub); font-weight:700; font-size:11px; }
   }
 </style>
@@ -430,9 +435,9 @@
         : '';
       h += `<a class="arow ${a.level === 'red' ? 'red' : ''}" href="${href}"${isMgr ? ` data-eid="${x.id}"` : ''}>
         <span class="rno"><b class="mlbl">No. </b>${i + 1}</span>
-        <span><span class="altag ${a.level}">${esc(a.text)}${a.dlNote && a.deadline ? `<span class="dl">発注期限 ${fmtShort(a.deadline)}</span>` : ''}</span></span>
+        <span class="ctr"><span class="altag ${a.level}">${esc(a.text)}${a.dlNote && a.deadline ? `<span class="dl">発注期限 ${fmtShort(a.deadline)}</span>` : ''}</span></span>
         ${projCell}
-        <span><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '工事全体'}</span></span>
+        <span class="ctr"><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '工事全体'}</span></span>
         <span class="num"><b class="mlbl">着工 </b>${phase && phase.start_date ? fmtShort(phase.start_date) : '—'}</span>
         <span><span class="cat ${x.category}">${x.category === 'labor' ? '工' : '材'}</span>
           <span class="nm" style="display:inline;font-size:12px">${esc(x.item_name)}</span>
