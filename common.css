@@ -117,11 +117,11 @@ body{
 }
 .hcell{
   background:var(--card); flex:1 1 108px; min-width:0;
-  padding:11px 14px; display:flex; align-items:baseline; gap:9px;
+  padding:5px 12px; display:flex; align-items:baseline; gap:7px;
 }
-.hlbl{ font-size:12px; color:var(--sub); white-space:nowrap; }
+.hlbl{ font-size:11px; color:var(--sub); white-space:nowrap; }
 .hval{
-  font-family:var(--mono); font-size:19px; font-weight:500;
+  font-family:var(--mono); font-size:15px; font-weight:500;
   color:var(--ink); line-height:1.2;
 }
 .hval.ok{ font-size:14px; color:var(--ok); }
@@ -132,7 +132,7 @@ body{
 /* 保管量：文字数が多いため幅を広く取り、1行に収める */
 .hcell.st{ flex:2 1 264px; flex-wrap:wrap; align-items:baseline; column-gap:7px; }
 .hcell.st .hlbl, .hcell.st .hval, .hcell.st .hsub{ white-space:nowrap; }
-.hcell.st .hval{ font-size:17px; }
+.hcell.st .hval{ font-size:14px; }
 .hsub{ font-family:var(--mono); font-size:11px; color:var(--sub); }
 .stbar{
   flex:1 1 100%; height:3px; background:var(--rule-2);
@@ -149,7 +149,7 @@ body{
 }
 .grp:first-of-type{ margin-top:0; }
 .grp h2{
-  font-family:var(--disp); font-weight:700; font-size:16px;
+  font-family:var(--disp); font-weight:700; font-size:14px;
   margin:0; padding-left:10px; border-left:4px solid var(--safety);
   line-height:1.4;
 }
@@ -162,7 +162,7 @@ body{
 .mode{
   display:grid; grid-template-columns:46px 1fr; align-items:stretch;
   background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-  text-decoration:none; color:inherit; min-height:var(--tap);
+  text-decoration:none; color:inherit; min-height:38px;
   overflow:hidden; box-shadow:var(--shadow-1);
   transition:box-shadow .15s ease, transform .15s ease, border-color .15s ease;
 }
@@ -171,12 +171,12 @@ body{
   font-family:var(--mono); font-size:13px;
   display:flex; align-items:center; justify-content:center;
 }
-.mode .mbody{ padding:9px 13px; min-width:0; }
+.mode .mbody{ padding:5px 12px; min-width:0; }
 .mttl{
-  display:block; font-family:var(--disp); font-weight:700; font-size:15.5px;
-  line-height:1.4;
+  display:block; font-family:var(--disp); font-weight:700; font-size:13.5px;
+  line-height:1.35;
 }
-.msub{ display:block; font-size:12px; color:var(--sub); line-height:1.5; }
+.msub{ display:block; font-size:11px; color:var(--sub); line-height:1.35; }
 
 a.mode:hover{ border-color:var(--ink); box-shadow:var(--shadow-2); transform:translateY(-2px); }
 a.mode:hover .mno{ background:var(--safety); color:var(--ink); }
