@@ -57,6 +57,7 @@ alter table public.phase_order_items add column if not exists unit text;
 alter table public.phase_order_items add column if not exists unit_price numeric;
 
 -- phase_budget_items
+alter table public.phase_budget_items add column if not exists actual_amount numeric;
 alter table public.phase_budget_items add column if not exists amount numeric;
 alter table public.phase_budget_items add column if not exists budget_amount numeric;
 alter table public.phase_budget_items add column if not exists category text;
@@ -68,6 +69,7 @@ alter table public.phase_budget_items add column if not exists delivered_qty num
 alter table public.phase_budget_items add column if not exists discipline text;
 alter table public.phase_budget_items add column if not exists due_date date;
 alter table public.phase_budget_items add column if not exists estimate_partner_id uuid;
+alter table public.phase_budget_items add column if not exists inspected_on date;
 alter table public.phase_budget_items add column if not exists is_import boolean;
 alter table public.phase_budget_items add column if not exists item_name text;
 alter table public.phase_budget_items add column if not exists lead_time_days integer;
@@ -139,6 +141,8 @@ alter table public.projects add column if not exists name text;
 alter table public.projects add column if not exists note text;
 alter table public.projects add column if not exists organization_id uuid;
 alter table public.projects add column if not exists permits jsonb;
+alter table public.projects add column if not exists profit_closed_at timestamptz;
+alter table public.projects add column if not exists profit_closed_by uuid;
 alter table public.projects add column if not exists project_no text;
 alter table public.projects add column if not exists schedule_revised_by uuid;
 alter table public.projects add column if not exists schedule_revised_on date;
