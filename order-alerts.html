@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料調達計画表) v20260908A -->
+<!-- BUILD: order-alerts (材料調達計画表) v20260908B -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -86,9 +86,9 @@
   .ahead, .arow{ display:grid; align-items:start; gap:8px; }
   /* 工事を1つ選んだとき（工事列なし）と、すべての工事（横断・工事列あり）で列を切り替える */
   /* 大画面で列が間延びしないよう最大幅を制限して中央寄せ（ヘッダー・行で同じ幅） */
-  .ahead, .arow{ max-width:1080px; margin-inline:auto; box-sizing:border-box; }
-  .m-one .ahead, .m-one .arow{ min-width:820px; grid-template-columns:44px 160px 1.5fr 0.95fr 100px 100px 88px; }
-  .m-all .ahead, .m-all .arow{ max-width:1240px; min-width:1050px; grid-template-columns:44px 160px 1.35fr 0.95fr 1fr 100px 100px 88px; }
+  .ahead, .arow{ max-width:1140px; margin-inline:auto; box-sizing:border-box; }
+  .m-one .ahead, .m-one .arow{ min-width:904px; grid-template-columns:44px 160px 1.4fr 76px 0.95fr 100px 100px 88px; }
+  .m-all .ahead, .m-all .arow{ max-width:1300px; min-width:1134px; grid-template-columns:44px 160px 1.3fr 0.95fr 76px 1fr 100px 100px 88px; }
   .ahead{
     position:sticky; top:0; z-index:5;
     background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
@@ -417,7 +417,7 @@
     }
 
     let h = `<div class="atable ${isAll ? 'm-all' : 'm-one'}"><div class="ahead">
-      <span class="rno">NO</span><span>アラート</span>${isAll ? '<span>工事</span>' : ''}<span>工程</span><span>材料</span>
+      <span class="rno">NO</span><span>アラート</span>${isAll ? '<span>工事</span>' : ''}<span>工程</span><span class="num">着工</span><span>材料</span>
       <span class="num">納品予定</span><span class="num">発注期限</span><span>状態</span>
     </div>`;
     rows.forEach(({ x, phase, a }, i) => {
@@ -432,7 +432,8 @@
         <span class="rno"><b class="mlbl">No. </b>${i + 1}</span>
         <span><span class="altag ${a.level}">${esc(a.text)}${a.dlNote && a.deadline ? `<span class="dl">発注期限 ${fmtShort(a.deadline)}</span>` : ''}</span></span>
         ${projCell}
-        <span><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '工事全体'}</span>${phase && phase.start_date ? `<span class="sub">着工 ${fmtShort(phase.start_date)}</span>` : ''}</span>
+        <span><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '工事全体'}</span></span>
+        <span class="num"><b class="mlbl">着工 </b>${phase && phase.start_date ? fmtShort(phase.start_date) : '—'}</span>
         <span><span class="cat ${x.category}">${x.category === 'labor' ? '工' : '材'}</span>
           <span class="nm" style="display:inline;font-size:12px">${esc(x.item_name)}</span>
           ${(x.procurement_type || x.is_import) ? `<span class="proc${x.procurement_type === 'made_to_order' || x.is_import ? ' hot' : ''}">${x.procurement_type === 'made_to_order' ? '受注生産' : (x.procurement_type === 'stock' ? '在庫品' : '')}${x.is_import ? (x.procurement_type ? '・輸入' : '輸入') : ''}</span>` : ''}
