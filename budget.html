@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: budget (実行予算) v20260907F -->
+<!-- BUILD: budget (実行予算) v20260907G -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -57,15 +57,16 @@
   .sumcard.over .v{ color:var(--alert); }
   .sumcard .v2{ font-family:var(--mono); font-size:10.5px; color:var(--sub); margin-top:1px; }
   .sumcard .up{ color:var(--ok); font-weight:700; } .sumcard .dn{ color:var(--alert); font-weight:800; }
-  .sumcard.over::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:rgba(197,56,38,.42); opacity:0; }
+  .sumcard.over::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:rgba(197,56,38,.6); opacity:0; }
+  .sumcard.hero.over::after{ background:rgba(255,224,214,.65); }  /* 赤カードの上は白めのフラッシュで点滅を見せる */
   @media (prefers-reduced-motion:no-preference){
     .sumgrid .sumcard{ animation:cardin .35s ease both; }
     .sumgrid .sumcard:nth-child(2){ animation-delay:.05s; }
     .sumgrid .sumcard:nth-child(3){ animation-delay:.10s; }
     @keyframes cardin{ from{ opacity:0; transform:translateY(-5px); } to{ opacity:1; transform:none; } }
-    /* 超過カード：開いた後 約3秒 赤く点滅（6回）してから収まる */
-    .sumcard.over::after{ animation:alertblink .5s steps(1,end) .35s 6 both; }
-    @keyframes alertblink{ 0%,49%{ opacity:.9; } 50%,100%{ opacity:0; } }
+    /* 超過カード：開いた後 約3.6秒 赤く点滅（4回）してから収まる */
+    .sumcard.over::after{ animation:blinkfade .45s ease-in-out .3s 8 alternate both; }
+    @keyframes blinkfade{ from{ opacity:0; } to{ opacity:.72; } }
   }
 
   .btable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
