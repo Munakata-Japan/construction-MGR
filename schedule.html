@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260907G -->
+<!-- BUILD: schedule (工程表) v20260908A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -758,6 +758,10 @@ body > header.bar{ flex:0 0 auto; }
   const canEdit = (me.role === 'admin' || me.role === 'manager');
 
   paintBar(me, await loadOrgName(me.organization_id));
+
+  // 発注（金額を扱う）は管理者・現場監督のみ。一般社員・外注社員・協力業者には
+  // ボタン自体を出さず、発注パネル（単価・金額）へ到達させない（金額欄を最初から持たせない）。
+  if (!canEdit){ const ob = $('ordbtn'); if (ob) ob.remove(); }
 
   $('notebtn').classList.add('on');
 
@@ -1773,12 +1777,13 @@ body > header.bar{ flex:0 0 auto; }
   }
 
   function openOrders(focusPhase){
+    if (!canEdit) return;   // 発注（金額）は管理者・現場監督のみ。他区分には開かせない
     if (!projId){ showMsg($('msg'), '工事を選んでください。', 'err'); return; }
     $('oadd').hidden = !canEdit;
     paintOrders(focusPhase);
     $('opanel').classList.add('open');
   }
-  $('ordbtn').addEventListener('click', () => openOrders(null));
+  { const ob = $('ordbtn'); if (ob) ob.addEventListener('click', () => openOrders(null)); }
 
   $('notebtn').addEventListener('click', () => {
     showNotes = !showNotes;
@@ -1884,6 +1889,7 @@ body > header.bar{ flex:0 0 auto; }
   }
 
   async function openOrderEdit(o){
+    if (!canEdit) return;   // 発注の編集（単価・金額）は管理者・現場監督のみ
     oediting = o || null;
     showMsg($('oemsg'), '');
     $('oettl').textContent = o ? '発注・依頼' : '発注・依頼の追加';
