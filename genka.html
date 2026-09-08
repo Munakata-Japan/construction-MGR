@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: genka (相見積・原価決定) v20260907B -->
+<!-- BUILD: genka (業者見積・原価決定) v20260908A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>相見積・原価決定 ｜ 宗像総合管理システム</title>
+<title>業者見積・原価決定 ｜ 宗像総合管理システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -135,7 +135,7 @@
 
 <header class="bar">
   <span class="mark" aria-hidden="true"></span>
-  <h1>相見積・原価決定</h1>
+  <h1>業者見積・原価決定</h1>
   <div class="who" id="who"></div>
 </header>
 
@@ -250,7 +250,7 @@
       .select('id,budget_item_id,partner_id,unit_price,amount').eq('project_id', projId);
     if (error){
       if (/relation .* does not exist|schema cache/i.test(error.message || ''))
-        showMsg($('msg'), '相見積の項目がまだありません。Supabase で phase17_estimate_quotes.sql を実行してください。', 'err');
+        showMsg($('msg'), '業者見積の項目がまだありません。Supabase で phase17_estimate_quotes.sql を実行してください。', 'err');
       return;
     }
     quotes = data || [];
@@ -296,7 +296,7 @@
       $('vends').innerHTML = '';
       $('sumgrid').hidden = true;
       $('count').textContent = '';
-      $('ctable').innerHTML = `<div class="hold" style="height:200px"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、相見積の比較が出ます。</div></div>`;
+      $('ctable').innerHTML = `<div class="hold" style="height:200px"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、業者見積の比較が出ます。</div></div>`;
       return;
     }
     renderVendors();
@@ -377,7 +377,7 @@
       return;
     }
     if (!rows.length){
-      $('ctable').innerHTML = `<div class="empty"><b>見積の明細がありません</b>実行予算で品目（材工）を入れると、ここに相見積として並びます。</div>`;
+      $('ctable').innerHTML = `<div class="empty"><b>見積の明細がありません</b>実行予算で品目（材工）を入れると、ここに業者見積として並びます。</div>`;
       return;
     }
 
