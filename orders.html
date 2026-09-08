@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: orders (材工発注) v20260908E -->
+<!-- BUILD: orders (材工発注) v20260909B -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -70,8 +70,8 @@
   .otable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
     box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
   .ohead, .orow{ display:grid; align-items:stretch; gap:8px; max-width:1440px; margin-inline:auto; box-sizing:border-box; }
-  .m-one .ohead, .m-one .orow{ min-width:900px; grid-template-columns:44px 116px 1.5fr 1fr 150px 64px 116px 116px; }
-  .m-all .ohead, .m-all .orow{ min-width:1080px; grid-template-columns:44px 116px 1.3fr 1fr 1fr 150px 64px 116px 116px; }
+  .m-one .ohead, .m-one .orow{ min-width:820px; grid-template-columns:44px 96px 1.6fr 1fr 150px 120px 104px; }
+  .m-all .ohead, .m-all .orow{ min-width:980px; grid-template-columns:44px 96px 1.4fr 1fr 1fr 150px 120px 104px; }
   .ohead{ position:sticky; top:0; z-index:5; background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
     white-space:nowrap; align-items:stretch; padding:6px 12px; border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0; }
   .ohead > span{ text-align:center; border-right:1px solid var(--rule); padding-right:8px; }
@@ -94,6 +94,7 @@
   .stag.planned{ color:#6B4E00; background:#FBF0D4; }
   .stag.ordered{ color:#255A91; background:#E7EFF7; }
   .stag.delivered{ color:var(--ok); background:#EAF2ED; }
+  .stag.inspected{ color:#fff; background:var(--ok); }
   .stag.cancelled{ color:var(--sub); background:#EDEFEA; text-decoration:line-through; }
   .stag.gap{ color:#fff; background:var(--alert); }
   .scope{ font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; white-space:nowrap; display:inline-block; }
@@ -128,7 +129,7 @@
 
 <div class="wrap">
   <p class="lead" id="lead" hidden>
-    外部への発注（<b>材料</b>・<b>工事</b>）を管理します。上のタブで「材料発注」と「工事発注」を切り替えられます。まだ発注していないもの（<b>発注抜け</b>）を点検し、<b>業者見積で原価を決めてから発注</b>します。業者見積・原価決定は「業者見積・原価決定」、発注の作成・編集は「工程表」から行えます。発注後の入荷（納品予定）は「材料到着スケジュール」で管理します。
+    <b>すべての発注（材料・工事）の台帳</b>です。着工前原価台帳の全品目を集約し、上のタブで<b>材料発注／工事発注</b>を切り替え、<b>発注抜け（未発注）</b>を点検します。原価は業者見積で決定（「業者見積・原価決定」）、品目や発注状態の編集は「実行予算」「工程表」から。発注後の入荷（納品予定）は「材料到着スケジュール」で確認できます。
   </p>
 
   <div class="ctl">
@@ -140,16 +141,11 @@
     <button class="fl-help" id="helpBtn" type="button">？使い方 ▼</button>
     <select id="fproj"><option value="">すべての工事</option></select>
     <select id="fstat">
-      <option value="all">すべての発注</option>
-      <option value="planned">これから出す</option>
-      <option value="ordered">発注済み</option>
-      <option value="delivered">届いた</option>
+      <option value="all">すべての状態</option>
       <option value="gap">未発注（発注抜け）</option>
-    </select>
-    <select id="fscope">
-      <option value="">社内・社外すべて</option>
-      <option value="internal">社内</option>
-      <option value="external">社外</option>
+      <option value="ordered">発注済み</option>
+      <option value="delivered">納品済み</option>
+      <option value="inspected">検査完了</option>
     </select>
     <span class="sp"></span>
     <a class="btn ghost sm newbtn" href="genka.html">業者見積・原価決定</a>
@@ -201,114 +197,88 @@
       projects.map(p => `<option value="${p.id}"${p.id===projId?' selected':''}>${esc(p.project_no||'')} ${esc(p.name)}</option>`).join('');
   }
 
+  // このページは「すべての発注の台帳（正）」。着工前原価台帳(phase_budget_items)の
+  // 全品目（材料・工事）を集約して表示する。材料到着スケジュール・実行予算と同じ品目。
   async function loadData(){
-    let oq = sb.from('phase_orders').select('*').eq('is_active', true);
-    let bq = sb.from('phase_budget_items').select('id,project_id,phase_id,item_name,category,cost_stage,status,quantity,unit,scheduled_delivery_date');
+    let bq = sb.from('phase_budget_items').select('*');
     let pq = sb.from('project_phases').select('id,project_id,name,seq').eq('is_active', true);
-    if (projId){ oq = oq.eq('project_id', projId); bq = bq.eq('project_id', projId); pq = pq.eq('project_id', projId); }
-    const [o, b, p] = await Promise.all([oq, bq, pq]);
-    if (o.error){
-      showMsg($('msg'), /relation .* does not exist|schema cache/i.test(o.error.message||'')
-        ? 'データベースに発注の表がまだありません。Supabase で phase_orders.sql を実行してください。'
-        : '発注を読み込めませんでした。' + o.error.message, 'err');
+    if (projId){ bq = bq.eq('project_id', projId); pq = pq.eq('project_id', projId); }
+    const [b, p] = await Promise.all([bq, pq]);
+    if (b.error){
+      showMsg($('msg'), /relation .* does not exist|schema cache/i.test(b.error.message||'')
+        ? 'データベースに実行予算の表がまだありません。Supabase で phase3_budget.sql を実行してください。'
+        : '読み込めませんでした。' + b.error.message, 'err');
     }
-    orders = o.data || []; budgets = b.data || []; phases = p.data || [];
+    budgets = b.data || []; phases = p.data || [];
   }
 
+  const STATN = { estimate:'未発注', ordered:'発注済み', delivered:'納品済み', inspected:'検査完了', cancelled:'中止' };
   const pmap = () => Object.fromEntries(phases.map(p => [p.id, p.name]));
   const ptmap = () => Object.fromEntries(partners.map(p => [p.id, p.name]));
-  const umap = () => Object.fromEntries(users.map(u => [u.id, u.name]));
   const projmap = () => Object.fromEntries(projects.map(p => [p.id, p]));
+  // 原価：決定額(相見積後) → 予算 → 単価×数量 の順で採用
+  const amountOf = x => (x.contract_amount != null ? x.contract_amount
+                       : x.budget_amount != null ? x.budget_amount
+                       : (x.unit_price != null && x.quantity != null) ? x.unit_price * x.quantity : null);
 
   function render(){
     const isAll = !projId;
-    const today = Math.round(Date.now()/DAY);
-    const PM = pmap(), PT = ptmap(), UM = umap(), PJ = projmap();
-    const fstat = $('fstat').value, fscope = $('fscope').value;
+    const PM = pmap(), PT = ptmap(), PJ = projmap();
+    const fstat = $('fstat').value;
 
-    // タブ（材料発注／工事発注）で表示を切り替える。材料か工事かは、発注が紐づく
-    // 予算台帳の費目 category（material／labor）で判定する。
-    const budgetById = Object.fromEntries(budgets.map(b => [b.id, b]));
-    const matOrders = orders.filter(o => { const b = budgetById[o.budget_item_id]; return b && b.category === matmode; });
+    // タブ：材料タブ＝費目=材料／工事タブ＝材料以外（労務など。未分類も工事側で拾う）
+    let items = budgets.filter(x => x.status !== 'cancelled')
+      .filter(x => matmode === 'material' ? x.category === 'material' : x.category !== 'material');
 
-    // 発注抜け（未発注）＝予算台帳で見積中(estimate)のまま、発注が紐づいていないもの（現モードの費目）
-    const orderedBItems = new Set(orders.filter(o=>o.budget_item_id).map(o=>o.budget_item_id));
-    const gaps = budgets.filter(b => b.status === 'estimate' && !orderedBItems.has(b.id) && b.category === matmode);
-
-    // サマリ集計（材料の発注のみ）
-    const activeOrders = matOrders.filter(o => o.status !== 'cancelled');
-    const nPlanned = activeOrders.filter(o=>o.status==='planned').length;
-    const nOrdered = activeOrders.filter(o=>o.status==='ordered').length;
-    const nOverdue = activeOrders.filter(o=>o.status==='planned' && o.due_date && d2n(o.due_date) < today).length;
-    const nGap = gaps.length;
+    const nGap     = items.filter(x => (x.status||'estimate') === 'estimate').length;
+    const nOrdered = items.filter(x => x.status === 'ordered').length;
+    const nDone    = items.filter(x => x.status === 'delivered' || x.status === 'inspected').length;
+    const total    = items.reduce((s,x)=> s + (amountOf(x)||0), 0);
 
     $('sumgrid').hidden = false;
     $('sumgrid').innerHTML =
-      `<div class="sumcard ${nGap>0?'danger':'ok'}"><span class="ico">${nGap>0?'⚠':'✓'}</span><span class="t">発注抜け</span><span class="v">${nGap}<small>件</small></span></div>`
-    + `<div class="sumcard ${nOverdue>0?'danger':'ok'}"><span class="ico">${nOverdue>0?'🔴':'✓'}</span><span class="t">期限超過</span><span class="v">${nOverdue}<small>件</small></span></div>`
-    + `<div class="sumcard warn"><span class="ico">📝</span><span class="t">これから出す</span><span class="v">${nPlanned}<small>件</small></span></div>`
-    + `<div class="sumcard info"><span class="ico">📦</span><span class="t">発注済み</span><span class="v">${nOrdered}<small>件</small></span></div>`;
+      `<div class="sumcard ${nGap>0?'danger':'ok'}"><span class="ico">${nGap>0?'⚠':'✓'}</span><span class="t">発注抜け（未発注）</span><span class="v">${nGap}<small>件</small></span></div>`
+    + `<div class="sumcard info"><span class="ico">📦</span><span class="t">発注済み</span><span class="v">${nOrdered}<small>件</small></span></div>`
+    + `<div class="sumcard ok"><span class="ico">✓</span><span class="t">納品・検査完了</span><span class="v">${nDone}<small>件</small></span></div>`
+    + `<div class="sumcard info"><span class="ico">¥</span><span class="t">原価合計</span><span class="v" style="font-size:13px">${fmtMoney(total)}</span></div>`;
 
-    // 行の作成
-    let rows = [];
-    if (fstat === 'gap'){
-      rows = gaps.map(b => ({ gap:true, b }));
-    } else {
-      let os = matOrders.slice();
-      if (fstat !== 'all') os = os.filter(o => o.status === fstat);
-      if (fscope) os = os.filter(o => (o.scope||'internal') === fscope);
-      // 期限の早い順（未定は末尾）、その中で状態
-      os.sort((a,b)=>{
-        const ax=a.due_date||'9999', bx=b.due_date||'9999';
-        return ax.localeCompare(bx);
-      });
-      rows = os.map(o => ({ gap:false, o }));
-    }
+    // 絞り込み
+    let rows = items.slice();
+    if (fstat === 'gap') rows = rows.filter(x => (x.status||'estimate') === 'estimate');
+    else if (fstat !== 'all') rows = rows.filter(x => x.status === fstat);
+
+    // 並び：未発注→発注済み→納品→検査。同状態内は工程順→登録順
+    const sto = { estimate:0, ordered:1, delivered:2, inspected:3 };
+    rows.sort((a,b)=> (sto[a.status]??9)-(sto[b.status]??9) || (a.seq||0)-(b.seq||0));
 
     if (!rows.length){
-      $('otable').innerHTML = `<div class="empty"><b>${fstat==='gap'?'発注抜けはありません':'発注がありません'}</b>${fstat==='gap'?'予算台帳の項目はすべて発注に紐づいています。':'工程表から発注を作成すると、ここに一覧されます。'}</div>`;
+      $('otable').innerHTML = `<div class="empty"><b>${fstat==='gap'?'発注抜けはありません':'該当する品目がありません'}</b>${fstat==='gap'?'この費目はすべて発注済みです。':'実行予算で品目を登録すると、ここに集約されます。'}</div>`;
       return;
     }
 
     const cls = isAll ? 'm-all' : 'm-one';
     let h = `<div class="otable ${cls}"><div class="ohead">`
-      + `<span class="rno">NO</span><span>状態</span><span>内容・品名</span><span>工程</span>`
+      + `<span class="rno">NO</span><span>状態</span><span>品目</span><span>工程</span>`
       + (isAll ? '<span>工事</span>' : '')
-      + `<span>発注先</span><span>区分</span><span>期限</span><span>金額</span></div>`;
+      + `<span>発注先</span><span>金額(原価)</span><span>納品予定</span></div>`;
 
-    rows.forEach((r, i) => {
-      if (r.gap){
-        const b = r.b, pj = PJ[b.project_id];
-        const href = `schedule.html?p=${b.project_id}&bitem=${b.id}`;
-        h += `<a class="orow gap" href="${href}">
-          <span class="rno"><b class="mlbl">No. </b>${i+1}</span>
-          <span class="ctr"><span class="stag gap">未発注</span></span>
-          <span><span class="nm" style="font-size:12.5px">${esc(b.item_name||'（無題）')}</span>${b.quantity?`<span class="sub">${b.quantity}${b.unit?esc(b.unit):''}</span>`:''}</span>
-          <span class="ctr"><span class="sub" style="font-size:12.5px">${PM[b.phase_id]?esc(PM[b.phase_id]):'工事全体'}</span></span>
-          ${isAll?`<span class="ctr"><span class="sub" style="font-size:12px">${pj?esc(pj.name):''}</span></span>`:''}
-          <span class="ctr sub">—</span>
-          <span class="ctr sub">—</span>
-          <span class="num">${b.scheduled_delivery_date?fmtShort(b.scheduled_delivery_date):'—'}</span>
-          <span class="num sub">—</span>
-        </a>`;
-      } else {
-        const o = r.o, pj = PJ[o.project_id];
-        const overdue = o.status==='planned' && o.due_date && d2n(o.due_date) < today;
-        const near = o.status==='planned' && o.due_date && !overdue && (d2n(o.due_date)-today) <= (o.alert_days ?? 14);
-        const dueTxt = o.due_date ? fmtShort(o.due_date) : (o.due_note ? esc(o.due_note) : '未定');
-        const href = `schedule.html?p=${o.project_id}&order=${o.id}`;
-        h += `<a class="orow ${overdue?'over':''}" href="${href}">
-          <span class="rno"><b class="mlbl">No. </b>${i+1}</span>
-          <span class="ctr"><span class="stag ${o.status}">${OSTAT[o.status]||o.status}</span></span>
-          <span><span class="nm" style="font-size:12.5px">${esc(o.title||'（無題）')}</span></span>
-          <span class="ctr"><span class="sub" style="font-size:12.5px">${PM[o.phase_id]?esc(PM[o.phase_id]):'工事全体'}</span></span>
-          ${isAll?`<span class="ctr"><span class="sub" style="font-size:12px">${pj?esc(pj.name):''}</span></span>`:''}
-          <span class="ctr"><span class="sub" style="font-size:12.5px">${o.partner_id&&PT[o.partner_id]?esc(PT[o.partner_id]):'—'}</span></span>
-          <span class="ctr"><span class="scope ${o.scope==='external'?'ex':'in'}">${o.scope==='external'?'社外':'社内'}</span></span>
-          <span class="num due ${overdue?'over':(near?'near':'')}">${o.due_date&&overdue?`${dueTxt}<br><span style="font-size:10px">${d2n(o.due_date)<today?`${today-d2n(o.due_date)}日超過`:''}</span>`:dueTxt}</span>
-          <span class="num">${o.total_amount?fmtMoney(o.total_amount):'—'}</span>
-        </a>`;
-      }
+    rows.forEach((x, i) => {
+      const pj = PJ[x.project_id];
+      const st = x.status || 'estimate';
+      const gap = (st === 'estimate');
+      const amt = amountOf(x);
+      const deliv = x.scheduled_delivery_date || x.delivered_on || null;
+      const href = `schedule.html?p=${x.project_id}&bitem=${x.id}`;
+      h += `<a class="orow ${gap?'gap':''}" href="${href}">
+        <span class="rno"><b class="mlbl">No. </b>${i+1}</span>
+        <span class="ctr"><span class="stag ${gap?'gap':st}">${STATN[st]||st}</span></span>
+        <span><span class="nm" style="font-size:12.5px">${esc(x.item_name||'（無題）')}</span>${x.quantity!=null?`<span class="sub">${x.quantity}${x.unit?esc(x.unit):''}</span>`:''}</span>
+        <span class="ctr"><span class="sub" style="font-size:12.5px">${PM[x.phase_id]?esc(PM[x.phase_id]):'工事全体'}</span></span>
+        ${isAll?`<span class="ctr"><span class="sub" style="font-size:12px">${pj?esc(pj.name):''}</span></span>`:''}
+        <span class="ctr"><span class="sub" style="font-size:12.5px">${x.estimate_partner_id&&PT[x.estimate_partner_id]?esc(PT[x.estimate_partner_id]):'—'}</span></span>
+        <span class="num">${amt!=null?fmtMoney(amt):'—'}</span>
+        <span class="num">${deliv?fmtShort(deliv):'—'}</span>
+      </a>`;
     });
     h += `</div>`;
     $('otable').innerHTML = h;
@@ -323,7 +293,6 @@
     await loadData(); render();
   });
   $('fstat').addEventListener('change', render);
-  $('fscope').addEventListener('change', render);
 
   // 材料発注／工事発注 の切替
   function setMode(m){
