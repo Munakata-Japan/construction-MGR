@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: orders (材工発注) v20260908E -->
+<!-- BUILD: orders (材工発注) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -229,7 +229,13 @@
     // タブ（材料発注／工事発注）で表示を切り替える。材料か工事かは、発注が紐づく
     // 予算台帳の費目 category（material／labor）で判定する。
     const budgetById = Object.fromEntries(budgets.map(b => [b.id, b]));
-    const matOrders = orders.filter(o => { const b = budgetById[o.budget_item_id]; return b && b.category === matmode; });
+    // 発注(phase_orders)は費目を持たないため、紐づく予算台帳の費目で材料/工事を判定する。
+    // 台帳未紐づけ・費目不明の発注が消えないよう、工事タブは「材料と確定していないもの＝全部」を拾う。
+    const matOrders = orders.filter(o => {
+      const b = budgetById[o.budget_item_id];
+      const cat = b ? b.category : null;
+      return matmode === 'material' ? (cat === 'material') : (cat !== 'material');
+    });
 
     // 発注抜け（未発注）＝予算台帳で見積中(estimate)のまま、発注が紐づいていないもの（現モードの費目）
     const orderedBItems = new Set(orders.filter(o=>o.budget_item_id).map(o=>o.budget_item_id));
