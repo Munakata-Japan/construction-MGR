@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: index (ログイン) v20260909A -->
+<!-- BUILD: index (ログイン) v20260909B -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -69,7 +69,7 @@
     .sp-draw.d4{ animation-delay:.48s } .sp-draw.d5{ animation-delay:.62s } .sp-draw.d6{ animation-delay:.74s }
     .sp-emblem .fillyl{ animation:spfill .5s ease .95s forwards; }
     .sp-word{ animation:spword .7s ease .55s forwards; }
-    .sp-bar > span{ animation:spbar 1.75s ease .15s forwards; }
+    .sp-bar > span{ animation:spbar 3s ease .15s forwards; }
     @keyframes spdraw{ to{ stroke-dashoffset:0 } }
     @keyframes spfill{ to{ opacity:1 } }
     @keyframes spword{ to{ opacity:1; transform:none } }
@@ -159,7 +159,7 @@
       <button id="go" class="btn wide" type="submit">ログイン</button>
     </form>
 
-    <p class="foot">v20260909A</p>
+    <p class="foot">v20260909B</p>
   </div>
 </div>
 
@@ -175,7 +175,7 @@
   // 起動スプラッシュ：一定時間見せてから、ログイン画面へ（または既ログインなら遷移）
   const splash = document.getElementById('splash');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const SPLASH_MS = reduce ? 500 : 1950;
+  const SPLASH_MS = reduce ? 800 : 3300;
   const t0 = Date.now();
   const holdSplash = fn => setTimeout(fn, Math.max(0, SPLASH_MS - (Date.now() - t0)));
   const hideSplash = () => { if (!splash) return; splash.classList.add('gone'); setTimeout(() => splash.remove(), 650); };
