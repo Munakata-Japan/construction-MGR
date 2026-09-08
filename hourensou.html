@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: hourensou (報・連・相) v20260908D -->
+<!-- BUILD: hourensou (報・連・相) v20260908E -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -474,14 +474,14 @@
       ? (r.acknowledged_at ? `<span class="ackchip yes">確認済（${UM[r.acknowledged_by]?esc(UM[r.acknowledged_by]):''} ${fmtDT(r.acknowledged_at)}）</span>`
                            : `<button class="btn sm" id="d_ack" type="button">本社として確認</button>`)
       : `<span class="ackchip ${r.acknowledged_at?'yes':'no'}">${r.acknowledged_at?'本社確認済':'本社未確認'}</span>`;
-    const delBtn = isMgr ? `<button class="btn ghost sm" id="d_del" type="button">削除</button>` : '';
+    // 報告・連絡・相談は全ログ保存が前提。削除機能は設けない。
 
     $('dbodywrap').innerHTML =
       `<div class="dmeta">${pj?esc(pj.name):'工事全体'}　｜　投稿：${UM[r.created_by]?esc(UM[r.created_by]):'—'}　${fmtDT(r.created_at)}　｜　${TYPESUB[r.report_type]}</div>`
     + `<div class="dbody">${esc(r.body||'')||'<span style=\"color:var(--sub)\">（本文なし）</span>'}</div>`
     + attHtml
     + statSel
-    + `<div class="cfoot">${ackBtn}<span style="flex:1 1 auto"></span>${delBtn}</div>`
+    + `<div class="cfoot">${ackBtn}</div>`
     + `<div style="font-size:12px;font-weight:800;color:var(--ink-2);margin-top:6px">やり取り（${reps.length}）</div>`
     + `<div class="replies" id="d_replies">${reps.map(x=>`<div class="reply"><div class="rmeta">${UM[x.created_by]?esc(UM[x.created_by]):'—'}　${fmtDT(x.created_at)}</div><div class="rtext">${esc(x.body||'')}</div></div>`).join('') || '<span class="sub" style="font-size:12px;color:var(--sub)">まだ返信はありません。</span>'}</div>`
     + `<textarea id="d_reply" placeholder="返信を書く（本社の回答・現場の追記）"></textarea>`
@@ -492,7 +492,6 @@
     $('d_close').addEventListener('click', ()=> $('dpanel').classList.remove('open'));
     const send = $('d_send'); if (send) send.addEventListener('click', sendReply);
     const ack = $('d_ack'); if (ack) ack.addEventListener('click', doAck);
-    const del = $('d_del'); if (del) del.addEventListener('click', doDelete);
     const ss = $('d_status'); if (ss) ss.addEventListener('change', ()=> changeStatus(ss.value));
   }
 
@@ -514,13 +513,6 @@
     const { error } = await sb.from('site_reports').update({ status: v }).eq('id', dId);
     if (error){ showMsg($('msg'),'状態を変えられませんでした。'+error.message,'err'); return; }
     await loadData(); render(); openDetail(dId);
-  }
-  async function doDelete(){
-    if (!confirm('この投稿を削除します。よろしいですか？（記録は残さず一覧から消えます）')) return;
-    const { error } = await sb.from('site_reports').update({ is_active:false }).eq('id', dId);
-    if (error){ showMsg($('msg'),'削除できませんでした。'+error.message,'err'); return; }
-    $('dpanel').classList.remove('open');
-    await loadData(); render();
   }
 
   // イベント
