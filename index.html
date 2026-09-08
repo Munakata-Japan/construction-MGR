@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: index (ログイン) v20260723D -->
+<!-- BUILD: index (ログイン) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -36,9 +36,92 @@
     color:var(--sub); letter-spacing:.06em; text-align:center;
   }
   .row .fld input{ border:1px solid var(--rule); }
+
+  /* ===== 起動スプラッシュ（図面×安全イエロー：太陽光・蓄電所サイトを製図） ===== */
+  .splash{ position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(125% 100% at 50% -8%, #1E4A7A 0%, #13385D 46%, #0B2540 100%);
+    color:#fff; overflow:hidden; transition:opacity .6s ease; }
+  .splash.gone{ opacity:0; pointer-events:none; }
+  .sp-grid{ position:absolute; inset:-2px; opacity:.55;
+    background-image:linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+                     linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(78% 68% at 50% 44%, #000 52%, transparent 100%);
+            mask-image:radial-gradient(78% 68% at 50% 44%, #000 52%, transparent 100%); }
+  .sp-core{ position:relative; text-align:center; padding:0 20px; }
+  .sp-emblem{ width:min(76vw,250px); height:auto; display:block; margin:0 auto 20px;
+    filter:drop-shadow(0 6px 20px rgba(0,0,0,.35)); }
+  .sp-emblem .st{ fill:none; stroke:#E9EEF5; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
+  .sp-emblem .yl{ stroke:var(--safety); }
+  .sp-emblem .fillyl{ fill:var(--safety); stroke:none; opacity:0; }
+  .sp-emblem .sp-draw{ stroke-dasharray:100; stroke-dashoffset:100; }
+  .sp-word{ display:inline-flex; align-items:center; gap:13px; opacity:0; transform:translateY(9px); }
+  .sp-mark{ width:9px; height:38px; background:var(--safety); border-radius:1px; flex:0 0 auto;
+    box-shadow:0 0 16px rgba(234,168,0,.55); }
+  .sp-txt{ text-align:left; }
+  .sp-kick{ font-family:var(--mono); font-size:11px; letter-spacing:.34em; color:#F0B417; margin-bottom:3px; }
+  .sp-title{ font-family:var(--disp); font-weight:700; font-size:clamp(20px,5.4vw,28px); letter-spacing:.03em; line-height:1.18; }
+  .sp-bar{ width:min(66vw,230px); height:3px; border-radius:2px; background:rgba(255,255,255,.14); margin:22px auto 0; overflow:hidden; }
+  .sp-bar > span{ display:block; height:100%; width:0; background:linear-gradient(90deg,#EAA800,#FFD65A); border-radius:2px; }
+  @media (prefers-reduced-motion:no-preference){
+    .sp-emblem .sp-draw{ animation:spdraw 1s ease forwards; }
+    .sp-draw.d1{ animation-delay:.05s } .sp-draw.d2{ animation-delay:.20s } .sp-draw.d3{ animation-delay:.34s }
+    .sp-draw.d4{ animation-delay:.48s } .sp-draw.d5{ animation-delay:.62s } .sp-draw.d6{ animation-delay:.74s }
+    .sp-emblem .fillyl{ animation:spfill .5s ease .95s forwards; }
+    .sp-word{ animation:spword .7s ease .55s forwards; }
+    .sp-bar > span{ animation:spbar 1.75s ease .15s forwards; }
+    @keyframes spdraw{ to{ stroke-dashoffset:0 } }
+    @keyframes spfill{ to{ opacity:1 } }
+    @keyframes spword{ to{ opacity:1; transform:none } }
+    @keyframes spbar{ to{ width:100% } }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .sp-emblem .sp-draw{ stroke-dashoffset:0 } .sp-emblem .fillyl{ opacity:1 }
+    .sp-word{ opacity:1; transform:none } .sp-bar>span{ width:100% }
+  }
 </style>
 </head>
 <body>
+
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="sp-grid"></div>
+  <div class="sp-core">
+    <svg class="sp-emblem" viewBox="0 0 220 150" role="img" aria-label="宗像総合管理システム">
+      <!-- 地面 -->
+      <line class="st sp-draw d1" x1="16" y1="120" x2="204" y2="120" pathLength="100"/>
+      <!-- 太陽光パネル -->
+      <path class="st sp-draw d2" d="M34 102 L88 84 L88 70 L34 88 Z" pathLength="100"/>
+      <line class="st sp-draw d2" x1="47" y1="97" x2="47" y2="83" pathLength="100"/>
+      <line class="st sp-draw d2" x1="60" y1="93" x2="60" y2="79" pathLength="100"/>
+      <line class="st sp-draw d2" x1="74" y1="88" x2="74" y2="74" pathLength="100"/>
+      <line class="st sp-draw d3" x1="44" y1="101" x2="44" y2="120" pathLength="100"/>
+      <line class="st sp-draw d3" x1="80" y1="88" x2="80" y2="120" pathLength="100"/>
+      <!-- 受電柱 -->
+      <line class="st sp-draw d4" x1="128" y1="120" x2="128" y2="52" pathLength="100"/>
+      <line class="st sp-draw d4" x1="112" y1="60" x2="144" y2="60" pathLength="100"/>
+      <line class="st sp-draw d4" x1="116" y1="60" x2="116" y2="54" pathLength="100"/>
+      <line class="st sp-draw d4" x1="140" y1="60" x2="140" y2="54" pathLength="100"/>
+      <!-- 蓄電池コンテナ -->
+      <rect class="st sp-draw d5" x="158" y="96" width="44" height="24" rx="2" pathLength="100"/>
+      <line class="st sp-draw d5" x1="158" y1="105" x2="202" y2="105" pathLength="100"/>
+      <!-- 太陽（安全イエロー） -->
+      <circle class="st yl sp-draw d6" cx="186" cy="36" r="11" pathLength="100"/>
+      <circle class="fillyl" cx="186" cy="36" r="5"/>
+      <line class="st yl sp-draw d6" x1="186" y1="14" x2="186" y2="19" pathLength="100"/>
+      <line class="st yl sp-draw d6" x1="164" y1="36" x2="169" y2="36" pathLength="100"/>
+      <line class="st yl sp-draw d6" x1="170" y1="20" x2="173" y2="23" pathLength="100"/>
+      <line class="st yl sp-draw d6" x1="202" y1="20" x2="199" y2="23" pathLength="100"/>
+    </svg>
+    <div class="sp-word">
+      <span class="sp-mark"></span>
+      <div class="sp-txt">
+        <div class="sp-kick">CONSTRUCTION MGR</div>
+        <div class="sp-title">宗像総合管理システム</div>
+      </div>
+    </div>
+    <div class="sp-bar"><span></span></div>
+  </div>
+</div>
 
 <div class="stage">
   <div class="board">
@@ -76,7 +159,7 @@
       <button id="go" class="btn wide" type="submit">ログイン</button>
     </form>
 
-    <p class="foot">v20260723D</p>
+    <p class="foot">v20260909A</p>
   </div>
 </div>
 
@@ -89,12 +172,21 @@
   const form = document.getElementById('form');
   const go   = document.getElementById('go');
 
+  // 起動スプラッシュ：一定時間見せてから、ログイン画面へ（または既ログインなら遷移）
+  const splash = document.getElementById('splash');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SPLASH_MS = reduce ? 500 : 1950;
+  const t0 = Date.now();
+  const holdSplash = fn => setTimeout(fn, Math.max(0, SPLASH_MS - (Date.now() - t0)));
+  const hideSplash = () => { if (!splash) return; splash.classList.add('gone'); setTimeout(() => splash.remove(), 650); };
+
   // ログイン後にどこへ進むか（指定が無ければメニュー一覧）
   const next = new URL(location.href).searchParams.get('next') || 'mode-select.html';
 
-  // 既にログイン済みなら一覧へ
+  // 既にログイン済みなら、スプラッシュを見せてから一覧へ
   const { data:{ session } } = await sb.auth.getSession();
-  if (session) { location.replace(next); return; }
+  if (session) { holdSplash(() => location.replace(next)); return; }
+  holdSplash(hideSplash);
 
   form.addEventListener('submit', async function(e){
     e.preventDefault();
