@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<!-- BUILD: orders (材料発注) v20260908B -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>材料発注 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{ max-width:1560px; }
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:4px; padding-bottom:6px; }
+  .lead, .ctl, #msg, .count, #sumgrid{ flex:0 0 auto; }
+  #otable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
+  .lead{ color:var(--sub); font-size:10.5px; line-height:1.28; margin:0 0 4px; }
+  .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
+
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:4px; }
+  .ctl select{ width:auto; min-width:140px; max-width:320px; min-height:30px; flex:0 1 auto; }
+  .ctl .fl-lb{ font-size:10px; font-weight:800; color:var(--ink-2); letter-spacing:.06em;
+    padding:3px 8px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; white-space:nowrap; }
+  .fl-help{ font-size:10px; font-weight:700; color:var(--sub); background:transparent;
+    border:1px solid var(--rule-2); border-radius:999px; padding:3px 8px; cursor:pointer; white-space:nowrap; }
+  .fl-help:hover{ background:#EEF1EA; color:var(--ink-2); }
+  #fproj{ font-weight:700; border-color:var(--ink-2); box-shadow:inset 0 0 0 1px rgba(37,90,145,.15); }
+  .ctl .sp{ flex:1 1 0; }
+  .newbtn{ flex:0 0 auto; }
+
+  .sumgrid{ display:grid; gap:5px; grid-template-columns:repeat(4, minmax(120px,1fr)); margin:0 0 5px; max-width:720px; }
+  .sumcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:3px 10px; display:flex; align-items:center; gap:7px; position:relative; overflow:hidden; }
+  .sumcard .ico{ font-size:12px; line-height:1; flex:0 0 auto; }
+  .sumcard .t{ font-size:10.5px; color:var(--sub); margin:0; font-weight:700; white-space:nowrap; }
+  .sumcard .v{ font-family:var(--mono); font-weight:800; font-size:16px; color:var(--ink); margin-left:auto; line-height:1; }
+  .sumcard .v small{ font-size:9.5px; font-weight:700; color:var(--sub); margin-left:1px; }
+  .sumcard.danger{ background:linear-gradient(180deg,#C7412F,var(--alert)); border-color:#8F2A1D; box-shadow:0 2px 10px rgba(190,60,44,.35); }
+  .sumcard.danger .ico, .sumcard.danger .t, .sumcard.danger .v, .sumcard.danger .v small{ color:#fff; }
+  .sumcard.danger::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:rgba(255,224,214,.75); opacity:0; }
+  .sumcard.warn{ background:#FBF3E2; border-color:#E7C866; }
+  .sumcard.warn .ico, .sumcard.warn .v{ color:#8A6200; }
+  .sumcard.ok{ background:#EAF4EC; border-color:#BFE0C7; }
+  .sumcard.ok .ico, .sumcard.ok .v{ color:var(--ok); }
+  .sumcard.info{ padding-left:12px; }
+  .sumcard.info::before{ content:""; position:absolute; left:0; top:4px; bottom:4px; width:3px; border-radius:2px; background:var(--ink-2); }
+  @media (prefers-reduced-motion:no-preference){
+    .sumcard{ animation:cardin .38s ease both; }
+    .sumcard:nth-child(2){ animation-delay:.06s; } .sumcard:nth-child(3){ animation-delay:.12s; } .sumcard:nth-child(4){ animation-delay:.18s; }
+    @keyframes cardin{ from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+    .sumcard.danger::after{ animation:blinkfade .45s ease-in-out .3s 8 alternate both; }
+    @keyframes blinkfade{ from{opacity:0} to{opacity:.75} }
+  }
+
+  .count{ margin:2px 0 4px; font-size:10.5px; color:var(--sub); }
+
+  .otable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
+  .ohead, .orow{ display:grid; align-items:stretch; gap:8px; max-width:1440px; margin-inline:auto; box-sizing:border-box; }
+  .m-one .ohead, .m-one .orow{ min-width:900px; grid-template-columns:44px 116px 1.5fr 1fr 150px 64px 116px 116px; }
+  .m-all .ohead, .m-all .orow{ min-width:1080px; grid-template-columns:44px 116px 1.3fr 1fr 1fr 150px 64px 116px 116px; }
+  .ohead{ position:sticky; top:0; z-index:5; background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+    white-space:nowrap; align-items:stretch; padding:6px 12px; border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0; }
+  .ohead > span{ text-align:center; border-right:1px solid var(--rule); padding-right:8px; }
+  .ohead > span:last-child{ border-right:none; padding-right:0; }
+  .orow{ padding:6px 12px; border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
+    font-size:14px; text-align:left; width:100%; font-family:var(--body); color:inherit; text-decoration:none; }
+  .orow:hover{ background:#F5F7F3; }
+  .orow.over{ background:#FBF1EF; } .orow.over:hover{ background:#F8E4DF; }
+  .orow.gap{ background:#FCF6E4; } .orow.gap:hover{ background:#F7EFCF; }
+  .orow > span{ border-right:1px solid var(--rule-2); padding-right:8px; }
+  .orow > span:last-child{ border-right:none; padding-right:0; }
+  .orow .rno{ font-family:var(--mono); font-size:12px; color:var(--sub); text-align:center; }
+  .orow .nm{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-weight:700; }
+  .orow .sub{ font-size:11.5px; color:var(--sub); line-height:1.35; }
+  .orow .ctr{ text-align:center; }
+  .orow .num{ font-family:var(--mono); text-align:center; white-space:nowrap; font-size:12.5px; }
+
+  .stag{ font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:var(--radius-sm); white-space:nowrap;
+    display:inline-block; color:var(--sub); background:#EDEFEA; }
+  .stag.planned{ color:#6B4E00; background:#FBF0D4; }
+  .stag.ordered{ color:#255A91; background:#E7EFF7; }
+  .stag.delivered{ color:var(--ok); background:#EAF2ED; }
+  .stag.cancelled{ color:var(--sub); background:#EDEFEA; text-decoration:line-through; }
+  .stag.gap{ color:#fff; background:var(--alert); }
+  .scope{ font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; white-space:nowrap; display:inline-block; }
+  .scope.in{ background:#E3EBF3; color:var(--ink-2); }
+  .scope.ex{ background:#F7E7E3; color:#8C2A1D; }
+  .due.over{ color:var(--alert); font-weight:800; }
+  .due.near{ color:#8A6200; font-weight:700; }
+  .empty{ padding:34px 16px; text-align:center; color:var(--sub); }
+  .empty b{ display:block; font-size:15px; color:var(--ink); margin-bottom:4px; }
+
+  .mlbl{ display:none; }
+  @media (max-width:860px){
+    body{ height:auto; overflow:visible; display:block; }
+    .wrap{ flex:none; height:auto; overflow:visible; display:block; }
+    #otable{ display:block; }
+    .otable{ flex:none; max-height:none; overflow:visible; }
+    .ohead{ display:none; }
+    .m-one .orow, .m-all .orow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
+    .orow > span{ border-right:none; padding-right:0; text-align:left; }
+    .orow .num, .orow .rno, .orow .ctr{ text-align:left; }
+    .mlbl{ display:inline; color:var(--sub); font-weight:700; font-size:11px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1><span class="pgico" aria-hidden="true">🛒</span>材料発注</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<div class="wrap">
+  <p class="lead" id="lead" hidden>
+    材料の<b>発注</b>を管理します。まだ発注していない材料（<b>発注抜け＝未発注</b>）を点検し、<b>相見積で原価を決めてから発注</b>します。相見積・原価決定は「相見積・原価決定」、発注の作成・編集は「工程表」から行えます（行をクリックすると該当の発注／材料を工程表で開きます）。発注後の入荷（納品予定）は「材料到着スケジュール」で管理します。
+  </p>
+
+  <div class="ctl">
+    <span class="fl-lb">絞り込み</span>
+    <button class="fl-help" id="helpBtn" type="button">？使い方 ▼</button>
+    <select id="fproj"><option value="">すべての工事</option></select>
+    <select id="fstat">
+      <option value="all">すべての発注</option>
+      <option value="planned">これから出す</option>
+      <option value="ordered">発注済み</option>
+      <option value="delivered">届いた</option>
+      <option value="gap">未発注（発注抜け）</option>
+    </select>
+    <select id="fscope">
+      <option value="">社内・社外すべて</option>
+      <option value="internal">社内</option>
+      <option value="external">社外</option>
+    </select>
+    <span class="sp"></span>
+    <a class="btn ghost sm newbtn" href="genka.html">相見積・原価決定</a>
+    <a class="btn sm newbtn" id="newbtn" href="#">＋ 発注を作る（工程表）</a>
+  </div>
+
+  <div class="sumgrid" id="sumgrid" hidden></div>
+  <div id="msg" class="msg"></div>
+  <div id="otable"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const DAY = 86400000;
+  const d2n = s => Math.round(new Date(s + 'T00:00:00').getTime() / DAY);
+  const OSTAT = { planned:'これから出す', ordered:'発注済み', delivered:'届いた', cancelled:'取りやめ' };
+  function fmtShort(ymd){ if (!ymd) return ''; const [y,m,d] = ymd.split('-'); return `${y.slice(2)}/${Number(m)}/${Number(d)}`; }
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  // 使い方の開閉（一覧を最大化するため既定は畳む）
+  const HELPKEY = 'orders_help_open';
+  function applyHelp(){ let o=false; try{o=localStorage.getItem(HELPKEY)==='1';}catch(e){} $('lead').hidden=!o; $('helpBtn').textContent = o?'？使い方 ▲':'？使い方 ▼'; }
+  $('helpBtn').addEventListener('click', ()=>{ let o=false; try{o=localStorage.getItem(HELPKEY)==='1';}catch(e){} try{localStorage.setItem(HELPKEY,o?'0':'1');}catch(e){} applyHelp(); });
+  applyHelp();
+
+  let projects = [], phases = [], partners = [], users = [], orders = [], budgets = [];
+
+  // 工事の記憶（材料調達などと同じ挙動）
+  const qs = new URL(location.href).searchParams;
+  let projId = qs.get('p') || '';
+
+  async function loadRefs(){
+    const [pj, pt, us] = await Promise.all([
+      sb.from('projects').select('id, project_no, name').eq('is_active', true).order('project_no'),
+      sb.from('partners').select('id, name').eq('is_active', true),
+      sb.from('app_users').select('id, name').eq('is_active', true),
+    ]);
+    projects = pj.data || []; partners = pt.data || []; users = us.data || [];
+    $('fproj').innerHTML = '<option value="">すべての工事</option>' +
+      projects.map(p => `<option value="${p.id}"${p.id===projId?' selected':''}>${esc(p.project_no||'')} ${esc(p.name)}</option>`).join('');
+  }
+
+  async function loadData(){
+    let oq = sb.from('phase_orders').select('*').eq('is_active', true);
+    let bq = sb.from('phase_budget_items').select('id,project_id,phase_id,item_name,category,cost_stage,status,quantity,unit,scheduled_delivery_date');
+    let pq = sb.from('project_phases').select('id,project_id,name,seq').eq('is_active', true);
+    if (projId){ oq = oq.eq('project_id', projId); bq = bq.eq('project_id', projId); pq = pq.eq('project_id', projId); }
+    const [o, b, p] = await Promise.all([oq, bq, pq]);
+    if (o.error){
+      showMsg($('msg'), /relation .* does not exist|schema cache/i.test(o.error.message||'')
+        ? 'データベースに発注の表がまだありません。Supabase で phase_orders.sql を実行してください。'
+        : '発注を読み込めませんでした。' + o.error.message, 'err');
+    }
+    orders = o.data || []; budgets = b.data || []; phases = p.data || [];
+  }
+
+  const pmap = () => Object.fromEntries(phases.map(p => [p.id, p.name]));
+  const ptmap = () => Object.fromEntries(partners.map(p => [p.id, p.name]));
+  const umap = () => Object.fromEntries(users.map(u => [u.id, u.name]));
+  const projmap = () => Object.fromEntries(projects.map(p => [p.id, p]));
+
+  function render(){
+    const isAll = !projId;
+    const today = Math.round(Date.now()/DAY);
+    const PM = pmap(), PT = ptmap(), UM = umap(), PJ = projmap();
+    const fstat = $('fstat').value, fscope = $('fscope').value;
+
+    // 発注抜け（未発注）＝予算台帳で見積中(estimate)のまま、発注が紐づいていない材料・外注
+    const orderedBItems = new Set(orders.filter(o=>o.budget_item_id).map(o=>o.budget_item_id));
+    const gaps = budgets.filter(b => b.status === 'estimate' && !orderedBItems.has(b.id) && b.category !== 'other');
+
+    // サマリ集計
+    const activeOrders = orders.filter(o => o.status !== 'cancelled');
+    const nPlanned = activeOrders.filter(o=>o.status==='planned').length;
+    const nOrdered = activeOrders.filter(o=>o.status==='ordered').length;
+    const nOverdue = activeOrders.filter(o=>o.status==='planned' && o.due_date && d2n(o.due_date) < today).length;
+    const nGap = gaps.length;
+
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML =
+      `<div class="sumcard ${nGap>0?'danger':'ok'}"><span class="ico">${nGap>0?'⚠':'✓'}</span><span class="t">発注抜け</span><span class="v">${nGap}<small>件</small></span></div>`
+    + `<div class="sumcard ${nOverdue>0?'danger':'ok'}"><span class="ico">${nOverdue>0?'🔴':'✓'}</span><span class="t">期限超過</span><span class="v">${nOverdue}<small>件</small></span></div>`
+    + `<div class="sumcard warn"><span class="ico">📝</span><span class="t">これから出す</span><span class="v">${nPlanned}<small>件</small></span></div>`
+    + `<div class="sumcard info"><span class="ico">📦</span><span class="t">発注済み</span><span class="v">${nOrdered}<small>件</small></span></div>`;
+
+    // 行の作成
+    let rows = [];
+    if (fstat === 'gap'){
+      rows = gaps.map(b => ({ gap:true, b }));
+    } else {
+      let os = orders.slice();
+      if (fstat !== 'all') os = os.filter(o => o.status === fstat);
+      if (fscope) os = os.filter(o => (o.scope||'internal') === fscope);
+      // 期限の早い順（未定は末尾）、その中で状態
+      os.sort((a,b)=>{
+        const ax=a.due_date||'9999', bx=b.due_date||'9999';
+        return ax.localeCompare(bx);
+      });
+      rows = os.map(o => ({ gap:false, o }));
+    }
+
+    if (!rows.length){
+      $('otable').innerHTML = `<div class="empty"><b>${fstat==='gap'?'発注抜けはありません':'発注がありません'}</b>${fstat==='gap'?'予算台帳の材料はすべて発注に紐づいています。':'工程表から発注を作成すると、ここに一覧されます。'}</div>`;
+      return;
+    }
+
+    const cls = isAll ? 'm-all' : 'm-one';
+    let h = `<div class="otable ${cls}"><div class="ohead">`
+      + `<span class="rno">NO</span><span>状態</span><span>内容・品名</span><span>工程</span>`
+      + (isAll ? '<span>工事</span>' : '')
+      + `<span>発注先</span><span>区分</span><span>期限</span><span>金額</span></div>`;
+
+    rows.forEach((r, i) => {
+      if (r.gap){
+        const b = r.b, pj = PJ[b.project_id];
+        const href = `schedule.html?p=${b.project_id}&bitem=${b.id}`;
+        h += `<a class="orow gap" href="${href}">
+          <span class="rno"><b class="mlbl">No. </b>${i+1}</span>
+          <span class="ctr"><span class="stag gap">未発注</span></span>
+          <span><span class="nm" style="font-size:12.5px">${esc(b.item_name||'（無題）')}</span>${b.quantity?`<span class="sub">${b.quantity}${b.unit?esc(b.unit):''}</span>`:''}</span>
+          <span class="ctr"><span class="sub" style="font-size:12.5px">${PM[b.phase_id]?esc(PM[b.phase_id]):'工事全体'}</span></span>
+          ${isAll?`<span class="ctr"><span class="sub" style="font-size:12px">${pj?esc(pj.name):''}</span></span>`:''}
+          <span class="ctr sub">—</span>
+          <span class="ctr sub">—</span>
+          <span class="num">${b.scheduled_delivery_date?fmtShort(b.scheduled_delivery_date):'—'}</span>
+          <span class="num sub">—</span>
+        </a>`;
+      } else {
+        const o = r.o, pj = PJ[o.project_id];
+        const overdue = o.status==='planned' && o.due_date && d2n(o.due_date) < today;
+        const near = o.status==='planned' && o.due_date && !overdue && (d2n(o.due_date)-today) <= (o.alert_days ?? 14);
+        const dueTxt = o.due_date ? fmtShort(o.due_date) : (o.due_note ? esc(o.due_note) : '未定');
+        const href = `schedule.html?p=${o.project_id}&order=${o.id}`;
+        h += `<a class="orow ${overdue?'over':''}" href="${href}">
+          <span class="rno"><b class="mlbl">No. </b>${i+1}</span>
+          <span class="ctr"><span class="stag ${o.status}">${OSTAT[o.status]||o.status}</span></span>
+          <span><span class="nm" style="font-size:12.5px">${esc(o.title||'（無題）')}</span></span>
+          <span class="ctr"><span class="sub" style="font-size:12.5px">${PM[o.phase_id]?esc(PM[o.phase_id]):'工事全体'}</span></span>
+          ${isAll?`<span class="ctr"><span class="sub" style="font-size:12px">${pj?esc(pj.name):''}</span></span>`:''}
+          <span class="ctr"><span class="sub" style="font-size:12.5px">${o.partner_id&&PT[o.partner_id]?esc(PT[o.partner_id]):'—'}</span></span>
+          <span class="ctr"><span class="scope ${o.scope==='external'?'ex':'in'}">${o.scope==='external'?'社外':'社内'}</span></span>
+          <span class="num due ${overdue?'over':(near?'near':'')}">${o.due_date&&overdue?`${dueTxt}<br><span style="font-size:10px">${d2n(o.due_date)<today?`${today-d2n(o.due_date)}日超過`:''}</span>`:dueTxt}</span>
+          <span class="num">${o.total_amount?fmtMoney(o.total_amount):'—'}</span>
+        </a>`;
+      }
+    });
+    h += `</div>`;
+    $('otable').innerHTML = h;
+  }
+
+  // イベント
+  $('fproj').addEventListener('change', async () => {
+    projId = $('fproj').value;
+    const u = new URL(location.href); projId ? u.searchParams.set('p', projId) : u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+    $('newbtn').href = 'schedule.html?panel=orders' + (projId?`&p=${projId}`:'');
+    await loadData(); render();
+  });
+  $('fstat').addEventListener('change', render);
+  $('fscope').addEventListener('change', render);
+
+  await loadRefs();
+  $('newbtn').href = 'schedule.html?panel=orders' + (projId?`&p=${projId}`:'');
+  await loadData();
+  render();
+})();
+</script>
+</body>
+</html>

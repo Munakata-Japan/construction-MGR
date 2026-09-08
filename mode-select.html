@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: mode-select (セレクトモード) v20260908A -->
+<!-- BUILD: mode-select (セレクトモード) v20260908C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -126,7 +126,7 @@
     </a>
     <a class="mode" href="order-alerts.html">
       <span class="mno">12</span>
-      <span class="mbody"><span class="mttl">材料調達計画表</span><span class="msub">いつまでに・何を・発注／納期を可視化</span></span>
+      <span class="mbody"><span class="mttl">材料到着スケジュール</span><span class="msub">発注後、いつ入荷するか（納品予定）を管理</span></span>
     </a>
     <a class="mode" href="calendar.html">
       <span class="mno">13</span>
@@ -159,9 +159,9 @@
       <span class="mno">22</span>
       <span class="mbody"><span class="mttl">実行予算</span><span class="msub">見積＋実支出・損益の元</span></span>
     </a>
-    <a class="mode" href="schedule.html?panel=orders" data-role="manager">
+    <a class="mode" href="orders.html" data-role="manager">
       <span class="mno">23</span>
-      <span class="mbody"><span class="mttl">発注・依頼</span><span class="msub">全発注を一覧・作成／実行予算に紐づく</span></span>
+      <span class="mbody"><span class="mttl">材料発注</span><span class="msub">相見積→原価決定→発注／発注抜けを点検</span></span>
     </a>
     <a class="mode" href="progress.html" data-role="manager">
       <span class="mno">24</span>
@@ -181,16 +181,16 @@
     </a>
   </div>
 
-  <!-- 勤怠 -->
-  <div class="grp">
+  <!-- 勤怠（準備中：誤解の元になるため、経営者にだけ薄く表示。②〜④・協力業者は見出しごと非表示） -->
+  <div class="grp" style="opacity:.5">
     <h2>勤怠</h2>
   </div>
   <div class="modes">
-    <span class="mode off">
+    <span class="mode off" data-role="admin" style="opacity:.55">
       <span class="mno">31</span>
       <span class="mbody"><span class="mttl">打刻</span><span class="msub">準備中</span></span>
     </span>
-    <span class="mode off" data-role="manager">
+    <span class="mode off" data-role="admin" style="opacity:.55">
       <span class="mno">32</span>
       <span class="mbody"><span class="mttl">勤怠の確認</span><span class="msub">準備中</span></span>
     </span>
