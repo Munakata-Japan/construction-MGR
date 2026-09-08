@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: mode-select (セレクトモード) v20260908F -->
+<!-- BUILD: mode-select (セレクトモード) v20260908G -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -45,6 +45,13 @@
   .frame .mode .mbody{ padding:8px 13px; }
   .frame .mttl{ font-size:15px; line-height:1.3; }
   .frame .msub{ font-size:12px; line-height:1.35; }
+
+  /* 経営者ログイン時：特に重要なタイル（工程表・報連相・出来高）を金色で強調 */
+  body.exec .mode.keytile{ border-color:var(--safety); background:#FFF7E4;
+    box-shadow:0 0 0 2px rgba(234,168,0,.45), var(--shadow-2); }
+  body.exec .mode.keytile .mno{ background:var(--safety); color:var(--ink); font-weight:700; }
+  body.exec .mode.keytile .mttl{ color:#6B4E00; }
+  body.exec a.mode.keytile:hover{ box-shadow:0 0 0 2px rgba(234,168,0,.6), var(--shadow-3); }
 
   /* HUD */
   .frame .hcell{ padding:8px 16px; }
@@ -120,7 +127,7 @@
     <h2>現場管理</h2>
   </div>
   <div class="modes m3">
-    <a class="mode" href="schedule.html">
+    <a class="mode keytile" href="schedule.html">
       <span class="mno">11</span>
       <span class="mbody"><span class="mttl">工程表</span><span class="msub">ガント・ネットワーク</span></span>
     </a>
@@ -144,7 +151,7 @@
       <span class="mno">16</span>
       <span class="mbody"><span class="mttl">安全書類</span><span class="msub">協力会社提出用ひな型</span></span>
     </a>
-    <a class="mode" href="hourensou.html" data-role="manager">
+    <a class="mode keytile" href="hourensou.html" data-role="manager">
       <span class="mno">17</span>
       <span class="mbody"><span class="mttl">報・連・相</span><span class="msub">現場⇄本社：報告・連絡・相談を日次で共有（①②のみ）</span></span>
     </a>
@@ -171,7 +178,7 @@
       <span class="mno">24</span>
       <span class="mbody"><span class="mttl">材工発注</span><span class="msub">材料／工事を切替えて外部発注・発注抜けを点検</span></span>
     </a>
-    <a class="mode" href="progress.html" data-role="manager">
+    <a class="mode keytile" href="progress.html" data-role="manager">
       <span class="mno">25</span>
       <span class="mbody"><span class="mttl">出来高・進捗</span><span class="msub">工程ごとの％→予算×％で出来高を積上げ</span></span>
     </a>
@@ -218,6 +225,9 @@
 
   paintBar(me, await loadOrgName(me.organization_id));
   $('out').addEventListener('click', signOut);
+
+  // 経営者ログイン時は、特に重要なタイル（工程表・報連相・出来高）を金色で強調する
+  if (me.role === 'admin') document.body.classList.add('exec');
 
   // 権限に応じて表示を絞る
   const rank = { member:0, manager:1, admin:2 };
