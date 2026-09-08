@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: hourensou (報・連・相) v20260908B -->
+<!-- BUILD: hourensou (報・連・相) v20260908E -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -375,10 +375,34 @@
 
   // 添付：ドラッグ＆ドロップ＋ファイル選択
   function renderPicked(){
-    $('n_flist').innerHTML = picked.map((f,i)=>`<div class="fitem">${fileIcon(f.name,f.type)} <span class="fn">${esc(f.name)}</span> <span class="fs">${fmtSize(f.size)}</span> <button type="button" class="rm" data-i="${i}" title="外す">×</button></div>`).join('');
+    $('n_flist').innerHTML = picked.map((f,i)=>{
+      const sizeHtml = f.busy
+        ? `<span class="fs">圧縮中…</span>`
+        : (f.compressed
+            ? `<span class="fs">${fmtSize(f.origSize)} → ${fmtSize(f.size)} <b style="color:var(--ok)">画像圧縮済</b></span>`
+            : `<span class="fs">${fmtSize(f.size)}</span>`);
+      return `<div class="fitem">${fileIcon(f.name,f.type)} <span class="fn">${esc(f.name)}</span> ${sizeHtml} <button type="button" class="rm" data-i="${i}" title="外す">×</button></div>`;
+    }).join('');
     $('n_flist').querySelectorAll('.rm').forEach(b=> b.addEventListener('click', ()=>{ picked.splice(+b.dataset.i,1); renderPicked(); }));
   }
-  function addFiles(list){ for (const f of list) if (f) picked.push(f); renderPicked(); }
+  // 選んだ瞬間に画像を圧縮（1600px・JPEG）。圧縮後サイズを表示する。
+  async function addFiles(list){
+    const arr = Array.from(list || []).filter(Boolean);
+    const entries = arr.map(f => ({ name:f.name, type:f.type||'', blob:f, origSize:f.size, size:f.size, compressed:false, busy:(f.type||'').startsWith('image/') }));
+    entries.forEach(e => picked.push(e));
+    renderPicked();
+    for (const e of entries){
+      if (!e.busy) continue;
+      try {
+        const shrunk = await shrinkImage(e.blob, 1600, 0.8);
+        if (shrunk && shrunk.blob && shrunk.blob.size < e.origSize){
+          e.blob = shrunk.blob; e.type = 'image/jpeg'; e.size = shrunk.blob.size; e.compressed = true;
+        }
+      } catch(err){ console.error(err); }
+      e.busy = false;
+      renderPicked();
+    }
+  }
   $('n_pick').addEventListener('click', ()=> $('n_files').click());
   $('n_files').addEventListener('change', ()=>{ addFiles($('n_files').files); $('n_files').value=''; });
   const dz = $('n_drop');
@@ -400,29 +424,33 @@
     }).select('id').single();
     if (error){ $('nsave').disabled=false; $('nsave').textContent='投稿する'; showMsg($('nmsg'),'投稿できませんでした。'+error.message,'err'); return; }
     const rid = ins.id;
-    // 添付をアップロード（画像は縮小、その他はそのまま）
+    // 添付をアップロード（画像は選択時に圧縮済み。その entry の blob をそのまま送る）
+    // ストレージのパスは「<組織ID>/…」で始める必要がある（バケットのポリシー準拠）。
+    let attErr = 0;
     for (let k=0;k<picked.length;k++){
-      const f = picked[k];
+      const it = picked[k];
       $('nsave').textContent = `添付をアップロード中… ${k+1}/${picked.length}`;
       try {
-        const shrunk = await shrinkImage(f, 1600, 0.8);
-        const blob = shrunk ? shrunk.blob : f;
-        const ctype = shrunk ? 'image/jpeg' : (f.type || 'application/octet-stream');
-        const safe = (f.name||'file').replace(/[^\w.\-]+/g,'_');
-        const path = `reports/${rid}/${Date.now()}_${k}_${safe}${shrunk?'.jpg':''}`;
+        const blob = it.blob;
+        const ctype = it.type || 'application/octet-stream';
+        const safe = (it.name||'file').replace(/[^\w.\-]+/g,'_');
+        const path = `${me.organization_id}/reports/${rid}/${Date.now()}_${k}_${safe}${it.compressed?'.jpg':''}`;
         const up = await sb.storage.from(BUCKET).upload(path, blob, { contentType: ctype });
         if (up.error) throw up.error;
-        await sb.from('project_files').insert({
+        const ins2 = await sb.from('project_files').insert({
           organization_id: me.organization_id, project_id: proj,
-          file_kind: (f.type||'').startsWith('image/') ? 'photo' : ((f.type==='application/pdf') ? 'document' : 'other'),
-          storage_path: path, original_name: f.name, mime_type: f.type || null,
+          uploaded_by: me.id,
+          file_kind: (it.type||'').startsWith('image/') ? 'photo' : ((it.type==='application/pdf') ? 'document' : 'other'),
+          storage_path: path, original_name: it.name, mime_type: it.type || null,
           byte_size: blob.size, site_report_id: rid
         });
-      } catch(e){ console.error(e); showMsg($('nmsg'), `一部の添付をアップロードできませんでした（${f.name}）。`, 'err'); }
+        if (ins2.error) throw ins2.error;
+      } catch(e){ console.error(e); attErr++; showMsg($('nmsg'), `添付「${it.name}」を保存できませんでした：${(e && e.message) || e}`, 'err'); }
     }
     $('nsave').disabled=false; $('nsave').textContent='投稿する';
-    $('npanel').classList.remove('open');
+    $('npanel').classList.remove('open');   // 投稿は保存済み。重複投稿を防ぐため必ず閉じる
     await loadData(); render();
+    if (attErr > 0) showMsg($('msg'), `投稿は保存しましたが、添付${attErr}件を保存できませんでした（ストレージ設定をご確認ください。詳細はブラウザのコンソール）。`, 'err');
   });
 
   /* ===== 詳細・返信・本社確認・状態変更 ===== */
@@ -446,14 +474,14 @@
       ? (r.acknowledged_at ? `<span class="ackchip yes">確認済（${UM[r.acknowledged_by]?esc(UM[r.acknowledged_by]):''} ${fmtDT(r.acknowledged_at)}）</span>`
                            : `<button class="btn sm" id="d_ack" type="button">本社として確認</button>`)
       : `<span class="ackchip ${r.acknowledged_at?'yes':'no'}">${r.acknowledged_at?'本社確認済':'本社未確認'}</span>`;
-    const delBtn = isMgr ? `<button class="btn ghost sm" id="d_del" type="button">削除</button>` : '';
+    // 報告・連絡・相談は全ログ保存が前提。削除機能は設けない。
 
     $('dbodywrap').innerHTML =
       `<div class="dmeta">${pj?esc(pj.name):'工事全体'}　｜　投稿：${UM[r.created_by]?esc(UM[r.created_by]):'—'}　${fmtDT(r.created_at)}　｜　${TYPESUB[r.report_type]}</div>`
     + `<div class="dbody">${esc(r.body||'')||'<span style=\"color:var(--sub)\">（本文なし）</span>'}</div>`
     + attHtml
     + statSel
-    + `<div class="cfoot">${ackBtn}<span style="flex:1 1 auto"></span>${delBtn}</div>`
+    + `<div class="cfoot">${ackBtn}</div>`
     + `<div style="font-size:12px;font-weight:800;color:var(--ink-2);margin-top:6px">やり取り（${reps.length}）</div>`
     + `<div class="replies" id="d_replies">${reps.map(x=>`<div class="reply"><div class="rmeta">${UM[x.created_by]?esc(UM[x.created_by]):'—'}　${fmtDT(x.created_at)}</div><div class="rtext">${esc(x.body||'')}</div></div>`).join('') || '<span class="sub" style="font-size:12px;color:var(--sub)">まだ返信はありません。</span>'}</div>`
     + `<textarea id="d_reply" placeholder="返信を書く（本社の回答・現場の追記）"></textarea>`
@@ -464,7 +492,6 @@
     $('d_close').addEventListener('click', ()=> $('dpanel').classList.remove('open'));
     const send = $('d_send'); if (send) send.addEventListener('click', sendReply);
     const ack = $('d_ack'); if (ack) ack.addEventListener('click', doAck);
-    const del = $('d_del'); if (del) del.addEventListener('click', doDelete);
     const ss = $('d_status'); if (ss) ss.addEventListener('change', ()=> changeStatus(ss.value));
   }
 
@@ -486,13 +513,6 @@
     const { error } = await sb.from('site_reports').update({ status: v }).eq('id', dId);
     if (error){ showMsg($('msg'),'状態を変えられませんでした。'+error.message,'err'); return; }
     await loadData(); render(); openDetail(dId);
-  }
-  async function doDelete(){
-    if (!confirm('この投稿を削除します。よろしいですか？（記録は残さず一覧から消えます）')) return;
-    const { error } = await sb.from('site_reports').update({ is_active:false }).eq('id', dId);
-    if (error){ showMsg($('msg'),'削除できませんでした。'+error.message,'err'); return; }
-    $('dpanel').classList.remove('open');
-    await loadData(); render();
   }
 
   // イベント
