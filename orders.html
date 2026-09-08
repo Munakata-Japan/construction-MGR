@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: orders (材工発注) v20260909C -->
+<!-- BUILD: orders (材工発注) v20260909D -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -339,7 +339,18 @@
   }
 
   async function delItem(x){
-    if (!confirm(`「${x.item_name||'この品目'}」を削除します。\n実行予算・材料到着スケジュールからも消えます。よろしいですか？`)) return;
+    if (!confirm(`「${x.item_name||'この品目'}」を削除します。\nこの品目に紐づく発注があれば、その発注（明細を含む）も一緒に削除します。\n実行予算・材料到着スケジュールからも消えます。よろしいですか？`)) return;
+    // 外部キー制約（phase_orders.budget_item_id → phase_budget_items）を先に解消：
+    // この品目に紐づく発注(phase_orders)と、その明細(phase_order_items)を先に削除する。
+    try {
+      const ord = await sb.from('phase_orders').select('id').eq('budget_item_id', x.id);
+      const orderIds = (ord.data || []).map(o => o.id);
+      if (orderIds.length){
+        await sb.from('phase_order_items').delete().in('phase_order_id', orderIds);   // 明細（無ければ0件）
+        const dOrd = await sb.from('phase_orders').delete().in('id', orderIds);
+        if (dOrd.error) throw dOrd.error;
+      }
+    } catch (e){ showMsg($('msg'), '紐づく発注を外せませんでした。' + ((e && e.message) || e), 'err'); return; }
     const { error } = await sb.from('phase_budget_items').delete().eq('id', x.id);
     if (error){ showMsg($('msg'), '削除できませんでした。' + error.message, 'err'); return; }
     $('dpanel').classList.remove('open');
