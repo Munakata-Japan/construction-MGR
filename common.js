@@ -45,15 +45,6 @@ function tierOf(u){
   return 3;                                          // 一般社員
 }
 function tierLabel(n){ const t = TIERS.find(x => x.n === n); return t ? t.label : ''; }
-// テスト表示用に me を指定区分の見え方へ書き換える（表示検証のみ。実データのRLSは実ユーザーのまま）
-function applyTierOverride(me, n){
-  me.is_external = (n === 5);
-  if (n === 1) me.role = 'admin';
-  else if (n === 2) me.role = 'manager';
-  else { me.role = 'member';
-         if (n === 4) me.employee_type = 'subcontractor';
-         else if (n === 3 && me.employee_type === 'subcontractor') me.employee_type = 'employee'; }
-}
 
 /* ---------- 竣工図書の章立て（民間工事の標準）----------
    写真・書類（project_files.doc_category）を、この章に振り分けて
@@ -252,48 +243,7 @@ async function requireAuth(){
     return null;
   }
   startPresence();
-
-  // テスト表示：経営者（管理者）だけが、①〜⑤の各区分の見え方を切り替えて確認できる。
-  // 実データのアクセス権（RLS）は実ユーザーのまま。あくまで画面表示の検証用。
-  me._realTier = tierOf(me);
-  const isRealBoss = (me.role === 'admin');
-  let pv = null;
-  try { pv = sessionStorage.getItem('preview_tier'); } catch (e) {}
-  if (pv && isRealBoss){
-    const n = parseInt(pv, 10);
-    if (n >= 1 && n <= 5){ applyTierOverride(me, n); me._previewTier = n; }
-  }
-  if (isRealBoss) mountPreviewSwitch(me._previewTier || me._realTier);
-
   return { session, me };
-}
-
-/* ---------- テスト表示スイッチ（経営者のみ・全ページ共通） ---------- */
-function mountPreviewSwitch(current){
-  if (document.getElementById('pvsw')) return;
-  const active = !!(() => { try { return sessionStorage.getItem('preview_tier'); } catch(e){ return null; } })();
-  const set = n => { try { n ? sessionStorage.setItem('preview_tier', n) : sessionStorage.removeItem('preview_tier'); } catch(e){} location.reload(); };
-
-  const box = document.createElement('div');
-  box.id = 'pvsw';
-  box.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:9999;background:#13385D;color:#fff;'
-    + 'border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.35);font-family:var(--body,sans-serif);'
-    + 'font-size:12px;padding:7px 9px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;max-width:94vw;'
-    + (active ? 'outline:2px solid #EAA800;' : '');
-  let html = '<b style="font-size:10.5px;letter-spacing:.04em;opacity:.9">テスト表示</b>';
-  TIERS.forEach(t => {
-    const on = (current === t.n);
-    html += `<button data-n="${t.n}" style="cursor:pointer;border:1px solid ${on?'#EAA800':'rgba(255,255,255,.35)'};`
-      + `background:${on?'#EAA800':'transparent'};color:${on?'#13385D':'#fff'};font-weight:700;`
-      + `border-radius:6px;padding:3px 7px;font-size:11.5px;line-height:1.1">${t.n}${t.label}</button>`;
-  });
-  html += `<button data-n="0" style="cursor:pointer;border:1px solid rgba(255,255,255,.35);background:transparent;`
-    + `color:#fff;border-radius:6px;padding:3px 8px;font-size:11.5px">解除</button>`;
-  if (active) html += '<span style="font-size:10px;color:#FFE39B;font-weight:700">※表示のみの検証中</span>';
-  box.innerHTML = html;
-  box.querySelectorAll('button').forEach(b =>
-    b.addEventListener('click', () => { const n = parseInt(b.dataset.n, 10); set(n === 0 ? null : n); }));
-  document.body.appendChild(box);
 }
 
 /* ---------- ログイン中の人数のための在席打刻 ----------
