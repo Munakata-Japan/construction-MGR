@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: partners (取引先) v20260907A -->
+<!-- BUILD: partners (取引先) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -107,7 +107,7 @@
     <select id="fwarn">
       <option value="">すべて</option>
       <option value="lic">許可の期限が近い・切れている</option>
-      <option value="si">社会保険が未確認</option>
+      <option value="si">労災未確認</option>
     </select>
   </div>
 
@@ -261,7 +261,7 @@
 
   function licState(p){
     if (!p.is_subcontractor) return null;
-    if (!p.license_end_on) return { lv:'none', txt:'許可未登録' };
+    if (!p.license_end_on) return { lv:'none', txt:'許可未確認' };
     const left = d2n(p.license_end_on) - today;
     if (left < 0)  return { lv:'over', txt:`許可の期限切れ（${-left}日前）` };
     if (left < 90) return { lv:'near', txt:`許可の期限まで${left}日` };
@@ -269,8 +269,8 @@
   }
   function siState(p){
     if (!p.is_subcontractor) return null;
-    if (p.si_health === null || p.si_health === undefined) return { txt:'社会保険が未確認' };
-    if (!(p.si_health && p.si_pension && p.si_employment)) return { txt:'社会保険に未加入あり' };
+    if (p.si_health === null || p.si_health === undefined) return { txt:'労災未確認' };
+    if (!(p.si_health && p.si_pension && p.si_employment)) return { txt:'労災未確認' };
     return null;
   }
 
