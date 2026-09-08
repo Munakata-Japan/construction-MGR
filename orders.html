@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: orders (材工発注) v20260909B -->
+<!-- BUILD: orders (材工発注) v20260909C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -105,6 +105,18 @@
   .empty{ padding:34px 16px; text-align:center; color:var(--sub); }
   .empty b{ display:block; font-size:15px; color:var(--ink); margin-bottom:4px; }
 
+  /* 品目の詳細パネル（材工発注の中で完結） */
+  .panel{ position:fixed; inset:0; z-index:60; background:rgba(15,20,30,.5); display:none; }
+  .panel.open{ display:flex; align-items:center; justify-content:center; padding:14px; }
+  .card{ background:var(--card); border-radius:8px; width:min(96vw,540px); max-height:92vh; overflow:auto; box-shadow:0 14px 44px rgba(0,0,0,.45); }
+  .card h2{ font-family:var(--disp); font-size:16px; margin:0; padding:12px 16px; border-bottom:1px solid var(--rule-2); display:flex; align-items:center; gap:8px; }
+  .cbody{ padding:14px 16px 18px; display:flex; flex-direction:column; gap:9px; }
+  .drow{ display:flex; gap:10px; font-size:13.5px; align-items:baseline; }
+  .drow .k{ flex:0 0 92px; color:var(--sub); font-size:12.5px; }
+  .drow .val{ font-weight:700; overflow-wrap:anywhere; }
+  .drow .val.num{ font-family:var(--mono); }
+  .cfoot{ display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+
   .mlbl{ display:none; }
   @media (max-width:860px){
     body{ height:auto; overflow:visible; display:block; }
@@ -155,6 +167,14 @@
   <div class="sumgrid" id="sumgrid" hidden></div>
   <div id="msg" class="msg"></div>
   <div id="otable"></div>
+</div>
+
+<!-- 品目の詳細（材工発注の中で完結。別ページへ飛ばさない） -->
+<div class="panel" id="dpanel">
+  <div class="card">
+    <h2 id="dttl">品目</h2>
+    <div class="cbody" id="dbody"></div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -268,8 +288,7 @@
       const gap = (st === 'estimate');
       const amt = amountOf(x);
       const deliv = x.scheduled_delivery_date || x.delivered_on || null;
-      const href = `schedule.html?p=${x.project_id}&bitem=${x.id}`;
-      h += `<a class="orow ${gap?'gap':''}" href="${href}">
+      h += `<div class="orow ${gap?'gap':''}" data-id="${x.id}" role="button" tabindex="0">
         <span class="rno"><b class="mlbl">No. </b>${i+1}</span>
         <span class="ctr"><span class="stag ${gap?'gap':st}">${STATN[st]||st}</span></span>
         <span><span class="nm" style="font-size:12.5px">${esc(x.item_name||'（無題）')}</span>${x.quantity!=null?`<span class="sub">${x.quantity}${x.unit?esc(x.unit):''}</span>`:''}</span>
@@ -278,11 +297,55 @@
         <span class="ctr"><span class="sub" style="font-size:12.5px">${x.estimate_partner_id&&PT[x.estimate_partner_id]?esc(PT[x.estimate_partner_id]):'—'}</span></span>
         <span class="num">${amt!=null?fmtMoney(amt):'—'}</span>
         <span class="num">${deliv?fmtShort(deliv):'—'}</span>
-      </a>`;
+      </div>`;
     });
     h += `</div>`;
     $('otable').innerHTML = h;
+    $('otable').querySelectorAll('.orow').forEach(el => {
+      const open = () => openDetail(el.dataset.id);
+      el.addEventListener('click', open);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
+    });
   }
+
+  /* ===== 品目の詳細＋削除（材工発注の中で完結・別ページへ飛ばさない） ===== */
+  function openDetail(id){
+    const x = budgets.find(b => b.id === id); if (!x) return;
+    const PM = pmap(), PT = ptmap(), PJ = projmap();
+    const pj = PJ[x.project_id], st = x.status || 'estimate', amt = amountOf(x);
+    const deliv = x.scheduled_delivery_date || x.delivered_on || null;
+    $('dttl').innerHTML = `<span class="stag ${st==='estimate'?'gap':st}">${STATN[st]||st}</span> ${esc(x.item_name||'（無題）')}`;
+    const row = (k,v) => `<div class="drow"><span class="k">${k}</span><span class="val">${v}</span></div>`;
+    const rowN = (k,v) => `<div class="drow"><span class="k">${k}</span><span class="val num">${v}</span></div>`;
+    $('dbody').innerHTML =
+        row('工事', pj?esc(pj.name):'—')
+      + row('工程', PM[x.phase_id]?esc(PM[x.phase_id]):'工事全体')
+      + row('費目', x.category==='material'?'材料':(x.category==='labor'?'工事・労務':(x.category?esc(x.category):'—')))
+      + rowN('数量', x.quantity!=null?`${x.quantity}${x.unit?esc(x.unit):''}`:'—')
+      + rowN('単価', x.unit_price!=null?fmtMoney(x.unit_price):'—')
+      + rowN('金額(原価)', amt!=null?fmtMoney(amt):'—')
+      + row('発注先', x.estimate_partner_id&&PT[x.estimate_partner_id]?esc(PT[x.estimate_partner_id]):'—')
+      + rowN('納品予定', deliv?fmtShort(deliv):'—')
+      + (x.note?row('備考', esc(x.note)):'')
+      + `<div class="cfoot">
+           <button class="btn danger sm" id="d_del" type="button">この品目を削除</button>
+           <span style="flex:1 1 auto"></span>
+           <a class="btn ghost sm" href="budget.html?p=${x.project_id}">実行予算で編集</a>
+           <button class="btn sm" id="d_close" type="button">閉じる</button>
+         </div>`;
+    $('dpanel').classList.add('open');
+    $('d_close').addEventListener('click', () => $('dpanel').classList.remove('open'));
+    $('d_del').addEventListener('click', () => delItem(x));
+  }
+
+  async function delItem(x){
+    if (!confirm(`「${x.item_name||'この品目'}」を削除します。\n実行予算・材料到着スケジュールからも消えます。よろしいですか？`)) return;
+    const { error } = await sb.from('phase_budget_items').delete().eq('id', x.id);
+    if (error){ showMsg($('msg'), '削除できませんでした。' + error.message, 'err'); return; }
+    $('dpanel').classList.remove('open');
+    await loadData(); render();
+  }
+  $('dpanel').addEventListener('click', e => { if (e.target === $('dpanel')) $('dpanel').classList.remove('open'); });
 
   // イベント
   $('fproj').addEventListener('change', async () => {
