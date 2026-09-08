@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<!-- BUILD: hourensou (報・連・相) v20260908A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>報・連・相 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{ max-width:1440px; }
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:4px; padding-bottom:6px; }
+  .lead, .ctl, #msg, #sumgrid{ flex:0 0 auto; }
+  #stable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
+  .lead{ color:var(--sub); font-size:10.5px; line-height:1.28; margin:0 0 4px; }
+  .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
+
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:4px; }
+  .ctl select{ width:auto; min-width:130px; max-width:300px; min-height:30px; flex:0 1 auto; }
+  .ctl input.q{ min-height:30px; min-width:160px; flex:0 1 220px; padding:4px 10px; border:1px solid var(--rule);
+    border-radius:var(--radius-sm); font-family:var(--body); font-size:13px; }
+  .ctl .fl-lb{ font-size:10px; font-weight:800; color:var(--ink-2); letter-spacing:.06em;
+    padding:3px 8px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; white-space:nowrap; }
+  .fl-help{ font-size:10px; font-weight:700; color:var(--sub); background:transparent;
+    border:1px solid var(--rule-2); border-radius:999px; padding:3px 8px; cursor:pointer; white-space:nowrap; }
+  .fl-help:hover{ background:#EEF1EA; color:var(--ink-2); }
+  .ctl .sp{ flex:1 1 0; }
+
+  #sumgrid{ display:grid; gap:5px; grid-template-columns:repeat(4, minmax(120px,1fr)); margin:0 0 5px; max-width:760px; }
+  .sumcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:3px 10px; display:flex; align-items:center; gap:7px; position:relative; overflow:hidden; }
+  .sumcard .ico{ font-size:12px; line-height:1; flex:0 0 auto; }
+  .sumcard .t{ font-size:10.5px; color:var(--sub); margin:0; font-weight:700; white-space:nowrap; }
+  .sumcard .v{ font-family:var(--mono); font-weight:800; font-size:16px; color:var(--ink); margin-left:auto; line-height:1; }
+  .sumcard .v small{ font-size:9.5px; font-weight:700; color:var(--sub); margin-left:1px; }
+  .sumcard.danger{ background:linear-gradient(180deg,#C7412F,var(--alert)); border-color:#8F2A1D; box-shadow:0 2px 10px rgba(190,60,44,.35); }
+  .sumcard.danger .ico, .sumcard.danger .t, .sumcard.danger .v, .sumcard.danger .v small{ color:#fff; }
+  .sumcard.danger::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:rgba(255,224,214,.75); opacity:0; }
+  .sumcard.warn{ background:#FBF3E2; border-color:#E7C866; } .sumcard.warn .ico, .sumcard.warn .v{ color:#8A6200; }
+  .sumcard.info{ padding-left:12px; } .sumcard.info::before{ content:""; position:absolute; left:0; top:4px; bottom:4px; width:3px; border-radius:2px; background:var(--ink-2); }
+  .sumcard.ok{ background:#EAF4EC; border-color:#BFE0C7; } .sumcard.ok .ico, .sumcard.ok .v{ color:var(--ok); }
+  @media (prefers-reduced-motion:no-preference){
+    .sumcard{ animation:cardin .38s ease both; }
+    .sumcard:nth-child(2){ animation-delay:.06s; } .sumcard:nth-child(3){ animation-delay:.12s; } .sumcard:nth-child(4){ animation-delay:.18s; }
+    @keyframes cardin{ from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+    .sumcard.danger::after{ animation:blinkfade .45s ease-in-out .3s 8 alternate both; }
+    @keyframes blinkfade{ from{opacity:0} to{opacity:.75} }
+  }
+
+  .stable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
+  .shead, .srow{ display:grid; align-items:stretch; gap:8px; max-width:1400px; margin-inline:auto; box-sizing:border-box;
+    grid-template-columns:44px 78px 1.7fr 1fr 118px 96px 84px 92px; min-width:940px; }
+  .shead{ position:sticky; top:0; z-index:5; background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+    white-space:nowrap; padding:6px 12px; border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0; }
+  .shead > span{ text-align:center; border-right:1px solid var(--rule); padding-right:8px; }
+  .shead > span:last-child{ border-right:none; padding-right:0; }
+  .srow{ padding:7px 12px; border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
+    font-size:14px; text-align:left; width:100%; font-family:var(--body); color:inherit; }
+  .srow:hover{ background:#F5F7F3; }
+  .srow.unres{ background:#FCF6E4; } .srow.unres:hover{ background:#F7EFCF; }
+  .srow.consultUnres{ background:#FBF1EF; } .srow.consultUnres:hover{ background:#F8E4DF; }
+  .srow > span{ border-right:1px solid var(--rule-2); padding-right:8px; }
+  .srow > span:last-child{ border-right:none; padding-right:0; }
+  .srow .rno{ font-family:var(--mono); font-size:12px; color:var(--sub); text-align:center; }
+  .srow .ttl{ font-weight:700; line-height:1.35; overflow-wrap:break-word; }
+  .srow .ex{ font-size:11.5px; color:var(--sub); line-height:1.35; display:block; margin-top:1px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .srow .ctr{ text-align:center; }
+  .srow .num{ font-family:var(--mono); text-align:center; white-space:nowrap; font-size:12px; }
+  .srow .sub{ font-size:12px; color:var(--sub); }
+
+  .tchip{ display:inline-block; font-size:11px; font-weight:800; padding:2px 8px; border-radius:var(--radius-sm); white-space:nowrap; }
+  .tchip.report{ color:#1F7A3D; background:#E4F1E7; border:1px solid #B9DEC3; }
+  .tchip.contact{ color:#6B4E00; background:#FBF0D4; border:1px solid #E7C866; }
+  .tchip.consult{ color:#fff; background:var(--alert); }
+  .schip{ display:inline-block; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:var(--radius-sm); white-space:nowrap; }
+  .schip.open{ color:#8C2A1D; background:#FBF1EF; } .schip.in_progress{ color:#6B4E00; background:#FBF0D4; }
+  .schip.resolved{ color:var(--ok); background:#EAF2ED; }
+  .ackchip{ display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; white-space:nowrap; }
+  .ackchip.no{ color:var(--sub); background:#EDEFEA; } .ackchip.yes{ color:#255A91; background:#E7EFF7; }
+  .empty{ padding:34px 16px; text-align:center; color:var(--sub); } .empty b{ display:block; font-size:15px; color:var(--ink); margin-bottom:4px; }
+
+  /* パネル（新規投稿・詳細） */
+  .panel{ position:fixed; inset:0; z-index:60; background:rgba(15,20,30,.5); display:none; }
+  .panel.open{ display:flex; align-items:center; justify-content:center; padding:14px; }
+  .card{ background:var(--card); border-radius:8px; width:min(96vw,620px); max-height:92vh; overflow:auto; box-shadow:0 14px 44px rgba(0,0,0,.45); }
+  .card h2{ font-family:var(--disp); font-size:16px; margin:0; padding:12px 16px; border-bottom:1px solid var(--rule-2); }
+  .cbody{ padding:14px 16px 18px; display:flex; flex-direction:column; gap:10px; }
+  .frow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .frow > label{ flex:0 0 74px; font-size:13px; color:var(--sub); }
+  .frow select, .frow input, .cbody textarea{ flex:1 1 auto; min-height:38px; padding:6px 10px; border:1px solid var(--rule);
+    border-radius:var(--radius-sm); background:#fff; font-size:14px; font-family:var(--body); color:var(--ink); }
+  .cbody textarea{ min-height:110px; resize:vertical; line-height:1.5; }
+  .seg{ display:inline-flex; border:1px solid var(--ink-2); border-radius:999px; overflow:hidden; }
+  .seg button{ border:0; background:var(--card); color:var(--ink-2); font-weight:800; font-size:12.5px; padding:6px 14px; cursor:pointer; }
+  .seg button+button{ border-left:1px solid var(--rule); }
+  .seg button.on{ background:linear-gradient(180deg,#275A91,var(--ink) 65%); color:#fff; }
+  .cfoot{ display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap; }
+  .dmeta{ font-size:12px; color:var(--sub); }
+  .dbody{ font-size:14px; line-height:1.6; white-space:pre-wrap; background:#F7F9F6; border:1px solid var(--rule-2); border-radius:6px; padding:10px 12px; }
+  .replies{ display:flex; flex-direction:column; gap:8px; }
+  .reply{ background:#F1F3EF; border-radius:6px; padding:8px 10px; }
+  .reply .rmeta{ font-size:11px; color:var(--sub); margin-bottom:2px; }
+  .reply .rtext{ font-size:13.5px; line-height:1.5; white-space:pre-wrap; }
+
+  .mlbl{ display:none; }
+  @media (max-width:900px){
+    body{ height:auto; overflow:visible; display:block; }
+    .wrap{ flex:none; height:auto; overflow:visible; display:block; }
+    #stable{ display:block; } .stable{ flex:none; max-height:none; overflow:visible; }
+    .shead{ display:none; }
+    .srow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
+    .srow > span{ border-right:none; padding-right:0; text-align:left; }
+    .srow .num, .srow .rno, .srow .ctr{ text-align:left; }
+    .mlbl{ display:inline; color:var(--sub); font-weight:700; font-size:11px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1><span class="pgico" aria-hidden="true">📣</span>報・連・相</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<div class="wrap">
+  <p class="lead" id="lead" hidden>
+    現場の状況を<b>報告（成果・工程の進み具合）</b>・<b>連絡（問題点）</b>・<b>相談（トラブルや工程遅れに直結する重要事項）</b>で毎日投稿し、本社が確認・返信して<b>双方で確認</b>します。すべてログとして残り、見出しで検索できます。
+  </p>
+
+  <div class="ctl">
+    <span class="fl-lb">絞り込み</span>
+    <button class="fl-help" id="helpBtn" type="button">？使い方 ▼</button>
+    <select id="fproj"><option value="">すべての工事</option></select>
+    <select id="ftype">
+      <option value="">全ての種別</option>
+      <option value="report">報告（成果）</option>
+      <option value="contact">連絡（問題点）</option>
+      <option value="consult">相談（重要）</option>
+    </select>
+    <select id="fstatus">
+      <option value="">すべての状態</option>
+      <option value="unres">未解決のみ</option>
+      <option value="unack">本社未確認のみ</option>
+      <option value="mine">自分の投稿</option>
+    </select>
+    <input class="q" id="q" type="search" placeholder="見出し・内容で検索" inputmode="search">
+    <div id="sumgrid" hidden></div>
+    <span class="sp"></span>
+    <button class="btn sm" id="newbtn" type="button">＋ 投稿する</button>
+  </div>
+
+  <div id="msg" class="msg"></div>
+  <div id="stable"></div>
+</div>
+
+<!-- 新規投稿 -->
+<div class="panel" id="npanel">
+  <div class="card">
+    <h2>報・連・相を投稿</h2>
+    <div class="cbody">
+      <div class="frow"><label>種別</label>
+        <div class="seg" id="nseg">
+          <button type="button" data-t="report" class="on">報告（成果）</button>
+          <button type="button" data-t="contact">連絡（問題点）</button>
+          <button type="button" data-t="consult">相談（重要）</button>
+        </div></div>
+      <div class="frow"><label for="n_proj">工事</label>
+        <select id="n_proj"><option value="">工事全体</option></select></div>
+      <div class="frow"><label for="n_title">見出し</label>
+        <input id="n_title" type="text" placeholder="例）建柱2本完了／PAS取付で干渉あり など"></div>
+      <textarea id="n_body" placeholder="内容を具体的に。成果は進み具合、問題点は状況、相談は判断してほしいこと。"></textarea>
+      <div class="cfoot">
+        <span style="flex:1 1 auto"></span>
+        <button class="btn ghost sm" id="ncancel" type="button">やめる</button>
+        <button class="btn" id="nsave" type="button">投稿する</button>
+      </div>
+      <div id="nmsg" class="msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 詳細・返信 -->
+<div class="panel" id="dpanel">
+  <div class="card">
+    <h2 id="dttl">報・連・相</h2>
+    <div class="cbody" id="dbodywrap"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const TYPE = { report:'報告', contact:'連絡', consult:'相談' };
+  const TYPESUB = { report:'成果・進み具合', contact:'問題点', consult:'重要・遅れ直結' };
+  const STATUS = { open:'未対応', in_progress:'対応中', resolved:'解決' };
+  const fmtDT = ts => { if(!ts) return ''; const d=new Date(ts); const p=n=>String(n).padStart(2,'0');
+    return `${String(d.getFullYear()).slice(2)}/${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+  const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; };
+  const dayKey = ts => { const d=new Date(ts); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; };
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isMgr = (me.role === 'admin' || me.role === 'manager');   // 経営者(①)・現場監督(②)＝本ページの利用者
+  // 権限：報・連・相は「経営者 ⇄ 現場監督」の間だけ。一般社員・外注社員・協力業者は使用不可。
+  if (!isMgr){ alert('報・連・相は経営者・現場監督のみ使用できます。'); location.replace('mode-select.html'); return; }
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  const HELPKEY = 'hrs_help_open';
+  function applyHelp(){ let o=false; try{o=localStorage.getItem(HELPKEY)==='1';}catch(e){} $('lead').hidden=!o; $('helpBtn').textContent=o?'？使い方 ▲':'？使い方 ▼'; }
+  $('helpBtn').addEventListener('click', ()=>{ let o=false; try{o=localStorage.getItem(HELPKEY)==='1';}catch(e){} try{localStorage.setItem(HELPKEY,o?'0':'1');}catch(e){} applyHelp(); });
+  applyHelp();
+
+  let projects = [], users = [], reports = [], replies = [];
+  const qs = new URL(location.href).searchParams;
+  let projId = qs.get('p') || '';
+
+  async function loadRefs(){
+    const [pj, us] = await Promise.all([
+      sb.from('projects').select('id, project_no, name').eq('is_active', true).order('project_no'),
+      sb.from('app_users').select('id, name').eq('is_active', true),
+    ]);
+    projects = pj.data || []; users = us.data || [];
+    const opts = '<option value="">工事全体</option>' + projects.map(p=>`<option value="${p.id}">${esc(p.project_no||'')} ${esc(p.name)}</option>`).join('');
+    $('n_proj').innerHTML = opts;
+    $('fproj').innerHTML = '<option value="">すべての工事</option>' + projects.map(p=>`<option value="${p.id}"${p.id===projId?' selected':''}>${esc(p.project_no||'')} ${esc(p.name)}</option>`).join('');
+  }
+
+  async function loadData(){
+    let rq = sb.from('site_reports').select('*').eq('is_active', true).order('created_at', { ascending:false });
+    if (projId) rq = rq.eq('project_id', projId);
+    const r = await rq;
+    if (r.error){
+      showMsg($('msg'), /relation .* does not exist|schema cache/i.test(r.error.message||'')
+        ? 'データベースに報・連・相の表がまだありません。Supabase で phase22_hourensou.sql を実行してください。'
+        : '読み込めませんでした。' + r.error.message, 'err');
+      reports = []; replies = []; return;
+    }
+    reports = r.data || [];
+    const ids = reports.map(x=>x.id);
+    if (ids.length){
+      const rr = await sb.from('site_report_replies').select('*').in('report_id', ids).order('created_at');
+      replies = rr.data || [];
+    } else replies = [];
+  }
+
+  const umap = () => Object.fromEntries(users.map(u=>[u.id,u.name]));
+  const projmap = () => Object.fromEntries(projects.map(p=>[p.id,p]));
+  const repliesOf = id => replies.filter(r=>r.report_id===id);
+
+  function render(){
+    const UM = umap(), PJ = projmap();
+    const ft = $('ftype').value, fs = $('fstatus').value, q = ($('q').value||'').trim().toLowerCase();
+    const tkey = todayStr();
+
+    // サマリ（現在の絞り込み工事の範囲で）
+    const nConsult = reports.filter(r=>r.report_type==='consult' && r.status!=='resolved').length;
+    const nContact = reports.filter(r=>r.report_type==='contact' && r.status!=='resolved').length;
+    const nUnack   = reports.filter(r=>!r.acknowledged_at).length;
+    const nToday   = reports.filter(r=>dayKey(r.created_at)===tkey).length;
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML =
+      `<div class="sumcard ${nConsult>0?'danger':'ok'}"><span class="ico">${nConsult>0?'🔴':'✓'}</span><span class="t">未解決の相談</span><span class="v">${nConsult}<small>件</small></span></div>`
+    + `<div class="sumcard ${nContact>0?'warn':'ok'}"><span class="ico">${nContact>0?'⚠':'✓'}</span><span class="t">未解決の問題点</span><span class="v">${nContact}<small>件</small></span></div>`
+    + `<div class="sumcard info"><span class="ico">📥</span><span class="t">本社未確認</span><span class="v">${nUnack}<small>件</small></span></div>`
+    + `<div class="sumcard info"><span class="ico">📅</span><span class="t">今日の投稿</span><span class="v">${nToday}<small>件</small></span></div>`;
+
+    let rows = reports.slice();
+    if (ft) rows = rows.filter(r=>r.report_type===ft);
+    if (fs==='unres') rows = rows.filter(r=>r.status!=='resolved');
+    else if (fs==='unack') rows = rows.filter(r=>!r.acknowledged_at);
+    else if (fs==='mine') rows = rows.filter(r=>r.created_by===me.id);
+    if (q) rows = rows.filter(r=>((r.title||'')+' '+(r.body||'')).toLowerCase().includes(q));
+
+    if (!rows.length){
+      $('stable').innerHTML = `<div class="empty"><b>該当する投稿がありません</b>右上の「投稿する」から報告・連絡・相談を記録できます。</div>`;
+      return;
+    }
+
+    let h = `<div class="stable"><div class="shead">`
+      + `<span class="rno">NO</span><span>種別</span><span>見出し・内容</span><span>工事</span><span>投稿者</span><span>日時</span><span>状態</span><span>本社確認</span></div>`;
+    rows.forEach((r,i)=>{
+      const pj = PJ[r.project_id];
+      const consultUnres = r.report_type==='consult' && r.status!=='resolved';
+      const contactUnres = r.report_type==='contact' && r.status!=='resolved';
+      const cls = consultUnres ? 'consultUnres' : (contactUnres ? 'unres' : '');
+      const nrep = repliesOf(r.id).length;
+      h += `<div class="srow ${cls}" data-id="${r.id}">
+        <span class="rno"><b class="mlbl">No. </b>${i+1}</span>
+        <span class="ctr"><span class="tchip ${r.report_type}">${TYPE[r.report_type]}</span></span>
+        <span><span class="ttl">${esc(r.title||'（無題）')}</span><span class="ex">${esc((r.body||'').replace(/\s+/g,' '))}${nrep?`　💬${nrep}`:''}</span></span>
+        <span class="ctr"><span class="sub">${pj?esc(pj.name):'工事全体'}</span></span>
+        <span class="ctr"><span class="sub">${UM[r.created_by]?esc(UM[r.created_by]):'—'}</span></span>
+        <span class="num">${fmtDT(r.created_at)}</span>
+        <span class="ctr">${r.report_type==='report'?'<span class="sub">—</span>':`<span class="schip ${r.status}">${STATUS[r.status]||''}</span>`}</span>
+        <span class="ctr"><span class="ackchip ${r.acknowledged_at?'yes':'no'}">${r.acknowledged_at?'確認済':'未確認'}</span></span>
+      </div>`;
+    });
+    h += `</div>`;
+    $('stable').innerHTML = h;
+    $('stable').querySelectorAll('.srow').forEach(el=> el.addEventListener('click', ()=> openDetail(el.dataset.id)));
+  }
+
+  /* ===== 新規投稿 ===== */
+  let nType = 'report';
+  $('newbtn').addEventListener('click', ()=>{
+    nType='report'; $('nseg').querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.t==='report'));
+    $('n_proj').value = projId || ''; $('n_title').value=''; $('n_body').value=''; showMsg($('nmsg'),'');
+    $('npanel').classList.add('open'); $('n_title').focus();
+  });
+  $('nseg').querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{ nType=b.dataset.t; $('nseg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); }));
+  $('ncancel').addEventListener('click', ()=> $('npanel').classList.remove('open'));
+  $('nsave').addEventListener('click', async ()=>{
+    const title = $('n_title').value.trim(), body = $('n_body').value.trim();
+    if (!title && !body){ showMsg($('nmsg'),'見出しか内容を入れてください。','err'); return; }
+    $('nsave').disabled=true;
+    const { error } = await sb.from('site_reports').insert({
+      organization_id: me.organization_id, project_id: $('n_proj').value || null,
+      report_type: nType, title: title || null, body: body || null,
+      status: 'open', created_by: me.id
+    });
+    $('nsave').disabled=false;
+    if (error){ showMsg($('nmsg'),'投稿できませんでした。'+error.message,'err'); return; }
+    $('npanel').classList.remove('open');
+    await loadData(); render();
+  });
+
+  /* ===== 詳細・返信・本社確認・状態変更 ===== */
+  let dId = null;
+  async function openDetail(id){
+    dId = id;
+    const r = reports.find(x=>x.id===id); if(!r) return;
+    const UM = umap(), PJ = projmap(); const pj = PJ[r.project_id];
+    $('dttl').innerHTML = `<span class="tchip ${r.report_type}">${TYPE[r.report_type]}</span> ${esc(r.title||'（無題）')}`;
+    const reps = repliesOf(id);
+    const statSel = (r.report_type!=='report' && isMgr)
+      ? `<div class="frow"><label>状態</label><select id="d_status">
+           ${Object.entries(STATUS).map(([k,v])=>`<option value="${k}"${r.status===k?' selected':''}>${v}</option>`).join('')}
+         </select></div>` : '';
+    const ackBtn = isMgr
+      ? (r.acknowledged_at ? `<span class="ackchip yes">確認済（${UM[r.acknowledged_by]?esc(UM[r.acknowledged_by]):''} ${fmtDT(r.acknowledged_at)}）</span>`
+                           : `<button class="btn sm" id="d_ack" type="button">本社として確認</button>`)
+      : `<span class="ackchip ${r.acknowledged_at?'yes':'no'}">${r.acknowledged_at?'本社確認済':'本社未確認'}</span>`;
+    const delBtn = isMgr ? `<button class="btn ghost sm" id="d_del" type="button">削除</button>` : '';
+
+    $('dbodywrap').innerHTML =
+      `<div class="dmeta">${pj?esc(pj.name):'工事全体'}　｜　投稿：${UM[r.created_by]?esc(UM[r.created_by]):'—'}　${fmtDT(r.created_at)}　｜　${TYPESUB[r.report_type]}</div>`
+    + `<div class="dbody">${esc(r.body||'')||'<span style=\"color:var(--sub)\">（本文なし）</span>'}</div>`
+    + statSel
+    + `<div class="cfoot">${ackBtn}<span style="flex:1 1 auto"></span>${delBtn}</div>`
+    + `<div style="font-size:12px;font-weight:800;color:var(--ink-2);margin-top:6px">やり取り（${reps.length}）</div>`
+    + `<div class="replies" id="d_replies">${reps.map(x=>`<div class="reply"><div class="rmeta">${UM[x.created_by]?esc(UM[x.created_by]):'—'}　${fmtDT(x.created_at)}</div><div class="rtext">${esc(x.body||'')}</div></div>`).join('') || '<span class="sub" style="font-size:12px;color:var(--sub)">まだ返信はありません。</span>'}</div>`
+    + `<textarea id="d_reply" placeholder="返信を書く（本社の回答・現場の追記）"></textarea>`
+    + `<div class="cfoot"><span style="flex:1 1 auto"></span><button class="btn ghost sm" id="d_close" type="button">閉じる</button><button class="btn sm" id="d_send" type="button">返信する</button></div>`;
+
+    $('dpanel').classList.add('open');
+    $('d_close').addEventListener('click', ()=> $('dpanel').classList.remove('open'));
+    const send = $('d_send'); if (send) send.addEventListener('click', sendReply);
+    const ack = $('d_ack'); if (ack) ack.addEventListener('click', doAck);
+    const del = $('d_del'); if (del) del.addEventListener('click', doDelete);
+    const ss = $('d_status'); if (ss) ss.addEventListener('change', ()=> changeStatus(ss.value));
+  }
+
+  async function sendReply(){
+    const body = $('d_reply').value.trim(); if(!body) return;
+    $('d_send').disabled=true;
+    const { error } = await sb.from('site_report_replies').insert({
+      organization_id: me.organization_id, report_id: dId, body, created_by: me.id });
+    $('d_send').disabled=false;
+    if (error){ showMsg($('msg'),'返信できませんでした。'+error.message,'err'); return; }
+    await loadData(); render(); openDetail(dId);
+  }
+  async function doAck(){
+    const { error } = await sb.from('site_reports').update({ acknowledged_by: me.id, acknowledged_at: new Date().toISOString() }).eq('id', dId);
+    if (error){ showMsg($('msg'),'確認できませんでした。'+error.message,'err'); return; }
+    await loadData(); render(); openDetail(dId);
+  }
+  async function changeStatus(v){
+    const { error } = await sb.from('site_reports').update({ status: v }).eq('id', dId);
+    if (error){ showMsg($('msg'),'状態を変えられませんでした。'+error.message,'err'); return; }
+    await loadData(); render(); openDetail(dId);
+  }
+  async function doDelete(){
+    if (!confirm('この投稿を削除します。よろしいですか？（記録は残さず一覧から消えます）')) return;
+    const { error } = await sb.from('site_reports').update({ is_active:false }).eq('id', dId);
+    if (error){ showMsg($('msg'),'削除できませんでした。'+error.message,'err'); return; }
+    $('dpanel').classList.remove('open');
+    await loadData(); render();
+  }
+
+  // イベント
+  $('fproj').addEventListener('change', async ()=>{
+    projId = $('fproj').value;
+    const u = new URL(location.href); projId ? u.searchParams.set('p', projId) : u.searchParams.delete('p'); history.replaceState(null,'',u);
+    await loadData(); render();
+  });
+  $('ftype').addEventListener('change', render);
+  $('fstatus').addEventListener('change', render);
+  $('q').addEventListener('input', render);
+  [$('npanel'),$('dpanel')].forEach(p=> p.addEventListener('click', e=>{ if(e.target===p) p.classList.remove('open'); }));
+
+  await loadRefs();
+  await loadData();
+  render();
+})();
+</script>
+</body>
+</html>
