@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260908B -->
+<!-- BUILD: schedule (工程表) v20260908C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -2466,6 +2466,12 @@ body > header.bar{ flex:0 0 auto; }
     const s = $('f_start').value, e = $('f_end').value;
     if (s && e && s > e){ showMsg($('pmsg'), '終了日が開始日より前になっています。', 'err'); return; }
 
+    // 進み具合＝完了なら出来高（進捗％）を自動で100%に。完了を取り消したら自動100%も解除。
+    const _st = $('f_status').value;
+    const _ppct = (_st === 'done') ? 100
+                : (editing && editing.status === 'done') ? 0
+                : (editing ? (editing.progress_pct ?? 0) : 0);
+
     const body = {
       organization_id : me.organization_id,
       project_id      : projId,
@@ -2475,7 +2481,8 @@ body > header.bar{ flex:0 0 auto; }
       start_date      : s || null,
       end_date        : e || null,
       planned_mandays : $('f_md').value === '' ? 0 : Number($('f_md').value),
-      status          : $('f_status').value,
+      status          : _st,
+      progress_pct    : _ppct,
       note            : $('f_note').value.trim() || null
     };
     if (!editing) body.seq = (phases.length ? Math.max(...phases.map(p => p.seq||0)) : 0) + 10;
