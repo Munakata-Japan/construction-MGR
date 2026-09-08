@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260908A -->
+<!-- BUILD: schedule (工程表) v20260908B -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -1058,7 +1058,8 @@ body > header.bar{ flex:0 0 auto; }
       o.status === 'planned' && o.due_date &&
       (d2n(o.due_date) - today) <= (o.alert_days ?? 14));
 
-    $('ordbtn').innerHTML = orders.length ? `発注 <b>${orders.length}</b>` : '発注';
+    // 発注ボタンは非管理者では存在しない（金額を扱うため除去済み）。存在するときだけ更新
+    { const ob = $('ordbtn'); if (ob) ob.innerHTML = orders.length ? `発注 <b>${orders.length}</b>` : '発注'; }
 
     if (!hit.length){
       $('alertbtn').hidden = true;
