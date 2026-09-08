@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<!-- BUILD: permissions (権限マトリクス) v20260908A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>権限マトリクス ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{ max-width:1240px; padding-bottom:40px; }
+  .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
+
+  .lead{ color:var(--sub); font-size:12px; line-height:1.5; margin:2px 0 12px; }
+
+  /* ===== 5区分の定義カード ===== */
+  .roles{ display:grid; gap:8px; grid-template-columns:repeat(5, 1fr); margin:0 0 14px; }
+  .role{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:9px 10px; position:relative; overflow:hidden; }
+  .role .tno{ font-family:var(--mono); font-weight:800; font-size:15px; color:var(--ink-2); line-height:1; }
+  .role .tnm{ display:block; font-weight:700; font-size:13.5px; margin-top:3px; color:var(--ink); }
+  .role .tside{ display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:999px; margin-top:5px; }
+  .role .tside.in{ background:#E3EBF3; color:var(--ink-2); }
+  .role .tside.ex{ background:#FBF1EF; color:#8C2A1D; }
+  .role .tdesc{ display:block; font-size:11px; color:var(--sub); margin-top:5px; line-height:1.45; }
+  .role.me{ border-color:var(--ink-2); box-shadow:0 0 0 2px rgba(37,90,145,.18), var(--shadow-1); }
+  .role.me::after{ content:"今のあなた"; position:absolute; top:0; right:0; font-size:9.5px; font-weight:800;
+    color:#fff; background:var(--ink-2); padding:2px 7px; border-radius:0 0 0 8px; letter-spacing:.02em; }
+
+  /* ===== 凡例 ===== */
+  .legend{ display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; margin:0 0 10px; font-size:11px; color:var(--sub); }
+  .legend .lg{ display:inline-flex; align-items:center; gap:5px; }
+  .cell{ display:inline-block; min-width:58px; text-align:center; font-size:11.5px; font-weight:700;
+    padding:3px 8px; border-radius:var(--radius-sm); line-height:1.25; white-space:nowrap; }
+  .cell.edit{ background:#E4F1E7; color:#1F7A3D; border:1px solid #B9DEC3; }   /* 編集・全件 */
+  .cell.view{ background:#E7EFF7; color:#255A91; border:1px solid #C3D6E8; }   /* 閲覧 */
+  .cell.own { background:#FBF0D4; color:#6B4E00; border:1px solid #E7C866; }   /* 担当のみ・自分のみ */
+  .cell.post{ background:#E4F1E7; color:#1F7A3D; border:1px dashed #9FCEAD; }  /* 投稿可 */
+  .cell.yes { background:#EEF3EC; color:var(--ok); border:1px solid #CFE0CC; } /* 可 */
+  .cell.no  { background:transparent; color:#B7BEC4; border:1px solid var(--rule-2); }  /* 不可 */
+
+  /* ===== マトリクス表 ===== */
+  .tbox{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); overflow:auto; }
+  table.mx{ border-collapse:collapse; width:100%; min-width:820px; }
+  table.mx th, table.mx td{ border:1px solid var(--rule-2); padding:7px 8px; text-align:center; vertical-align:middle; }
+  table.mx thead th{ position:sticky; top:0; z-index:3; background:#F1F3EF; font-size:12px; color:var(--ink);
+    font-weight:700; }
+  table.mx thead th .tno{ font-family:var(--mono); font-weight:800; font-size:13px; color:var(--ink-2); display:block; }
+  table.mx thead th .side{ display:block; font-size:9.5px; font-weight:700; color:var(--sub); margin-top:2px; }
+  table.mx thead th.fn, table.mx tbody th.fn{ text-align:left; }
+  table.mx tbody th.fn{ background:var(--card); font-weight:700; font-size:13px; color:var(--ink);
+    white-space:nowrap; position:sticky; left:0; z-index:2; }
+  table.mx tbody tr:hover td, table.mx tbody tr:hover th.fn{ background:#F7F9F6; }
+  table.mx tr.grp th{ background:#EEF1EA; color:var(--ink-2); text-align:left; font-size:11px; font-weight:800;
+    letter-spacing:.04em; padding:5px 8px; position:sticky; left:0; }
+  table.mx col.mecol, table.mx th.mecol, table.mx td.mecol{ background:rgba(37,90,145,.06); }
+  table.mx thead th.mecol{ background:#E7EEF6; box-shadow:inset 0 -2px 0 var(--ink-2); }
+
+  .note{ margin-top:14px; background:#F1F3EF; border:1px solid var(--rule-2); border-radius:var(--radius);
+    padding:10px 12px; font-size:11.5px; color:var(--ink-2); line-height:1.6; }
+  .note b{ color:var(--ink); }
+  .note .ph{ display:inline-block; font-size:10px; font-weight:800; padding:1px 7px; border-radius:999px;
+    background:#E3EBF3; color:var(--ink-2); margin-right:5px; }
+
+  @media (max-width:720px){
+    .roles{ grid-template-columns:1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1><span class="pgico" aria-hidden="true">🔑</span>権限マトリクス</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<div class="wrap">
+  <p class="lead">
+    利用者を <b>5区分</b> に分け、区分ごとに「見える項目」と「できる操作」を定めます。金額・原価などの社内情報は上位の区分だけに、社外（協力業者）は自分の担当工事の現場情報だけに絞ります。
+  </p>
+
+  <div class="roles" id="roles"></div>
+
+  <div class="legend" id="legend">
+    <span class="lg"><span class="cell edit">編集</span>作成・編集・全件</span>
+    <span class="lg"><span class="cell view">閲覧</span>見るだけ</span>
+    <span class="lg"><span class="cell own">担当のみ</span>自分の担当工事・自分の分だけ</span>
+    <span class="lg"><span class="cell post">投稿可</span>自分の分を登録</span>
+    <span class="lg"><span class="cell no">—</span>不可（非表示）</span>
+  </div>
+
+  <div class="tbox">
+    <table class="mx" id="mx"></table>
+  </div>
+
+  <div class="note">
+    <p style="margin:0 0 6px"><span class="ph">第1段階</span><b>区分ごとの表示・操作の出し分け</b>（見える／編集／削除）。DBの役職＋社内外を5区分に整理して制御します。</p>
+    <p style="margin:0"><span class="ph">第2段階</span><b>「担当のみ」の範囲を実際に絞る</b>（④外注社員・⑤協力業者向け）。工事への担当割当の仕組みとRLSが必要なため、別途対応します。現状は目安表示です。</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  // 5区分の定義
+  const ROLES = [
+    { no:'①', nm:'経営者',   side:'in', desc:'最上位。全情報＋利用者管理' },
+    { no:'②', nm:'現場監督', side:'in', desc:'現場運営。原価・予算・発注・損益まで' },
+    { no:'③', nm:'一般社員', side:'in', desc:'日常業務。閲覧中心＋日報・写真' },
+    { no:'④', nm:'外注社員', side:'in', desc:'社内だが担当工事に限定' },
+    { no:'⑤', nm:'協力業者', side:'ex', desc:'社外。担当工事の現場情報のみ' },
+  ];
+
+  // 現在のログイン権限がどの区分に当たるかの目安（第1段階の導入前なので概算）
+  let ext = null, emp = null;
+  try {
+    const { data } = await sb.from('app_users').select('is_external, employee_type').eq('id', me.id).maybeSingle();
+    if (data){ ext = data.is_external; emp = data.employee_type; }
+  } catch(e){}
+  let meIdx;
+  if (ext) meIdx = 4;
+  else if (me.role === 'admin') meIdx = 0;
+  else if (me.role === 'manager') meIdx = 1;
+  else if (emp === 'outsourced' || emp === '外注' || emp === 'contractor') meIdx = 3;
+  else meIdx = 2;
+
+  // 区分カード
+  $('roles').innerHTML = ROLES.map((r,i)=>`
+    <div class="role${i===meIdx?' me':''}">
+      <span class="tno">${r.no}</span>
+      <span class="tnm">${r.nm}</span>
+      <span class="tside ${r.side}">${r.side==='in'?'社内':'社外'}</span>
+      <span class="tdesc">${r.desc}</span>
+    </div>`).join('');
+
+  /* セル記号：
+     E=編集/全件  V=閲覧  O=担当のみ  P=投稿可  Y=可  X=不可
+     ラベルを変えたい時は [記号,'表示文字'] で指定 */
+  const C = {
+    E:['edit','編集'], V:['view','閲覧'], O:['own','担当のみ'],
+    P:['post','投稿可'], Y:['yes','可'], X:['no','—']
+  };
+  function cell(code){
+    let sym = code, label = null;
+    if (Array.isArray(code)){ sym = code[0]; label = code[1]; }
+    const def = C[sym] || C.X;
+    return `<span class="cell ${def[0]}">${label || def[1]}</span>`;
+  }
+
+  // マトリクス定義（機能ごとに [①,②,③,④,⑤]）
+  const SECTIONS = [
+    { grp:'基本情報', rows:[
+      ['工事一覧',      ['E','全件'], ['E','全件'], ['V','閲覧(全)'], 'O', 'O'],
+      ['取引先',         'E', 'E', 'V', 'X', 'X'],
+      ['利用者管理',     ['E','管理'], 'X', 'X', 'X', 'X'],
+      ['権限マトリクス', 'V', 'V', 'X', 'X', 'X'],
+    ]},
+    { grp:'現場管理', rows:[
+      ['工程表',         'E', 'E', ['V','閲覧(全)'], ['V','閲覧(全)'], 'O'],
+      ['材料調達計画表', 'E', 'E', 'V', 'O', 'O'],
+      ['カレンダー',     'Y', 'Y', 'Y', 'Y', ['O','自分の予定']],
+      ['作業日報',       ['V','全社'], ['V','全社'], ['P','自分＋閲覧'], ['O','自分のみ'], ['O','自分のみ']],
+      ['写真・書類',     'E', 'E', 'P', ['O','閲覧(担当)'], ['P','投稿(担当)']],
+      ['安全書類',       'Y', 'Y', 'Y', 'Y', 'Y'],
+    ]},
+    { grp:'工事台帳（原価・経営）', rows:[
+      ['相見積・原価決定','E', 'E', 'X', 'X', 'X'],
+      ['実行予算',       'E', 'E', 'X', 'X', 'X'],
+      ['発注・依頼',     'E', 'E', 'X', 'X', 'X'],
+      ['出来高・進捗',   'E', 'E', 'X', 'X', 'X'],
+      ['損益・粗利',     'V', 'V', 'X', 'X', 'X'],
+      ['設計変更・追加', 'E', 'E', 'V', 'V', 'X'],
+      ['竣工図書',       'E', 'E', 'V', 'V', 'X'],
+    ]},
+  ];
+
+  // 表の組み立て
+  let h = '<colgroup><col class="fncol">';
+  for (let i=0;i<5;i++) h += `<col class="${i===meIdx?'mecol':''}">`;
+  h += '</colgroup>';
+  h += '<thead><tr><th class="fn">機能</th>';
+  ROLES.forEach((r,i)=>{
+    h += `<th class="${i===meIdx?'mecol':''}"><span class="tno">${r.no}</span>${r.nm}<span class="side">${r.side==='in'?'社内':'社外'}</span></th>`;
+  });
+  h += '</tr></thead><tbody>';
+  SECTIONS.forEach(sec=>{
+    h += `<tr class="grp"><th class="fn" colspan="6">${sec.grp}</th></tr>`;
+    sec.rows.forEach(row=>{
+      h += `<tr><th class="fn">${row[0]}</th>`;
+      for (let i=1;i<=5;i++){
+        h += `<td class="${i-1===meIdx?'mecol':''}">${cell(row[i])}</td>`;
+      }
+      h += '</tr>';
+    });
+  });
+  h += '</tbody>';
+  $('mx').innerHTML = h;
+})();
+</script>
+</body>
+</html>
