@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: orders (発注・依頼一覧) v20260908A -->
+<!-- BUILD: orders (材料発注) v20260908B -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>発注・依頼一覧 ｜ 宗像総合管理システム</title>
+<title>材料発注 ｜ 宗像総合管理システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -116,13 +116,13 @@
 
 <header class="bar">
   <span class="mark" aria-hidden="true"></span>
-  <h1><span class="pgico" aria-hidden="true">🧾</span>発注・依頼一覧</h1>
+  <h1><span class="pgico" aria-hidden="true">🛒</span>材料発注</h1>
   <div class="who" id="who"></div>
 </header>
 
 <div class="wrap">
   <p class="lead" id="lead" hidden>
-    工事ごとの<b>発注・依頼</b>を一覧で確認し、<b>発注抜け（未発注）</b>が無いかを点検するページです。発注の作成・編集は工程表から行えます（行をクリックすると該当の発注／材料を工程表で開きます）。
+    材料の<b>発注</b>を管理します。まだ発注していない材料（<b>発注抜け＝未発注</b>）を点検し、<b>相見積で原価を決めてから発注</b>します。相見積・原価決定は「相見積・原価決定」、発注の作成・編集は「工程表」から行えます（行をクリックすると該当の発注／材料を工程表で開きます）。発注後の入荷（納品予定）は「材料到着スケジュール」で管理します。
   </p>
 
   <div class="ctl">
@@ -142,6 +142,7 @@
       <option value="external">社外</option>
     </select>
     <span class="sp"></span>
+    <a class="btn ghost sm newbtn" href="genka.html">相見積・原価決定</a>
     <a class="btn sm newbtn" id="newbtn" href="#">＋ 発注を作る（工程表）</a>
   </div>
 
@@ -249,7 +250,7 @@
     }
 
     if (!rows.length){
-      $('otable').innerHTML = `<div class="empty"><b>${fstat==='gap'?'発注抜けはありません':'発注・依頼がありません'}</b>${fstat==='gap'?'予算台帳の材料はすべて発注に紐づいています。':'工程表から発注を作成すると、ここに一覧されます。'}</div>`;
+      $('otable').innerHTML = `<div class="empty"><b>${fstat==='gap'?'発注抜けはありません':'発注がありません'}</b>${fstat==='gap'?'予算台帳の材料はすべて発注に紐づいています。':'工程表から発注を作成すると、ここに一覧されます。'}</div>`;
       return;
     }
 
