@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: permissions (権限マトリクス) v20260908B -->
+<!-- BUILD: permissions (権限マトリクス) v20260908C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -23,12 +23,12 @@
   .tbox{ flex:1 1 auto; min-height:0; }
   .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
 
-  .lead{ color:var(--sub); font-size:12px; line-height:1.5; margin:2px 0 12px; }
+  .lead{ color:var(--sub); font-size:11px; line-height:1.35; margin:0 0 6px; }
 
   /* ===== 5区分の定義カード ===== */
   .roles{ display:grid; gap:6px; grid-template-columns:repeat(5, 1fr); margin:0 0 8px; }
   .role{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-    box-shadow:var(--shadow-1); padding:5px 9px; position:relative; overflow:hidden; }
+    box-shadow:var(--shadow-1); padding:4px 9px; position:relative; overflow:hidden; }
   .role .tno{ font-family:var(--mono); font-weight:800; font-size:12.5px; color:var(--ink-2); line-height:1; }
   .role .tnm{ display:inline; font-weight:700; font-size:12.5px; margin-left:5px; color:var(--ink); }
   .role .tside{ display:inline-block; font-size:9px; font-weight:700; padding:0 6px; border-radius:999px; margin-left:6px; vertical-align:1px; }
@@ -90,7 +90,7 @@
 
 <div class="wrap">
   <p class="lead">
-    利用者を <b>5区分</b> に分け、区分ごとに「見える項目」と「できる操作」を定めます。金額・原価などの社内情報は上位の区分だけに、社外（協力業者）は自分の担当工事の現場情報だけに絞ります。
+    <b>5区分</b>ごとに「見える項目・できる操作」を定めます（金額・原価は上位区分のみ／協力業者は担当工事の現場情報だけ）。
   </p>
 
   <div class="roles" id="roles"></div>
