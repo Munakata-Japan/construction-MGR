@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: reports (日報) v20260906A -->
+<!-- BUILD: reports (日報) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -51,6 +51,14 @@
     #panel .wrap{ max-width:1100px; }
     .formgrid{ display:grid; grid-template-columns:400px 1fr; gap:16px; align-items:start; }
   }
+  /* 日報の写真添付（選ぶ／撮影・枚数無制限で累積） */
+  .phlist{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .phitem{ position:relative; width:82px; height:82px; border:1px solid var(--rule); border-radius:6px; overflow:hidden; background:#F1F3EF; flex:0 0 auto; }
+  .phitem img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .phitem .ph-x{ position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; border:0;
+    background:rgba(0,0,0,.6); color:#fff; font-weight:800; font-size:13px; cursor:pointer; line-height:20px; padding:0; text-align:center; }
+  .phitem .ph-tag{ position:absolute; left:0; right:0; bottom:0; font-size:9px; text-align:center; background:rgba(0,0,0,.5); color:#fff; padding:1px 0; }
+  .phcount{ font-size:11.5px; color:var(--ink-2); margin-top:8px; font-weight:700; }
 </style>
 </head>
 <body>
@@ -181,6 +189,23 @@
       </div>
     </div>
 
+    <div class="sheet" style="margin-top:16px">
+      <div class="head">写真</div>
+      <div class="row" style="grid-template-columns:1fr">
+        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+          <input id="ph_lib" type="file" accept="image/*" multiple hidden>
+          <input id="ph_cam" type="file" accept="image/*" capture="environment" multiple hidden>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn ghost sm" id="ph_pick" type="button">🖼 写真を選ぶ</button>
+            <button class="btn ghost sm" id="ph_shoot" type="button">📷 カメラで撮影</button>
+          </div>
+          <div class="phcount" id="ph_count" hidden></div>
+          <div id="ph_list" class="phlist"></div>
+          <div style="font-size:11px;color:var(--sub);margin-top:6px">現場の写真を添付できます（枚数の上限なし・追加していけます。画像は自動で縮小して保存）。</div>
+        </div>
+      </div>
+    </div>
+
     <div id="flow" style="margin-top:16px"></div>
     <div class="act" id="acts"></div>
     <div style="height:16px"></div>
@@ -221,6 +246,11 @@
     `<option value="${w}">${w || '（未設定）'}</option>`));
 
   let projects = [], users = [], reports = [], phaseCache = {}, editing = null, lines = [];
+  const BUCKET = 'project-files';
+  let phPicked = [];              // これから上げる写真（選択・撮影で累積・枚数無制限）
+  let phExisting = [];            // 既にこの日報に紐づく写真（project_files）
+  const phDelete = new Set();     // 削除する既存写真のid
+  let phReadonly = false;         // 閲覧のみのとき写真の追加・削除を不可に
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
@@ -399,6 +429,11 @@
     $('lines').classList.toggle('ro', !canEd);
     $('del').hidden = !(r && isMgr);
 
+    // 写真：この日報に紐づく既存写真を読み込み、追加・削除の可否を反映
+    phReadonly = !canEd;
+    $('ph_pick').disabled = !canEd; $('ph_shoot').disabled = !canEd;
+    await loadPhotos(r ? r.id : null);
+
     $('panel').classList.add('open');
     window.scrollTo(0,0);
   }
@@ -407,6 +442,77 @@
   $('add').addEventListener('click', () => openPanel(null));
   $('close').addEventListener('click', closePanel);
   $('cancel').addEventListener('click', closePanel);
+
+  /* ========== 写真の添付（選ぶ／撮影・累積・枚数無制限） ========== */
+  function renderPhotos(){
+    const ex = phExisting.filter(f => !phDelete.has(f.id));
+    let h = '';
+    const xBtn = (attr) => phReadonly ? '' : `<button type="button" class="ph-x" ${attr} title="外す">×</button>`;
+    ex.forEach(f => { h += `<div class="phitem"><img alt="" data-path="${esc(f.thumb_path||f.storage_path||'')}">${xBtn(`data-ex="${f.id}"`)}<span class="ph-tag">保存済</span></div>`; });
+    phPicked.forEach((p, i) => { h += `<div class="phitem"><img alt="" src="${p._url}">${xBtn(`data-pk="${i}"`)}</div>`; });
+    $('ph_list').innerHTML = h;
+    const n = ex.length + phPicked.length;
+    $('ph_count').hidden = (n === 0);
+    $('ph_count').textContent = n ? `写真 ${n} 枚` : '';
+    // 既存写真のサムネイルは署名URLで表示
+    $('ph_list').querySelectorAll('img[data-path]').forEach(async img => {
+      const path = img.dataset.path; if (!path) return;
+      const { data } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+      if (data && data.signedUrl) img.src = data.signedUrl;
+    });
+    $('ph_list').querySelectorAll('.ph-x').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.ex){ phDelete.add(b.dataset.ex); }
+      else if (b.dataset.pk != null){ const p = phPicked[+b.dataset.pk]; if (p && p._url) URL.revokeObjectURL(p._url); phPicked.splice(+b.dataset.pk, 1); }
+      renderPhotos();
+    }));
+  }
+  function addPhotos(list){
+    for (const f of list){ if (f && (f.type||'').startsWith('image/')){ f._url = URL.createObjectURL(f); phPicked.push(f); } }
+    renderPhotos();
+  }
+  $('ph_pick').addEventListener('click', () => $('ph_lib').click());
+  $('ph_shoot').addEventListener('click', () => $('ph_cam').click());
+  $('ph_lib').addEventListener('change', () => { addPhotos($('ph_lib').files); $('ph_lib').value = ''; });
+  $('ph_cam').addEventListener('change', () => { addPhotos($('ph_cam').files); $('ph_cam').value = ''; });
+
+  async function loadPhotos(reportId){
+    phPicked.forEach(p => { if (p._url) URL.revokeObjectURL(p._url); });
+    phPicked = []; phExisting = []; phDelete.clear();
+    if (reportId){
+      const { data } = await sb.from('project_files')
+        .select('id,storage_path,thumb_path,original_name,daily_report_id')
+        .eq('daily_report_id', reportId);
+      phExisting = data || [];
+    }
+    renderPhotos();
+  }
+  // 保存時：削除マークの既存を消し、選択・撮影した写真をアップロードして日報に紐づける
+  async function syncPhotos(reportId, projId){
+    for (const id of phDelete){
+      const f = phExisting.find(x => x.id === id);
+      if (f && f.storage_path) await sb.storage.from(BUCKET).remove([f.storage_path, f.thumb_path].filter(Boolean));
+      await sb.from('project_files').delete().eq('id', id);
+    }
+    phDelete.clear();
+    for (let k = 0; k < phPicked.length; k++){
+      const f = phPicked[k];
+      try {
+        const shrunk = await shrinkImage(f, 1600, 0.8);
+        const blob = shrunk ? shrunk.blob : f;
+        const path = `${me.organization_id}/daily/${reportId}/${Date.now()}_${k}_${(f.name||'photo').replace(/[^\w.\-]+/g,'_')}${shrunk?'.jpg':''}`;
+        const up = await sb.storage.from(BUCKET).upload(path, blob, { contentType: shrunk ? 'image/jpeg' : (f.type||'image/jpeg') });
+        if (up.error) throw up.error;
+        await sb.from('project_files').insert({
+          organization_id: me.organization_id, project_id: projId || null,
+          file_kind: 'photo', purpose: 'submit', storage_path: path,
+          original_name: f.name || null, mime_type: 'image/jpeg', byte_size: blob.size,
+          daily_report_id: reportId, uploaded_by: me.id
+        });
+      } catch(e){ console.error(e); showMsg($('pmsg'), `一部の写真をアップロードできませんでした（${f.name||'写真'}）。`, 'err'); }
+    }
+    phPicked.forEach(p => { if (p._url) URL.revokeObjectURL(p._url); });
+    phPicked = [];
+  }
 
   /* ================= 保存 ================= */
   function collectLines(){
@@ -466,6 +572,12 @@
         : error.code === '42501' ? 'この操作を行う権限がありません。'
         : '保存できませんでした。' + error.message, 'err');
       return null;
+    }
+
+    // 写真の反映（削除マーク→削除、選択・撮影→アップロード。日報に紐づける）
+    if (id && (phPicked.length || phDelete.size)){
+      $('save').textContent = '写真を保存しています…';
+      try { await syncPhotos(id, $('f_proj').value || null); } catch(e){ console.error(e); }
     }
     return id;
   }
