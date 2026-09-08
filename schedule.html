@@ -2563,6 +2563,13 @@ body > header.bar{ flex:0 0 auto; }
   }
   // メニューの「発注・依頼」から来たら、発注一覧を開く（発注管理の独立入口）
   if (qs.get('panel') === 'orders' && projId){ openOrders(null); }
+  // 発注・依頼一覧ページから特定の発注を指定して来たら、その発注を編集で開く
+  const oid = qs.get('order');
+  if (oid && projId){
+    openOrders(null);
+    const ex = orders.find(o => o.id === oid);
+    if (ex) openOrderEdit(ex);
+  }
   // 材料調達計画表から材料を指定して来たら、その材料の発注を開く（発注管理の入口を一本化）
   const bitem = qs.get('bitem');
   if (bitem && projId){
