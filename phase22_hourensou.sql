@@ -62,4 +62,9 @@ create policy srr_write on public.site_report_replies for all
   using (organization_id = current_org_id())
   with check (organization_id = current_org_id());
 
+-- 3) 添付ファイル（画像・Word・Excel・PDF等）は既存の project_files を流用し、
+--    どの報・連・相に紐づくかを持たせる（投稿を消しても資料は残す）。
+alter table public.project_files add column if not exists site_report_id uuid;
+create index if not exists project_files_site_report_idx on public.project_files(site_report_id);
+
 notify pgrst, 'reload schema';
