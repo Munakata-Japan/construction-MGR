@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: progress (出来高・進捗) v20260907E -->
+<!-- BUILD: progress (出来高・進捗) v20260908A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -155,6 +155,8 @@
   let projects = [], phases = [], items = [], projId = null;
   const nz = v => Number(v) || 0;
   const clampPct = v => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  // 工程の「進み具合＝完了(done)」は、出来高を常に100%として扱う（自動・オンタイム）
+  const effPct = p => (p && p.status === 'done') ? 100 : clampPct(p.progress_pct);
   const itemCost = x => nz(x.budget_amount ?? x.amount ?? x.contract_amount);
 
   const fmtShort = v => { if (!v) return ''; const d = new Date(v + 'T00:00:00'); return isNaN(d) ? v : `${d.getMonth() + 1}/${d.getDate()}`; };
@@ -170,7 +172,7 @@
   async function loadProject(){
     if (!projId){ phases = []; items = []; render(); return; }
     const [ph, bi] = await Promise.all([
-      sb.from('project_phases').select('id,name,seq,start_date,progress_pct')
+      sb.from('project_phases').select('id,name,seq,start_date,progress_pct,status')
         .eq('project_id', projId).eq('is_active', true).order('seq'),
       sb.from('phase_budget_items').select('id,phase_id,category,budget_amount,amount,contract_amount,status')
         .eq('project_id', projId)
@@ -192,7 +194,7 @@
   function totals(){
     const phaseIds = new Set(phases.map(p => p.id));
     let assigned = 0, earned = 0, unassigned = 0;
-    phases.forEach(p => { const b = phaseCost(p.id); assigned += b; earned += b * clampPct(p.progress_pct) / 100; });
+    phases.forEach(p => { const b = phaseCost(p.id); assigned += b; earned += b * effPct(p) / 100; });
     items.forEach(x => { if (!x.phase_id || !phaseIds.has(x.phase_id)) unassigned += itemCost(x); });
     const grand = assigned + unassigned;
     const pct = grand > 0 ? earned / grand * 100 : 0;
@@ -246,15 +248,16 @@
 
     phases.forEach((p, i) => {
       const b = phaseCost(p.id);
-      const pct = clampPct(p.progress_pct);
+      const done = (p.status === 'done');   // 進み具合＝完了なら自動100%（スライダーはロック）
+      const pct = effPct(p);
       const earned = b * pct / 100;
-      const prog = isMgr
+      const prog = (isMgr && !done)
         ? `<div class="pcell">
              <input type="range" min="0" max="100" step="5" value="${pct}" data-range="${p.id}" aria-label="進捗%">
              <span class="pv" id="pv_${p.id}">${pct}%</span>
            </div>
            <div class="pbar"><span id="pbar_${p.id}" style="width:${pct}%"></span></div>`
-        : `<div class="roinfo"><span class="pv">${pct}%</span>${stChip(pct)}</div>
+        : `<div class="roinfo"><span class="pv">${pct}%</span>${done ? '<span class="st done">完了（自動100%）</span>' : stChip(pct)}</div>
            <div class="pbar"><span style="width:${pct}%"></span></div>`;
       h += `<tr>
         <td class="rno">${i + 1}</td>
@@ -297,7 +300,7 @@
     set('s_pct', t.pct.toFixed(1) + '%'); set('s_unassigned', fmtMoney(t.unassigned));
     set('f_grand', fmtMoney(t.grand)); set('f_earned', fmtMoney(t.earned)); set('f_pct', t.pct.toFixed(1) + '%');
     phases.forEach(p => {
-      const b = phaseCost(p.id), pct = clampPct(p.progress_pct);
+      const b = phaseCost(p.id), pct = effPct(p);
       set('earn_' + p.id, fmtMoney(b * pct / 100));
     });
   }
