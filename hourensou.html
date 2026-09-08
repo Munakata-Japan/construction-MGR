@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: hourensou (報・連・相) v20260908C -->
+<!-- BUILD: hourensou (報・連・相) v20260908D -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -425,6 +425,8 @@
     if (error){ $('nsave').disabled=false; $('nsave').textContent='投稿する'; showMsg($('nmsg'),'投稿できませんでした。'+error.message,'err'); return; }
     const rid = ins.id;
     // 添付をアップロード（画像は選択時に圧縮済み。その entry の blob をそのまま送る）
+    // ストレージのパスは「<組織ID>/…」で始める必要がある（バケットのポリシー準拠）。
+    let attErr = 0;
     for (let k=0;k<picked.length;k++){
       const it = picked[k];
       $('nsave').textContent = `添付をアップロード中… ${k+1}/${picked.length}`;
@@ -432,20 +434,23 @@
         const blob = it.blob;
         const ctype = it.type || 'application/octet-stream';
         const safe = (it.name||'file').replace(/[^\w.\-]+/g,'_');
-        const path = `reports/${rid}/${Date.now()}_${k}_${safe}${it.compressed?'.jpg':''}`;
+        const path = `${me.organization_id}/reports/${rid}/${Date.now()}_${k}_${safe}${it.compressed?'.jpg':''}`;
         const up = await sb.storage.from(BUCKET).upload(path, blob, { contentType: ctype });
         if (up.error) throw up.error;
-        await sb.from('project_files').insert({
+        const ins2 = await sb.from('project_files').insert({
           organization_id: me.organization_id, project_id: proj,
+          uploaded_by: me.id,
           file_kind: (it.type||'').startsWith('image/') ? 'photo' : ((it.type==='application/pdf') ? 'document' : 'other'),
           storage_path: path, original_name: it.name, mime_type: it.type || null,
           byte_size: blob.size, site_report_id: rid
         });
-      } catch(e){ console.error(e); showMsg($('nmsg'), `一部の添付をアップロードできませんでした（${it.name}）。`, 'err'); }
+        if (ins2.error) throw ins2.error;
+      } catch(e){ console.error(e); attErr++; showMsg($('nmsg'), `添付「${it.name}」を保存できませんでした：${(e && e.message) || e}`, 'err'); }
     }
     $('nsave').disabled=false; $('nsave').textContent='投稿する';
-    $('npanel').classList.remove('open');
+    $('npanel').classList.remove('open');   // 投稿は保存済み。重複投稿を防ぐため必ず閉じる
     await loadData(); render();
+    if (attErr > 0) showMsg($('msg'), `投稿は保存しましたが、添付${attErr}件を保存できませんでした（ストレージ設定をご確認ください。詳細はブラウザのコンソール）。`, 'err');
   });
 
   /* ===== 詳細・返信・本社確認・状態変更 ===== */
