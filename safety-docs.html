@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: safety-docs (安全書類) v20260903A -->
+<!-- BUILD: safety-docs (安全書類) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -13,41 +13,138 @@
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <style>
-  .dlist{ display:grid; gap:10px; margin-top:16px; }
-  .dcard{
-    background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-    box-shadow:var(--shadow-1); padding:14px 16px;
-    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-  }
-  .dcard .no{
-    font-family:var(--mono); font-size:11px; color:#fff; background:var(--ink);
-    border-radius:var(--radius-sm); padding:3px 8px; flex:0 0 auto;
-  }
-  .dcard .body{ flex:1 1 260px; min-width:0; }
-  .dcard .nm{ font-family:var(--disp); font-weight:700; font-size:15.5px; margin:0 0 3px; }
-  .dcard .ds{ font-size:12.5px; color:var(--sub); line-height:1.6; }
-  .dcard .dl{ flex:0 0 auto; text-decoration:none; }
-  .lead{ color:var(--sub); font-size:13.5px; line-height:1.8; margin:14px 0 0; }
+  .wrap{ max-width:1400px; }
+  .lead{ color:var(--sub); font-size:11px; line-height:1.5; margin:6px 0 8px; }
   .lead b{ color:var(--ink); }
+
+  /* 保管書類／ひな型 の切替 */
+  .seg{ display:inline-flex; border:1px solid var(--ink-2); border-radius:999px; overflow:hidden; margin:6px 0 8px; }
+  .seg button{ border:0; background:var(--card); color:var(--ink-2); font-family:var(--body); font-weight:800;
+    font-size:12.5px; padding:6px 16px; min-height:32px; cursor:pointer; white-space:nowrap; }
+  .seg button+button{ border-left:1px solid var(--rule); }
+  .seg button.on{ background:linear-gradient(180deg,#275A91,var(--ink) 65%); color:#fff; }
+
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+  .ctl select{ width:auto; min-width:150px; max-width:320px; min-height:34px; flex:0 1 auto; }
+  .ctl .fl-lb{ font-size:10px; font-weight:800; color:var(--ink-2); letter-spacing:.06em;
+    padding:3px 8px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; white-space:nowrap; }
+  .ctl .sp{ flex:1 1 0; }
+
+  /* アップロード（管理者のみ） */
+  .up{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1);
+    padding:10px 12px; margin-bottom:8px; display:grid; gap:8px;
+    grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); align-items:end; }
+  .up label{ display:flex; flex-direction:column; gap:3px; font-size:11px; color:var(--sub); font-weight:700; }
+  .up input, .up select{ min-height:38px; font-size:14px; }
+  .up .drop{ grid-column:1/-1; border:2px dashed var(--ink-2); border-radius:var(--radius); background:#F3F6FA;
+    padding:12px; text-align:center; color:var(--ink-2); font-weight:700; font-size:12.5px; cursor:pointer; }
+  .up .drop.over{ background:#E7EFF7; }
+  .up .go{ grid-column:1/-1; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .up .hint{ font-size:10.5px; color:var(--sub); }
+
+  .count{ margin:2px 0 4px; font-size:10.5px; color:var(--sub); }
+
+  .stable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); overflow:auto; }
+  .shead, .srow{ display:grid; align-items:center; gap:8px; box-sizing:border-box;
+    grid-template-columns:44px 104px 128px 1.5fr 1fr 120px 132px; min-width:900px; }
+  .shead{ position:sticky; top:0; z-index:5; background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+    white-space:nowrap; padding:6px 12px; border-bottom:1px solid var(--rule); }
+  .shead > span{ text-align:center; border-right:1px solid var(--rule); padding-right:8px; }
+  .shead > span:last-child{ border-right:none; padding-right:0; }
+  .shead .sh{ cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:center; gap:3px; }
+  .shead .sh:hover{ color:var(--ink-2); } .shead .sh.on{ color:var(--ink); font-weight:800; }
+  .shead .sh .ar{ font-style:normal; font-size:9px; color:var(--ink-2); }
+  .srow{ padding:7px 12px; border-top:1px solid var(--rule-2); font-size:12.5px; }
+  .srow:hover{ background:#F5F7F3; }
+  .srow > span{ border-right:1px solid var(--rule-2); padding-right:8px; }
+  .srow > span:last-child{ border-right:none; padding-right:0; }
+  .srow .rno{ font-family:var(--mono); font-size:12px; color:var(--sub); text-align:center; }
+  .srow .dt{ font-family:var(--mono); text-align:center; }
+  .srow .ctr{ text-align:center; }
+  .srow .nm{ font-weight:700; overflow-wrap:break-word; line-height:1.4; }
+  .srow .sub{ font-size:11px; color:var(--sub); }
+  .tchip{ display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:var(--radius-sm);
+    background:#E7EFF7; color:var(--ink-2); white-space:nowrap; }
+  .ops{ display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+  .ops .btn{ min-height:30px; padding:3px 10px; font-size:12px; }
+  .empty{ padding:34px 16px; text-align:center; color:var(--sub); }
+  .empty b{ display:block; font-size:15px; color:var(--ink); margin-bottom:4px; }
+
+  /* ひな型 */
+  .dlist{ display:grid; gap:8px; margin-top:6px; }
+  .dcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1);
+    padding:12px 14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .dcard .no{ font-family:var(--mono); font-size:11px; color:#fff; background:var(--ink); border-radius:var(--radius-sm); padding:3px 8px; flex:0 0 auto; }
+  .dcard .body{ flex:1 1 260px; min-width:0; }
+  .dcard .nm{ font-family:var(--disp); font-weight:700; font-size:14px; margin:0 0 3px; }
+  .dcard .ds{ font-size:12px; color:var(--sub); line-height:1.55; }
+  .dcard .dl{ flex:0 0 auto; text-decoration:none; }
+
+  [hidden]{ display:none !important; }
 </style>
 </head>
 <body>
 
 <header class="bar">
   <span class="mark" aria-hidden="true"></span>
-  <h1>安全書類</h1>
+  <h1><span class="pgico" aria-hidden="true">🦺</span>安全書類</h1>
   <div class="who" id="who"></div>
 </header>
 
 <div class="wrap">
+  <div class="seg" role="tablist">
+    <button type="button" id="s_store" class="on">保管書類</button>
+    <button type="button" id="s_tmpl">ひな型</button>
+  </div>
+
   <div id="msg" class="msg"></div>
 
-  <p class="lead">
-    現場管理で使う安全書類のひな型（PDF）です。<b>協力会社に配布して記入・提出してもらい</b>、
-    元請けとしてまとめて保管してください。ダウンロード後、工事名や協力会社名を入れてお使いいただけます。
-  </p>
+  <!-- ===== 保管書類（提出済みの実ファイル） ===== -->
+  <section id="storeView">
+    <p class="lead"><b>提出・実施された安全書類</b>（KY活動表・新規入場者教育・施工体制図・労災保険 ほか）を、
+      <b>工事・日付・書類種別</b>で保管します。<b>現場全員が閲覧</b>できます。追加・削除は管理者（経営者・現場監督）のみ。</p>
 
-  <div id="dlist"></div>
+    <div class="up" id="upbox" hidden>
+      <label>工事
+        <select id="u_proj"><option value="">（工事共通／全社）</option></select>
+      </label>
+      <label>書類種別
+        <select id="u_type"></select>
+      </label>
+      <label>既定の日付（ファイル名に日付が無いとき）
+        <input id="u_date" type="date">
+      </label>
+      <label>件名（任意）
+        <input id="u_title" type="text" placeholder="例：現地KY活動表（村山蓄電所）">
+      </label>
+      <div class="drop" id="drop">📎 ここにファイルをドロップ、またはクリックして選択（複数可・PDF/画像）
+        <div class="hint">ファイル名に <b>2026-06-05</b> のような日付があれば自動で日付に割り当てます</div>
+      </div>
+      <input id="pick" type="file" multiple accept="application/pdf,image/*" hidden>
+      <div class="go">
+        <button class="btn" id="u_go" type="button" disabled>取り込む</button>
+        <span class="hint" id="u_stat"></span>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="fl-lb">絞り込み</span>
+      <select id="fproj"><option value="">すべての工事</option></select>
+      <select id="ftype"><option value="">すべての種別</option></select>
+      <span class="sp"></span>
+    </div>
+
+    <div class="count" id="count"></div>
+    <div id="stable"></div>
+  </section>
+
+  <!-- ===== ひな型（配布用テンプレート） ===== -->
+  <section id="tmplView" hidden>
+    <p class="lead">現場管理で使う安全書類の<b>ひな型（PDF）</b>です。協力会社に配布して記入・提出してもらい、
+      記入後のものは上の<b>「保管書類」</b>に取り込んで全員で共有してください。</p>
+    <div id="dlist"></div>
+  </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -56,74 +153,223 @@
 <script>
 (async function(){
   const $ = id => document.getElementById(id);
+  const BUCKET = 'project-files';
+  const TYPES = ['KY活動表','新規入場者教育','TBM(安全朝礼)','安全パトロール','ヒヤリハット・災害報告','作業員名簿','施工体制図','労災保険関係','その他'];
 
   const auth = await requireAuth();
   if (!auth) return;
   const me = auth.me;
-
+  const isMgr = me.role === 'admin' || me.role === 'manager';
   paintBar(me, await loadOrgName(me.organization_id));
 
+  let projects = [], users = [], docs = [];
+  const projmap = () => Object.fromEntries(projects.map(p => [p.id, p]));
+  const umap    = () => Object.fromEntries(users.map(u => [u.id, u.name]));
+
+  // 並べ替え（列見出しタップ）。既定は日付の新しい順。
+  let sortKey = 'date', sortDir = -1;
+  try { const s = JSON.parse(localStorage.getItem('safety_sort')||'null'); if (s && s.k){ sortKey=s.k; sortDir=(s.d===1?1:-1); } } catch(e){}
+  const SKN = { date:'日付', type:'種別', title:'件名', project:'工事', by:'登録者' };
+
+  // 種別セレクトを用意
+  $('u_type').innerHTML = TYPES.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  $('ftype').innerHTML  = '<option value="">すべての種別</option>' + TYPES.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+
+  async function loadRefs(){
+    const [pj, us] = await Promise.all([
+      sb.from('projects').select('id, project_no, name').eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('app_users').select('id, name').eq('is_active', true),
+    ]);
+    projects = pj.data || []; users = us.data || [];
+    const opts = projects.map(p => `<option value="${p.id}">${esc(p.project_no||'')} ${esc(p.name)}</option>`).join('');
+    $('fproj').innerHTML = '<option value="">すべての工事</option>' + opts;
+    $('u_proj').innerHTML = '<option value="">（工事共通／全社）</option>' + opts;
+  }
+
+  async function loadDocs(){
+    const r = await sb.from('site_safety_docs').select('*').eq('is_active', true);
+    if (r.error){
+      showMsg($('msg'), /relation .* does not exist|schema cache/i.test(r.error.message||'')
+        ? '安全書類の表がまだありません。Supabase で phase23_safety_docs.sql を実行してください。'
+        : '読み込めませんでした。' + r.error.message, 'err');
+      docs = []; return;
+    }
+    docs = r.data || [];
+  }
+
+  function render(){
+    const PJ = projmap(), UM = umap();
+    const fp = $('fproj').value, ft = $('ftype').value;
+    let rows = docs.filter(d => (!fp || d.project_id === fp) && (!ft || d.doc_type === ft));
+
+    $('count').textContent = `${rows.length} 件`;
+
+    const jc = (a,b) => String(a==null?'':a).localeCompare(String(b==null?'':b), 'ja', { numeric:true });
+    const cmps = {
+      date:    (a,b)=> jc(a.doc_date||a.created_at, b.doc_date||b.created_at),
+      type:    (a,b)=> jc(a.doc_type,b.doc_type) || jc(a.doc_date,b.doc_date),
+      title:   (a,b)=> jc(a.title||a.original_name, b.title||b.original_name),
+      project: (a,b)=> jc((PJ[a.project_id]||{}).project_no, (PJ[b.project_id]||{}).project_no) || jc(a.doc_date,b.doc_date),
+      by:      (a,b)=> jc(UM[a.uploaded_by], UM[b.uploaded_by]),
+    };
+    rows.sort((a,b)=> (cmps[sortKey]||cmps.date)(a,b) * sortDir);
+
+    if (!rows.length){
+      $('stable').innerHTML = `<div class="empty"><b>保管された安全書類がありません</b>${isMgr?'上の「取り込む」からPDF・画像を保存できます。':'管理者が取り込むと、ここに日付順で並びます。'}</div>`;
+      return;
+    }
+
+    const arrow = k => sortKey===k ? (sortDir===1?'▲':'▼') : '';
+    const th = (k,l) => `<span class="sh${sortKey===k?' on':''}" data-sort="${k}" role="button" tabindex="0">${l}<i class="ar">${arrow(k)}</i></span>`;
+    let h = `<div class="stable"><div class="shead"><span class="rno">NO</span>`
+      + th('date','日付') + th('type','種別') + th('title','件名') + th('project','工事') + th('by','登録者')
+      + `<span>操作</span></div>`;
+    rows.forEach((d,i)=>{
+      const pj = PJ[d.project_id];
+      h += `<div class="srow">
+        <span class="rno">${i+1}</span>
+        <span class="dt">${d.doc_date ? esc(d.doc_date) : '<span class="sub">日付なし</span>'}</span>
+        <span class="ctr"><span class="tchip">${esc(d.doc_type||'その他')}</span></span>
+        <span><span class="nm">${esc(d.title || d.original_name || '（無題）')}</span>${d.original_name && d.title ? `<span class="sub">${esc(d.original_name)}</span>` : ''}</span>
+        <span class="ctr"><span class="sub">${pj ? esc(pj.name) : '工事共通'}</span></span>
+        <span class="ctr"><span class="sub">${UM[d.uploaded_by] ? esc(UM[d.uploaded_by]) : '—'}</span></span>
+        <span><span class="ops"><button class="btn ghost" data-open="${d.id}" type="button">開く</button>${isMgr?`<button class="btn ghost" data-del="${d.id}" type="button">削除</button>`:''}</span></span>
+      </div>`;
+    });
+    h += `</div>`;
+    $('stable').innerHTML = h;
+
+    $('stable').querySelectorAll('.shead .sh').forEach(el=>{
+      const go=()=>{ const k=el.dataset.sort; if(k===sortKey) sortDir=-sortDir; else { sortKey=k; sortDir=(k==='date')?-1:1; }
+        try{ localStorage.setItem('safety_sort', JSON.stringify({k:sortKey,d:sortDir})); }catch(e){} render(); };
+      el.addEventListener('click', go);
+      el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+    });
+    $('stable').querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', ()=> openDoc(b.dataset.open)));
+    $('stable').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', ()=> delDoc(b.dataset.del)));
+  }
+
+  async function openDoc(id){
+    const d = docs.find(x => x.id === id); if (!d) return;
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(d.storage_path, 3600);
+    if (error || !data){ showMsg($('msg'), 'ファイルを開けませんでした。' + ((error&&error.message)||''), 'err'); return; }
+    window.open(data.signedUrl, '_blank', 'noopener');
+  }
+
+  async function delDoc(id){
+    const d = docs.find(x => x.id === id); if (!d) return;
+    if (!confirm(`「${d.title || d.original_name || 'この書類'}」を削除します。よろしいですか？`)) return;
+    await sb.storage.from(BUCKET).remove([d.storage_path]).catch(()=>{});
+    const { error } = await sb.from('site_safety_docs').delete().eq('id', id);
+    if (error){ showMsg($('msg'), '削除できませんでした。' + error.message, 'err'); return; }
+    await loadDocs(); render();
+    showMsg($('msg'), '削除しました。', 'ok');
+  }
+
+  /* ===== アップロード（管理者のみ） ===== */
+  const safeName = s => (s || 'file').normalize('NFKC').replace(/[^\w.\-]+/g, '_').replace(/^_+/, '').slice(-90) || 'file';
+  const parseDate = name => { const m = /(\d{4})[-_.\/]?(\d{2})[-_.\/]?(\d{2})/.exec(name || ''); return m ? `${m[1]}-${m[2]}-${m[3]}` : null; };
+  let picked = [];
+
+  function refreshGo(){ $('u_go').disabled = !(picked.length); $('u_stat').textContent = picked.length ? `${picked.length} 件を選択中` : ''; }
+  function addFiles(fl){ picked = picked.concat([...fl]); refreshGo(); }
+
+  if (isMgr){
+    $('upbox').hidden = false;
+    try { $('u_date').value = new Date().toISOString().slice(0,10); } catch(e){}
+    $('drop').addEventListener('click', () => $('pick').click());
+    $('pick').addEventListener('change', e => addFiles(e.target.files));
+    const dz = $('drop');
+    ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
+    ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('over'); }));
+    dz.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files); });
+    $('u_go').addEventListener('click', doUpload);
+  }
+
+  async function doUpload(){
+    if (!picked.length) return;
+    const projId = $('u_proj').value || null;
+    const dtype  = $('u_type').value || 'その他';
+    const defDate= $('u_date').value || null;
+    const title  = $('u_title').value.trim() || null;
+    $('u_go').disabled = true;
+    let ok = 0, ng = 0;
+    for (let i = 0; i < picked.length; i++){
+      const f = picked[i];
+      $('u_stat').textContent = `${i+1} / ${picked.length} 件目を取り込み中…（${f.name}）`;
+      try {
+        const ddate = parseDate(f.name) || defDate;
+        const path  = `${me.organization_id}/safety/${projId || 'common'}/${Date.now()}_${i}_${safeName(f.name)}`;
+        const up = await sb.storage.from(BUCKET).upload(path, f, { contentType: f.type || 'application/octet-stream' });
+        if (up.error) throw up.error;
+        const { error } = await sb.from('site_safety_docs').insert({
+          organization_id: me.organization_id,
+          project_id     : projId,
+          doc_type       : dtype,
+          doc_date       : ddate,
+          title          : title,
+          storage_path   : path,
+          original_name  : f.name,
+          mime_type      : f.type || null,
+          byte_size      : f.size,
+          uploaded_by    : me.id
+        });
+        if (error) throw error;
+        ok++;
+      } catch (e){ ng++; console.error(e); }
+    }
+    picked = []; $('pick').value = ''; refreshGo();
+    $('u_stat').textContent = `取り込み完了：${ok} 件${ng?`／失敗 ${ng} 件`:''}`;
+    await loadDocs(); render();
+    showMsg($('msg'), `安全書類を ${ok} 件保存しました。${ng?`（${ng} 件は失敗）`:''}`, ng ? 'err' : 'ok');
+  }
+
+  /* ===== 保管書類／ひな型 の切替 ===== */
+  function showView(which){
+    const store = which === 'store';
+    $('storeView').hidden = !store; $('tmplView').hidden = store;
+    $('s_store').classList.toggle('on', store); $('s_tmpl').classList.toggle('on', !store);
+  }
+  $('s_store').addEventListener('click', () => showView('store'));
+  $('s_tmpl').addEventListener('click', () => showView('tmpl'));
+
+  $('fproj').addEventListener('change', render);
+  $('ftype').addEventListener('change', render);
+
+  /* ===== ひな型（従来の配布テンプレート） ===== */
   const GROUPS = [
     { title:'現場管理・安全書類', gph:'協力会社提出用', items:[
-      { no:'安全書式-1', file:'安全書式-1_新規入場者教育記録簿.pdf',
-        name:'新規入場者教育記録簿',
-        desc:'新しく現場に入る作業員へ実施する安全教育の記録。対象者名簿と教育実施項目のチェック欄付き。' },
-      { no:'安全書式-2', file:'安全書式-2_KY活動記録表.pdf',
-        name:'KY活動記録表（危険予知活動記録表）',
-        desc:'作業開始前に行う危険予知（KY）活動の記録。4ラウンド法の記入欄付き。' },
-      { no:'安全書式-3', file:'安全書式-3_安全朝礼記録簿TBM.pdf',
-        name:'安全朝礼記録簿（TBM）',
-        desc:'毎朝のツールボックスミーティングの記録。本日の作業予定・注意事項・健康状態チェック欄付き。' },
-      { no:'安全書式-4', file:'安全書式-4_安全パトロール点検表.pdf',
-        name:'安全パトロール点検表',
-        desc:'現場代理人等が定期的に行う安全巡視の点検表。10項目の判定・是正欄付き（元請け実施用）。' },
-      { no:'安全書式-5', file:'安全書式-5_ヒヤリハット災害報告書.pdf',
-        name:'ヒヤリハット・災害報告書',
-        desc:'ヒヤリハットや災害が発生した際の報告書。発生状況・原因・対策の記入欄付き。' },
-      { no:'安全書式-6', file:'安全書式-6_作業員名簿.pdf',
-        name:'作業員名簿',
-        desc:'協力会社ごとに作成する作業員の名簿。資格・緊急連絡先・入場日などを記載。' },
-      { no:'安全書式-13', file:'安全書式-13_施工体系図一覧表.pdf',
-        name:'施工体系図（一覧表）',
-        desc:'下請負業者編成表に基づき元請けが作成する施工体制の一覧。国土交通省の標準様式をもとにした記入用テンプレート（元請け作成用）。' },
+      { no:'安全書式-1', file:'安全書式-1_新規入場者教育記録簿.pdf', name:'新規入場者教育記録簿', desc:'新しく現場に入る作業員へ実施する安全教育の記録。対象者名簿と教育実施項目のチェック欄付き。' },
+      { no:'安全書式-2', file:'安全書式-2_KY活動記録表.pdf', name:'KY活動記録表（危険予知活動記録表）', desc:'作業開始前に行う危険予知（KY）活動の記録。4ラウンド法の記入欄付き。' },
+      { no:'安全書式-3', file:'安全書式-3_安全朝礼記録簿TBM.pdf', name:'安全朝礼記録簿（TBM）', desc:'毎朝のツールボックスミーティングの記録。本日の作業予定・注意事項・健康状態チェック欄付き。' },
+      { no:'安全書式-4', file:'安全書式-4_安全パトロール点検表.pdf', name:'安全パトロール点検表', desc:'現場代理人等が定期的に行う安全巡視の点検表。10項目の判定・是正欄付き（元請け実施用）。' },
+      { no:'安全書式-5', file:'安全書式-5_ヒヤリハット災害報告書.pdf', name:'ヒヤリハット・災害報告書', desc:'ヒヤリハットや災害が発生した際の報告書。発生状況・原因・対策の記入欄付き。' },
+      { no:'安全書式-6', file:'安全書式-6_作業員名簿.pdf', name:'作業員名簿', desc:'協力会社ごとに作成する作業員の名簿。資格・緊急連絡先・入場日などを記載。' },
+      { no:'安全書式-13', file:'安全書式-13_施工体系図一覧表.pdf', name:'施工体系図（一覧表）', desc:'下請負業者編成表に基づき元請けが作成する施工体制の一覧。国土交通省の標準様式をもとにした記入用テンプレート（元請け作成用）。' },
     ]},
     { title:'一人親方用', gph:'個人事業主の職人が提出', items:[
-      { no:'安全書式-7', file:'安全書式-7_一人親方提出書類チェックリスト.pdf',
-        name:'一人親方 提出書類チェックリスト',
-        desc:'一人親方が提出すべき書類一式が揃っているかを確認する表紙。元請け側の受入チェックにも使えます。' },
-      { no:'安全書式-8', file:'安全書式-8_請負契約書.pdf',
-        name:'請負契約書（一人親方用）',
-        desc:'雇用契約ではなく請負契約であることを明確にする契約書のひな型。工期・請負代金・安全衛生条項付き。' },
-      { no:'安全書式-9', file:'安全書式-9_作業計画書.pdf',
-        name:'作業計画書（危険を伴う作業）',
-        desc:'墜落・崩壊・感電など危険を伴う作業の手順・使用機械・防止措置をまとめる計画書。' },
-      { no:'安全書式-10', file:'安全書式-10_災害防止協議会参加同意書.pdf',
-        name:'災害防止協議会 参加同意書',
-        desc:'現場の災害防止協議会（安全衛生協議会）のルール遵守・参加への同意を確認する書類。' },
-      { no:'安全書式-11', file:'安全書式-11_工具持込機械点検記録表.pdf',
-        name:'工具・持込機械等点検記録表',
-        desc:'一人親方が現場に持ち込む工具・機械の使用前点検を記録する表。' },
-      { no:'安全書式-12', file:'安全書式-12_労災保険特別加入申告書.pdf',
-        name:'労災保険（特別加入）加入状況申告書',
-        desc:'一人親方は通常の労災保険が適用されないため、特別加入団体名・加入番号・有効期間を申告する書類（証明書の写しを添付）。' },
+      { no:'安全書式-7', file:'安全書式-7_一人親方提出書類チェックリスト.pdf', name:'一人親方 提出書類チェックリスト', desc:'一人親方が提出すべき書類一式が揃っているかを確認する表紙。元請け側の受入チェックにも使えます。' },
+      { no:'安全書式-8', file:'安全書式-8_請負契約書.pdf', name:'請負契約書（一人親方用）', desc:'雇用契約ではなく請負契約であることを明確にする契約書のひな型。工期・請負代金・安全衛生条項付き。' },
+      { no:'安全書式-9', file:'安全書式-9_作業計画書.pdf', name:'作業計画書（危険を伴う作業）', desc:'墜落・崩壊・感電など危険を伴う作業の手順・使用機械・防止措置をまとめる計画書。' },
+      { no:'安全書式-10', file:'安全書式-10_災害防止協議会参加同意書.pdf', name:'災害防止協議会 参加同意書', desc:'現場の災害防止協議会（安全衛生協議会）のルール遵守・参加への同意を確認する書類。' },
+      { no:'安全書式-11', file:'安全書式-11_工具持込機械点検記録表.pdf', name:'工具・持込機械等点検記録表', desc:'一人親方が現場に持ち込む工具・機械の使用前点検を記録する表。' },
+      { no:'安全書式-12', file:'安全書式-12_労災保険特別加入申告書.pdf', name:'労災保険（特別加入）加入状況申告書', desc:'一人親方は通常の労災保険が適用されないため、特別加入団体名・加入番号・有効期間を申告する書類（証明書の写しを添付）。' },
     ]},
   ];
-
   $('dlist').innerHTML = GROUPS.map(g => `
     <div class="grp"><h2>${esc(g.title)}</h2><span class="gph">${esc(g.gph)}</span></div>
     <div class="dlist">
       ${g.items.map(d => `
         <div class="dcard">
           <span class="no">${esc(d.no)}</span>
-          <div class="body">
-            <p class="nm">${esc(d.name)}</p>
-            <p class="ds">${esc(d.desc)}</p>
-          </div>
+          <div class="body"><p class="nm">${esc(d.name)}</p><p class="ds">${esc(d.desc)}</p></div>
           <a class="btn sm dl" href="safety-docs/${encodeURIComponent(d.file)}" download>ダウンロード</a>
-        </div>
-      `).join('')}
-    </div>
-  `).join('');
+        </div>`).join('')}
+    </div>`).join('');
+
+  await loadRefs();
+  await loadDocs();
+  render();
 })();
 </script>
 </body>
