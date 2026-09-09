@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: hourensou (報・連・相) v20260908E -->
+<!-- BUILD: hourensou (報・連・相) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -64,6 +64,11 @@
     white-space:nowrap; padding:6px 12px; border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0; }
   .shead > span{ text-align:center; border-right:1px solid var(--rule); padding-right:8px; }
   .shead > span:last-child{ border-right:none; padding-right:0; }
+  .shead .sh{ cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:center; gap:3px; }
+  .shead .sh:hover{ color:var(--ink-2); }
+  .shead .sh.on{ color:var(--ink); font-weight:800; }
+  .shead .sh .ar{ font-style:normal; font-size:9px; line-height:1; color:var(--ink-2); }
+  .shead .sh:focus-visible{ outline:2px solid var(--ink-2); outline-offset:1px; border-radius:3px; }
   .srow{ padding:7px 12px; border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
     font-size:14px; text-align:left; width:100%; font-family:var(--body); color:inherit; }
   .srow:hover{ background:#F5F7F3; }
@@ -233,6 +238,13 @@
   const TYPE = { report:'報告', contact:'連絡', consult:'相談' };
   const TYPESUB = { report:'成果・進み具合', contact:'問題点', consult:'重要・遅れ直結' };
   const STATUS = { open:'未対応', in_progress:'対応中', resolved:'解決' };
+
+  // 並べ替え（Excel風：列見出しをタップで昇順/降順）。既定は日時の新しい順。
+  let sortKey = 'date', sortDir = -1;
+  try { const s = JSON.parse(localStorage.getItem('hrs_sort') || 'null'); if (s && s.k){ sortKey = s.k; sortDir = (s.d === 1 ? 1 : -1); } } catch(e){}
+  const SKN = { type:'種別', title:'見出し・内容', project:'工事', author:'投稿者', date:'日時', status:'状態', ack:'本社確認' };
+  const TORD = { report:0, contact:1, consult:2 };
+  const SORD = { open:0, in_progress:1, resolved:2 };
   const fmtDT = ts => { if(!ts) return ''; const d=new Date(ts); const p=n=>String(n).padStart(2,'0');
     return `${String(d.getFullYear()).slice(2)}/${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`; };
   const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; };
@@ -333,13 +345,29 @@
     else if (fs==='mine') rows = rows.filter(r=>r.created_by===me.id);
     if (q) rows = rows.filter(r=>((r.title||'')+' '+(r.body||'')).toLowerCase().includes(q));
 
+    // 並べ替え（Excel風）：選んだ列で昇順/降順。既定は日時の新しい順。
+    const jc = (a,b) => String(a==null?'':a).localeCompare(String(b==null?'':b), 'ja', { numeric:true });
+    const cmps = {
+      type:    (a,b)=> ((TORD[a.report_type]??9)-(TORD[b.report_type]??9)) || jc(b.created_at,a.created_at),
+      title:   (a,b)=> jc(a.title, b.title),
+      project: (a,b)=> jc((PJ[a.project_id]||{}).name, (PJ[b.project_id]||{}).name) || jc(b.created_at,a.created_at),
+      author:  (a,b)=> jc(UM[a.created_by], UM[b.created_by]) || jc(b.created_at,a.created_at),
+      date:    (a,b)=> jc(a.created_at, b.created_at),
+      status:  (a,b)=> ((SORD[a.status]??9)-(SORD[b.status]??9)) || jc(b.created_at,a.created_at),
+      ack:     (a,b)=> ((a.acknowledged_at?1:0)-(b.acknowledged_at?1:0)) || jc(b.created_at,a.created_at),
+    };
+    const cmp = cmps[sortKey] || cmps.date;
+    rows.sort((a,b)=> cmp(a,b) * sortDir);
+
     if (!rows.length){
       $('stable').innerHTML = `<div class="empty"><b>該当する投稿がありません</b>右上の「投稿する」から報告・連絡・相談を記録できます。</div>`;
       return;
     }
 
+    const arrow = k => sortKey===k ? (sortDir===1?'▲':'▼') : '';
+    const th = (k,label) => `<span class="sh${sortKey===k?' on':''}" data-sort="${k}" role="button" tabindex="0" aria-label="${label}で並べ替え">${label}<i class="ar">${arrow(k)}</i></span>`;
     let h = `<div class="stable"><div class="shead">`
-      + `<span class="rno">NO</span><span>種別</span><span>見出し・内容</span><span>工事</span><span>投稿者</span><span>日時</span><span>状態</span><span>本社確認</span></div>`;
+      + `<span class="rno">NO</span>${th('type','種別')}${th('title','見出し・内容')}${th('project','工事')}${th('author','投稿者')}${th('date','日時')}${th('status','状態')}${th('ack','本社確認')}</div>`;
     rows.forEach((r,i)=>{
       const pj = PJ[r.project_id];
       const consultUnres = r.report_type==='consult' && r.status!=='resolved';
@@ -360,6 +388,16 @@
     });
     h += `</div>`;
     $('stable').innerHTML = h;
+    $('stable').querySelectorAll('.shead .sh').forEach(el => {
+      const doSort = () => {
+        const k = el.dataset.sort;
+        if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = (k==='date') ? -1 : 1; }
+        try { localStorage.setItem('hrs_sort', JSON.stringify({ k:sortKey, d:sortDir })); } catch(e){}
+        render();
+      };
+      el.addEventListener('click', doSort);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doSort(); } });
+    });
     $('stable').querySelectorAll('.srow').forEach(el=> el.addEventListener('click', ()=> openDetail(el.dataset.id)));
   }
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料到着スケジュール) v20260908G -->
+<!-- BUILD: order-alerts (材料到着スケジュール) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -114,6 +114,12 @@
   .ahead .num{ text-align:center; }
   /* ヘッダーは全列そろえて中央（見出し行の左寄りバラつきを解消） */
   .ahead > span{ text-align:center; }
+  /* Excel風の並べ替え：タップできる列見出し */
+  .ahead .sh{ cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:center; gap:3px; }
+  .ahead .sh:hover{ color:var(--ink-2); }
+  .ahead .sh.on{ color:var(--ink); font-weight:800; }
+  .ahead .sh .ar{ font-style:normal; font-size:9px; line-height:1; color:var(--ink-2); }
+  .ahead .sh:focus-visible{ outline:2px solid var(--ink-2); outline-offset:1px; border-radius:3px; }
   /* 状態列（最終列）は中身も中央 */
   .arow > span:last-child{ text-align:center; }
   /* アラート・工程は中身も中央にしてヘッダーとそろえる */
@@ -239,6 +245,11 @@
 
   const STATN = { estimate:'見積中', ordered:'発注済み' };
   const STATCLS = { estimate:'est', ordered:'ord' };
+
+  // 並べ替え（Excel風：列見出しをタップで昇順/降順）。既定はアラート（至急順）。
+  let sortKey = 'alert', sortDir = 1;
+  try { const s = JSON.parse(localStorage.getItem('oa_sort') || 'null'); if (s && s.k){ sortKey = s.k; sortDir = (s.d === -1 ? -1 : 1); } } catch(e){}
+  const SKN = { alert:'アラート', project:'工事', phase:'工程', start:'着工', name:'材料', deliv:'納品予定', deadline:'発注期限', status:'状態' };
   const WARN_DAYS = 7;   // 発注期限の何日前からアラート扱いにするか（工程表と合わせる）
 
   const auth = await requireAuth();
@@ -397,12 +408,22 @@
       return noPhase || noLead || noSdd;
     });
 
-    // 至急順 → 発注期限の早い順 → 納品予定の早い順
-    rows.sort((a, b) => {
-      if (a.a.rank !== b.a.rank) return a.a.rank - b.a.rank;
-      const ad = a.a.deadline || a.a.dd || '9999', bd = b.a.deadline || b.a.dd || '9999';
-      return ad < bd ? -1 : ad > bd ? 1 : 0;
-    });
+    // 並べ替え（Excel風）：選んだ列で昇順/降順。既定のアラートは 至急順→期限→納品。
+    const pjno = o => { const p = pmap[o.x.project_id]; return p ? String(p.project_no||'') : ''; };
+    const jc = (a,b) => String(a==null?'':a).localeCompare(String(b==null?'':b), 'ja', { numeric:true });
+    const sord = { estimate:0, ordered:1 };
+    const cmps = {
+      alert:    (a,b)=> (a.a.rank-b.a.rank) || jc(a.a.deadline||a.a.dd||'9999', b.a.deadline||b.a.dd||'9999'),
+      project:  (a,b)=> jc(pjno(a),pjno(b)) || ((a.phase?.seq??9999)-(b.phase?.seq??9999)),
+      phase:    (a,b)=> ((a.phase?.seq??9999)-(b.phase?.seq??9999)) || jc(a.phase?.name, b.phase?.name) || jc(a.x.item_name,b.x.item_name),
+      start:    (a,b)=> jc(a.phase?.start_date||'9999-99-99', b.phase?.start_date||'9999-99-99'),
+      name:     (a,b)=> jc(a.x.item_name, b.x.item_name),
+      deliv:    (a,b)=> jc(a.x.scheduled_delivery_date||'9999-99-99', b.x.scheduled_delivery_date||'9999-99-99'),
+      deadline: (a,b)=> jc(a.a.deadline||'9999-99-99', b.a.deadline||'9999-99-99'),
+      status:   (a,b)=> ((sord[a.x.status]??9)-(sord[b.x.status]??9)) || jc(a.x.item_name,b.x.item_name),
+    };
+    const cmp = cmps[sortKey] || cmps.alert;
+    rows.sort((a,b)=> cmp(a,b) * sortDir);
 
     $('sumgrid').hidden = false;
     const totalN = items.filter(inProj).filter(x => !fc || x.category === fc).length;
@@ -418,16 +439,18 @@
         <span class="v">${totalN}<small>件</small></span></div>
     `;
 
-    $('count').textContent = `${rows.length} 件を表示`;
+    $('count').innerHTML = `${rows.length} 件を表示 ・ ↕ 並べ替え：<b style="color:var(--ink-2)">${SKN[sortKey]||'アラート'}（${sortDir===1?'昇順':'降順'}）</b> <span style="color:var(--sub)">— 列見出しをタップで変更</span>`;
 
     if (!rows.length){
       $('atable').innerHTML = `<div class="empty"><b>${fs === 'risk' ? '発注・納品の遅れの心配はありません' : '対象の材料がありません'}</b>${fs === 'risk' ? '発注期限が近い・過ぎている材料や、着工に間に合わない材料が出るとここに並びます。' : '絞り込みを変えてお試しください。'}</div>`;
       return;
     }
 
+    const arrow = k => sortKey===k ? (sortDir===1?'▲':'▼') : '';
+    const th = (k,label,cls='') => `<span class="sh${cls?' '+cls:''}${sortKey===k?' on':''}" data-sort="${k}" role="button" tabindex="0" aria-label="${label}で並べ替え">${label}<i class="ar">${arrow(k)}</i></span>`;
     let h = `<div class="atable ${isAll ? 'm-all' : 'm-one'}"><div class="ahead">
-      <span class="rno">NO</span><span>アラート</span>${isAll ? '<span>工事</span>' : ''}<span>工程</span><span class="num">着工</span><span>材料</span>
-      <span class="num">納品予定</span><span class="num">発注期限</span><span>状態</span>
+      <span class="rno">NO</span>${th('alert','アラート')}${isAll ? th('project','工事') : ''}${th('phase','工程')}${th('start','着工','num')}${th('name','材料')}
+      ${th('deliv','納品予定','num')}${th('deadline','発注期限','num')}${th('status','状態')}
     </div>`;
     rows.forEach(({ x, phase, a }, i) => {
       const pj = pmap[x.project_id];
@@ -454,6 +477,17 @@
     });
     h += `</div>`;
     $('atable').innerHTML = h;
+    // 列見出しのタップで並べ替え（同じ列を再タップで昇順⇄降順）
+    $('atable').querySelectorAll('.ahead .sh').forEach(el => {
+      const doSort = () => {
+        const k = el.dataset.sort;
+        if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+        try { localStorage.setItem('oa_sort', JSON.stringify({ k:sortKey, d:sortDir })); } catch(e){}
+        render();
+      };
+      el.addEventListener('click', doSort);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doSort(); } });
+    });
     if (isMgr){
       $('atable').querySelectorAll('.arow[data-eid]').forEach(a =>
         a.addEventListener('click', e => { e.preventDefault(); openEdit(a.dataset.eid); }));
