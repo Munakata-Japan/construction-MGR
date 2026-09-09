@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: changes (設計変更・追加工事) v20260907A -->
+<!-- BUILD: changes (設計変更・追加工事) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -35,6 +35,11 @@
   table.co thead th{ background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub); white-space:nowrap; }
   table.co .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
   table.co thead th.num{ text-align:right; }
+  table.co thead th.sh{ cursor:pointer; user-select:none; }
+  table.co thead th.sh:hover{ color:var(--ink-2); }
+  table.co thead th.sh.on{ color:var(--ink); }
+  table.co thead th.sh .ar{ font-style:normal; font-size:9px; margin-left:3px; color:var(--ink-2); }
+  table.co thead th.sh:focus-visible{ outline:2px solid var(--ink-2); outline-offset:-2px; }
   col.cno{ width:40px; } col.cnoo{ width:56px; } col.cmoney{ width:118px; } col.cst{ width:88px; } col.cdate{ width:104px; } col.cops{ width:150px; }
   .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
   .co .ttl{ font-weight:700; }
@@ -132,6 +137,12 @@
 
   const STAT = { estimate:'見積中', approved:'客先承認', rejected:'却下' };
   const nz = v => Number(v) || 0;
+
+  // 並べ替え（Excel風：列見出しをタップで昇順/降順）。既定は変更Noの順。
+  let sortKey = 'no', sortDir = 1;
+  try { const s = JSON.parse(localStorage.getItem('chg_sort') || 'null'); if (s && s.k){ sortKey = s.k; sortDir = (s.d === -1 ? -1 : 1); } } catch(e){}
+  const SKN = { no:'変更No', title:'件名', sales:'売上増減', status:'状態', decided:'承認/却下日', cost:'追加原価' };
+  const SORD = { estimate:0, approved:1, rejected:2 };
   const todayYMD = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
   async function loadRefs(){
@@ -235,17 +246,31 @@
   }
 
   function renderList(){
-    $('count').textContent = `${changes.length} 件`;
+    $('count').innerHTML = `${changes.length} 件 ・ ↕ 並べ替え：<b style="color:var(--ink-2)">${SKN[sortKey]||'変更No'}（${sortDir===1?'昇順':'降順'}）</b> <span style="color:var(--sub)">— 列見出しをタップ</span>`;
     if (!changes.length){
       $('list').innerHTML = `<div class="empty"><b>変更はまだありません</b>「＋ 変更を追加」から、設計変更・追加/減額を登録します。</div>`;
       return;
     }
+    // 並べ替え（Excel風）：選んだ列で昇順/降順。既定は変更Noの順。
+    const jc = (a,b) => String(a==null?'':a).localeCompare(String(b==null?'':b), 'ja', { numeric:true });
+    const cmps = {
+      no:      (a,b)=> jc(a.change_no, b.change_no),
+      title:   (a,b)=> jc(a.title, b.title),
+      sales:   (a,b)=> nz(a.sales_delta)-nz(b.sales_delta),
+      status:  (a,b)=> ((SORD[a.status]??9)-(SORD[b.status]??9)) || jc(a.change_no,b.change_no),
+      decided: (a,b)=> jc(a.decided_on||'9999-99-99', b.decided_on||'9999-99-99'),
+      cost:    (a,b)=> costOf(a.id)-costOf(b.id),
+    };
+    const rows = changes.slice().sort((a,b)=> (cmps[sortKey]||cmps.no)(a,b) * sortDir);
+
+    const arrow = k => sortKey===k ? (sortDir===1?'▲':'▼') : '';
+    const th = (k,label,cls='') => `<th class="sh${cls?' '+cls:''}${sortKey===k?' on':''}" data-sort="${k}" role="button" tabindex="0">${label}<i class="ar">${arrow(k)}</i></th>`;
     let h = `<div class="clist"><table class="co"><colgroup>
       <col class="cno"><col class="cnoo"><col><col class="cmoney"><col class="cst"><col class="cdate"><col class="cmoney">${isMgr ? '<col class="cops">' : ''}</colgroup>
       <thead><tr>
-        <th class="rno">NO</th><th>変更No</th><th>件名</th><th class="num">売上増減</th><th>状態</th><th>承認/却下日</th><th class="num">追加原価</th>${isMgr ? '<th>操作</th>' : ''}
+        <th class="rno">NO</th>${th('no','変更No')}${th('title','件名')}${th('sales','売上増減','num')}${th('status','状態')}${th('decided','承認/却下日')}${th('cost','追加原価','num')}${isMgr ? '<th>操作</th>' : ''}
       </tr></thead><tbody>`;
-    changes.forEach((c, i) => {
+    rows.forEach((c, i) => {
       const open = expanded.has(c.id);
       const cost = costOf(c.id);
       const d = nz(c.sales_delta);
@@ -291,6 +316,17 @@
 
   function wire(){
     const t = $('list');
+    // 列見出しのタップで並べ替え（同じ列を再タップで昇順⇄降順）
+    t.querySelectorAll('thead .sh').forEach(el => {
+      const doSort = () => {
+        const k = el.dataset.sort;
+        if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+        try { localStorage.setItem('chg_sort', JSON.stringify({ k:sortKey, d:sortDir })); } catch(e){}
+        renderList();
+      };
+      el.addEventListener('click', doSort);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doSort(); } });
+    });
     t.querySelectorAll('.trow').forEach(tr => tr.addEventListener('click', e => {
       if (e.target.closest('.ops')) return;   // 操作ボタンは展開しない
       const id = tr.dataset.open;

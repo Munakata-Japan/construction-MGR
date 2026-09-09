@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: progress (出来高・進捗) v20260908A -->
+<!-- BUILD: progress (出来高・進捗) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -63,6 +63,11 @@
                      white-space:nowrap; border-bottom:1px solid var(--rule); }
   table.pg .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
   table.pg thead th.num{ text-align:right; }
+  table.pg thead th.sh{ cursor:pointer; user-select:none; }
+  table.pg thead th.sh:hover{ color:var(--ink-2); }
+  table.pg thead th.sh.on{ color:var(--ink); }
+  table.pg thead th.sh .ar{ font-style:normal; font-size:9px; margin-left:3px; color:var(--ink-2); }
+  table.pg thead th.sh:focus-visible{ outline:2px solid var(--ink-2); outline-offset:-2px; }
   col.cno{ width:42px; } col.cdate{ width:92px; } col.cmoney{ width:116px; } col.cprog{ width:250px; }
   .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
   .nm{ font-weight:700; overflow-wrap:break-word; line-height:1.4; }
@@ -159,6 +164,11 @@
   const effPct = p => (p && p.status === 'done') ? 100 : clampPct(p.progress_pct);
   const itemCost = x => nz(x.budget_amount ?? x.amount ?? x.contract_amount);
 
+  // 並べ替え（Excel風：列見出しをタップで昇順/降順）。既定は工程順（seq）。
+  let sortKey = 'phase', sortDir = 1;
+  try { const s = JSON.parse(localStorage.getItem('pg_sort') || 'null'); if (s && s.k){ sortKey = s.k; sortDir = (s.d === -1 ? -1 : 1); } } catch(e){}
+  const SKN = { phase:'工程', start:'着工', budget:'予算', prog:'進捗', earned:'出来高' };
+
   const fmtShort = v => { if (!v) return ''; const d = new Date(v + 'T00:00:00'); return isNaN(d) ? v : `${d.getMonth() + 1}/${d.getDate()}`; };
 
   async function loadRefs(){
@@ -239,14 +249,28 @@
   }
 
   function renderTable(){
-    $('count').textContent = `工程 ${phases.length} 件`;
+    $('count').innerHTML = `工程 ${phases.length} 件 ・ ↕ 並べ替え：<b style="color:var(--ink-2)">${SKN[sortKey]||'工程'}（${sortDir===1?'昇順':'降順'}）</b> <span style="color:var(--sub)">— 列見出しをタップ</span>`;
+
+    // 並べ替え（Excel風）：選んだ列で昇順/降順。既定は工程順（seq）。
+    const jc = (a,b) => String(a==null?'':a).localeCompare(String(b==null?'':b), 'ja', { numeric:true });
+    const cmps = {
+      phase:  (a,b)=> ((a.seq??9999)-(b.seq??9999)) || jc(a.name,b.name),
+      start:  (a,b)=> jc(a.start_date||'9999-99-99', b.start_date||'9999-99-99'),
+      budget: (a,b)=> phaseCost(a.id)-phaseCost(b.id),
+      prog:   (a,b)=> effPct(a)-effPct(b),
+      earned: (a,b)=> (phaseCost(a.id)*effPct(a)/100) - (phaseCost(b.id)*effPct(b)/100),
+    };
+    const rows = phases.slice().sort((a,b)=> (cmps[sortKey]||cmps.phase)(a,b) * sortDir);
+
+    const arrow = k => sortKey===k ? (sortDir===1?'▲':'▼') : '';
+    const th = (k,label,cls='') => `<th class="sh${cls?' '+cls:''}${sortKey===k?' on':''}" data-sort="${k}" role="button" tabindex="0">${label}<i class="ar">${arrow(k)}</i></th>`;
     let h = `<div class="ptable"><table class="pg"><colgroup>
       <col class="cno"><col><col class="cdate"><col class="cmoney"><col class="cprog"><col class="cmoney"></colgroup>
       <thead><tr>
-        <th class="rno">NO</th><th>工程</th><th>着工</th><th class="num">予算</th><th>進捗</th><th class="num">出来高</th>
+        <th class="rno">NO</th>${th('phase','工程')}${th('start','着工')}${th('budget','予算','num')}${th('prog','進捗')}${th('earned','出来高','num')}
       </tr></thead><tbody>`;
 
-    phases.forEach((p, i) => {
+    rows.forEach((p, i) => {
       const b = phaseCost(p.id);
       const done = (p.status === 'done');   // 進み具合＝完了なら自動100%（スライダーはロック）
       const pct = effPct(p);
@@ -306,6 +330,17 @@
   }
 
   function wire(){
+    // 列見出しのタップで並べ替え（同じ列を再タップで昇順⇄降順）
+    $('ptable').querySelectorAll('thead .sh').forEach(el => {
+      const doSort = () => {
+        const k = el.dataset.sort;
+        if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+        try { localStorage.setItem('pg_sort', JSON.stringify({ k:sortKey, d:sortDir })); } catch(e){}
+        renderTable();
+      };
+      el.addEventListener('click', doSort);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doSort(); } });
+    });
     $('ptable').querySelectorAll('[data-range]').forEach(r => {
       const id = r.dataset.range;
       const p = phases.find(x => x.id === id);
