@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: orders (材工発注) v20260909E -->
+<!-- BUILD: orders (材工発注) v20260909F -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -134,6 +134,11 @@
   .drow .val{ font-weight:700; overflow-wrap:anywhere; }
   .drow .val.num{ font-family:var(--mono); }
   .cfoot{ display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  /* 工程の付け替え（詳細パネル内） */
+  .dmove{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px;
+    padding:9px 10px; background:#EEF2F7; border:1px solid var(--rule-2); border-radius:var(--radius); }
+  .dmove .k{ flex:0 0 auto; color:var(--ink-2); font-size:12.5px; font-weight:800; }
+  .dmove select{ flex:1 1 160px; min-width:140px; min-height:36px; }
 
   .mlbl{ display:none; }
   @media (max-width:860px){
@@ -171,6 +176,7 @@
     <span class="fl-lb">絞り込み</span>
     <button class="fl-help" id="helpBtn" type="button">？使い方 ▼</button>
     <select id="fproj"><option value="">すべての工事</option></select>
+    <select id="fphase"><option value="">すべての工程</option></select>
     <select id="fstat">
       <option value="all">すべての状態</option>
       <option value="gap">未発注（発注抜け）</option>
@@ -265,6 +271,23 @@
                        : x.budget_amount != null ? x.budget_amount
                        : (x.unit_price != null && x.quantity != null) ? x.unit_price * x.quantity : null);
 
+  // 工程で絞り込むためのプルダウンを作る（選択は可能なら維持）
+  function populatePhaseFilter(){
+    const cur = $('fphase').value;
+    const isAll = !projId;
+    const PJ = projmap();
+    const ps = phases.slice().sort((a,b)=>
+        String((PJ[a.project_id]||{}).project_no||'').localeCompare(String((PJ[b.project_id]||{}).project_no||''),'ja',{numeric:true})
+     || (a.seq??9999)-(b.seq??9999));
+    let opts = '<option value="">すべての工程</option>'
+      + ps.map(p=>{ const pj = PJ[p.project_id];
+          const lbl = (isAll && pj ? esc(pj.project_no||'')+' ' : '') + esc(p.name||'');
+          return `<option value="${p.id}">${lbl}</option>`; }).join('')
+      + '<option value="__none__">工事全体（工程なし）</option>';
+    $('fphase').innerHTML = opts;
+    if (cur && $('fphase').querySelector(`option[value="${cur}"]`)) $('fphase').value = cur;
+  }
+
   function render(){
     const isAll = !projId;
     const PM = pmap(), PT = ptmap(), PJ = projmap();
@@ -273,6 +296,11 @@
     // タブ：材料タブ＝費目=材料／工事タブ＝材料以外（労務など。未分類も工事側で拾う）
     let items = budgets.filter(x => x.status !== 'cancelled')
       .filter(x => matmode === 'material' ? x.category === 'material' : x.category !== 'material');
+
+    // 工程で絞り込み（選んだ工程の部材だけ表示。集計もその工程だけになる）
+    const fphase = $('fphase').value;
+    if (fphase === '__none__') items = items.filter(x => !x.phase_id);
+    else if (fphase) items = items.filter(x => x.phase_id === fphase);
 
     const nGap     = items.filter(x => (x.status||'estimate') === 'estimate').length;
     const nOrdered = items.filter(x => x.status === 'ordered').length;
@@ -409,6 +437,11 @@
       + row('発注先', x.estimate_partner_id&&PT[x.estimate_partner_id]?esc(PT[x.estimate_partner_id]):'—')
       + rowN('納品予定', deliv?fmtShort(deliv):'—')
       + (x.note?row('備考', esc(x.note)):'')
+      + `<div class="dmove">
+           <span class="k">工程を移す</span>
+           <select id="d_move">${moveOpts(x)}</select>
+           <button class="btn ghost sm" id="d_moveBtn" type="button">この工程へ移す</button>
+         </div>`
       + `<div class="cfoot">
            <button class="btn danger sm" id="d_del" type="button">この品目を削除</button>
            <span style="flex:1 1 auto"></span>
@@ -418,6 +451,28 @@
     $('dpanel').classList.add('open');
     $('d_close').addEventListener('click', () => $('dpanel').classList.remove('open'));
     $('d_del').addEventListener('click', () => delItem(x));
+    $('d_moveBtn').addEventListener('click', () => moveItem(x));
+  }
+
+  // 付け替え先の工程プルダウン（この品目の工事の工程＋工事全体）
+  function moveOpts(x){
+    const ps = phases.filter(p => p.project_id === x.project_id).sort((a,b)=>(a.seq??9999)-(b.seq??9999));
+    return `<option value="__none__"${!x.phase_id?' selected':''}>工事全体（工程なし）</option>`
+      + ps.map(p=>`<option value="${p.id}"${p.id===x.phase_id?' selected':''}>${esc(p.name||'')}</option>`).join('');
+  }
+
+  // 品目の工程を個別に付け替える（phase_id を更新）
+  async function moveItem(x){
+    const sel = $('d_move'); if (!sel) return;
+    const newPhase = (sel.value === '__none__') ? null : sel.value;
+    if ((newPhase||null) === (x.phase_id||null)){ showMsg($('msg'), '同じ工程です。変更はありません。', ''); return; }
+    const nm = newPhase ? ((phases.find(p=>p.id===newPhase)||{}).name || 'その工程') : '工事全体（工程なし）';
+    if (!confirm(`「${x.item_name||'この品目'}」を\n「${nm}」へ移します。よろしいですか？`)) return;
+    const { error } = await sb.from('phase_budget_items').update({ phase_id:newPhase }).eq('id', x.id);
+    if (error){ showMsg($('msg'), '工程を移せませんでした。' + error.message, 'err'); return; }
+    $('dpanel').classList.remove('open');
+    await loadData(); populatePhaseFilter(); render();
+    showMsg($('msg'), `「${x.item_name||'品目'}」を「${nm}」へ移しました。`, 'ok');
   }
 
   async function delItem(x){
@@ -446,8 +501,10 @@
     const u = new URL(location.href); projId ? u.searchParams.set('p', projId) : u.searchParams.delete('p');
     history.replaceState(null, '', u);
     $('newbtn').href = 'schedule.html?panel=orders' + (projId?`&p=${projId}`:'');
-    await loadData(); render();
+    $('fphase').value = '';                 // 工事を変えたら工程の絞り込みは解除
+    await loadData(); populatePhaseFilter(); render();
   });
+  $('fphase').addEventListener('change', render);
   $('fstat').addEventListener('change', render);
 
   // 材料発注／工事発注 の切替
@@ -469,6 +526,7 @@
   await loadRefs();
   $('newbtn').href = 'schedule.html?panel=orders' + (projId?`&p=${projId}`:'');
   await loadData();
+  populatePhaseFilter();
   render();
 })();
 </script>
