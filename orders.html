@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: orders (材工発注) v20260909D -->
+<!-- BUILD: orders (材工発注) v20260909E -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -66,6 +66,9 @@
   }
 
   .count{ margin:2px 0 4px; font-size:10.5px; color:var(--sub); }
+  .sorthint{ margin:0 0 4px; font-size:10.5px; color:var(--sub); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .sorthint b{ color:var(--ink-2); font-weight:800; }
+  .sorthint .tip{ color:var(--sub); }
 
   .otable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
     box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
@@ -76,6 +79,12 @@
     white-space:nowrap; align-items:stretch; padding:6px 12px; border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0; }
   .ohead > span{ text-align:center; border-right:1px solid var(--rule); padding-right:8px; }
   .ohead > span:last-child{ border-right:none; padding-right:0; }
+  /* Excel風の並べ替え：タップできる列見出し */
+  .ohead .sh{ cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:center; gap:3px; }
+  .ohead .sh:hover{ color:var(--ink-2); }
+  .ohead .sh.on{ color:var(--ink); font-weight:800; }
+  .ohead .sh .ar{ font-style:normal; font-size:9px; line-height:1; color:var(--ink-2); }
+  .ohead .sh:focus-visible{ outline:2px solid var(--ink-2); outline-offset:1px; border-radius:3px; }
   .orow{ padding:6px 12px; border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
     font-size:14px; text-align:left; width:100%; font-family:var(--body); color:inherit; text-decoration:none; }
   .orow:hover{ background:#F5F7F3; }
@@ -105,6 +114,15 @@
   .empty{ padding:34px 16px; text-align:center; color:var(--sub); }
   .empty b{ display:block; font-size:15px; color:var(--ink); margin-bottom:4px; }
 
+  /* 工程の見出し帯（工程毎にまとめる） */
+  .ogroup{ max-width:1440px; margin-inline:auto; box-sizing:border-box; padding:5px 12px;
+    display:flex; align-items:center; gap:8px; background:#E9EEF4; border-top:2px solid var(--ink-2); }
+  .m-one .ogroup{ min-width:820px; } .m-all .ogroup{ min-width:980px; }
+  .ogroup .gpi{ font-size:12px; line-height:1; flex:0 0 auto; }
+  .ogroup .gpn{ font-weight:800; color:var(--ink); font-size:12.5px; }
+  .ogroup .gpj{ font-size:11px; color:var(--sub); }
+  .ogroup .gpc{ margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--sub); white-space:nowrap; }
+
   /* 品目の詳細パネル（材工発注の中で完結） */
   .panel{ position:fixed; inset:0; z-index:60; background:rgba(15,20,30,.5); display:none; }
   .panel.open{ display:flex; align-items:center; justify-content:center; padding:14px; }
@@ -125,6 +143,7 @@
     .otable{ flex:none; max-height:none; overflow:visible; }
     .ohead{ display:none; }
     .m-one .orow, .m-all .orow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
+    .m-one .ogroup, .m-all .ogroup{ min-width:0; }
     .orow > span{ border-right:none; padding-right:0; text-align:left; }
     .orow .num, .orow .rno, .orow .ctr{ text-align:left; }
     .mlbl{ display:inline; color:var(--sub); font-weight:700; font-size:11px; }
@@ -166,6 +185,7 @@
 
   <div class="sumgrid" id="sumgrid" hidden></div>
   <div id="msg" class="msg"></div>
+  <div class="sorthint" id="sorthint" hidden></div>
   <div id="otable"></div>
 </div>
 
@@ -205,6 +225,10 @@
   const qs = new URL(location.href).searchParams;
   let projId = qs.get('p') || '';
   let matmode = (qs.get('m') === 'labor') ? 'labor' : 'material';   // 材料発注(material)／工事発注(labor)
+
+  // 並べ替え（Excel風：列見出しをタップで昇順/降順を切替）。既定は工程。
+  let sortKey = 'phase', sortDir = 1;   // dir: 1=昇順, -1=降順
+  try { const s = JSON.parse(localStorage.getItem('orders_sort') || 'null'); if (s && s.k){ sortKey = s.k; sortDir = (s.d === -1 ? -1 : 1); } } catch(e){}
 
   async function loadRefs(){
     const [pj, pt, us] = await Promise.all([
@@ -262,34 +286,80 @@
     + `<div class="sumcard ok"><span class="ico">✓</span><span class="t">納品・検査完了</span><span class="v">${nDone}<small>件</small></span></div>`
     + `<div class="sumcard info"><span class="ico">¥</span><span class="t">原価合計</span><span class="v" style="font-size:13px">${fmtMoney(total)}</span></div>`;
 
+    // 並べ替えの状態を表示（列見出しをタップで変更できることも案内）
+    const SKN = { phase:'工程', status:'状態', name:'品目', project:'工事', partner:'発注先', amount:'金額', deliv:'納品予定' };
+    $('sorthint').hidden = false;
+    $('sorthint').innerHTML = `↕ 並べ替え：<b>${SKN[sortKey]||'工程'}（${sortDir===1?'昇順':'降順'}）</b>`
+      + `<span class="tip">— 列見出しをタップで並べ替え（再タップで昇順⇄降順）</span>`;
+
     // 絞り込み
     let rows = items.slice();
     if (fstat === 'gap') rows = rows.filter(x => (x.status||'estimate') === 'estimate');
     else if (fstat !== 'all') rows = rows.filter(x => x.status === fstat);
 
-    // 並び：未発注→発注済み→納品→検査。同状態内は工程順→登録順
+    // ===== 並べ替え（Excel風）：sortKey の列で昇順/降順。既定は工程。=====
     const sto = { estimate:0, ordered:1, delivered:2, inspected:3 };
-    rows.sort((a,b)=> (sto[a.status]??9)-(sto[b.status]??9) || (a.seq||0)-(b.seq||0));
+    const PS = Object.fromEntries(phases.map(p => [p.id, p.seq ?? 9999]));
+    const pseq = x => (x.phase_id && PS[x.phase_id] != null) ? PS[x.phase_id] : 100000;   // 工事全体は末尾
+    const pjno = x => { const j = PJ[x.project_id]; return j ? String(j.project_no || '') : ''; };
+    const jcmp = (a,b) => String(a==null?'':a).localeCompare(String(b==null?'':b), 'ja', { numeric:true });
+    const gkeyOf = x => x.phase_id || ('P:' + x.project_id);   // 工程なしは工事単位でまとめる
+    const cmps = {
+      // 工程：工事→工程順→状態→品目名（工程毎にまとまる）
+      phase:   (a,b)=> jcmp(pjno(a),pjno(b)) || pseq(a)-pseq(b) || (sto[a.status]??9)-(sto[b.status]??9) || jcmp(a.item_name,b.item_name),
+      status:  (a,b)=> (sto[a.status]??9)-(sto[b.status]??9) || pseq(a)-pseq(b) || jcmp(a.item_name,b.item_name),
+      name:    (a,b)=> jcmp(a.item_name,b.item_name),
+      project: (a,b)=> jcmp(pjno(a),pjno(b)) || pseq(a)-pseq(b) || jcmp(a.item_name,b.item_name),
+      partner: (a,b)=> jcmp(PT[a.estimate_partner_id]||'～～', PT[b.estimate_partner_id]||'～～') || pseq(a)-pseq(b),
+      amount:  (a,b)=> ((amountOf(a)==null?-1:amountOf(a)) - (amountOf(b)==null?-1:amountOf(b))) || jcmp(a.item_name,b.item_name),
+      deliv:   (a,b)=> jcmp(a.scheduled_delivery_date||a.delivered_on||'9999-99-99', b.scheduled_delivery_date||b.delivered_on||'9999-99-99'),
+    };
+    const cmp = cmps[sortKey] || cmps.phase;
+    rows.sort((a,b)=> cmp(a,b) * sortDir);
+
+    // 工程で並べたときだけ、工程の見出し帯でまとめる
+    const grouped = (sortKey === 'phase');
+    const gcount = {};
+    if (grouped) rows.forEach(x => { const k = gkeyOf(x); gcount[k] = (gcount[k]||0) + 1; });
 
     if (!rows.length){
       $('otable').innerHTML = `<div class="empty"><b>${fstat==='gap'?'発注抜けはありません':'該当する品目がありません'}</b>${fstat==='gap'?'この費目はすべて発注済みです。':'実行予算で品目を登録すると、ここに集約されます。'}</div>`;
       return;
     }
 
+    // 見出し（列をタップで並べ替え。▲昇順／▼降順）
+    const arrow = k => sortKey===k ? (sortDir===1?'▲':'▼') : '';
+    const th = (k,label) => `<span class="sh${sortKey===k?' on':''}" data-sort="${k}" role="button" tabindex="0" aria-label="${label}で並べ替え">${label}<i class="ar">${arrow(k)}</i></span>`;
+
     const cls = isAll ? 'm-all' : 'm-one';
     let h = `<div class="otable ${cls}"><div class="ohead">`
-      + `<span class="rno">NO</span><span>状態</span><span>品目</span><span>工程</span>`
-      + (isAll ? '<span>工事</span>' : '')
-      + `<span>発注先</span><span>金額(原価)</span><span>納品予定</span></div>`;
+      + `<span class="rno">NO</span>`
+      + th('status','状態') + th('name','品目') + th('phase','工程')
+      + (isAll ? th('project','工事') : '')
+      + th('partner','発注先') + th('amount','金額(原価)') + th('deliv','納品予定')
+      + `</div>`;
 
-    rows.forEach((x, i) => {
+    let curKey = null, n = 0;
+    rows.forEach((x) => {
       const pj = PJ[x.project_id];
       const st = x.status || 'estimate';
       const gap = (st === 'estimate');
       const amt = amountOf(x);
       const deliv = x.scheduled_delivery_date || x.delivered_on || null;
+      // 工程で並べたときは、工程が変わるたびに見出し帯を差し込む
+      if (grouped){
+        const gkey = gkeyOf(x);
+        if (gkey !== curKey){
+          curKey = gkey;
+          const gname = PM[x.phase_id] ? esc(PM[x.phase_id]) : '工事全体';
+          h += `<div class="ogroup"><span class="gpi" aria-hidden="true">🏗</span><span class="gpn">${gname}</span>`
+             + (isAll && pj ? `<span class="gpj">${esc(pj.name)}</span>` : '')
+             + `<span class="gpc">${gcount[gkey]}件</span></div>`;
+        }
+      }
+      n++;
       h += `<div class="orow ${gap?'gap':''}" data-id="${x.id}" role="button" tabindex="0">
-        <span class="rno"><b class="mlbl">No. </b>${i+1}</span>
+        <span class="rno"><b class="mlbl">No. </b>${n}</span>
         <span class="ctr"><span class="stag ${gap?'gap':st}">${STATN[st]||st}</span></span>
         <span><span class="nm" style="font-size:12.5px">${esc(x.item_name||'（無題）')}</span>${x.quantity!=null?`<span class="sub">${x.quantity}${x.unit?esc(x.unit):''}</span>`:''}</span>
         <span class="ctr"><span class="sub" style="font-size:12.5px">${PM[x.phase_id]?esc(PM[x.phase_id]):'工事全体'}</span></span>
@@ -301,6 +371,18 @@
     });
     h += `</div>`;
     $('otable').innerHTML = h;
+
+    // 列見出しのタップで並べ替え（同じ列を再タップで昇順⇄降順）
+    $('otable').querySelectorAll('.ohead .sh').forEach(el => {
+      const doSort = () => {
+        const k = el.dataset.sort;
+        if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+        try { localStorage.setItem('orders_sort', JSON.stringify({ k:sortKey, d:sortDir })); } catch(e){}
+        render();
+      };
+      el.addEventListener('click', doSort);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doSort(); } });
+    });
     $('otable').querySelectorAll('.orow').forEach(el => {
       const open = () => openDetail(el.dataset.id);
       el.addEventListener('click', open);
