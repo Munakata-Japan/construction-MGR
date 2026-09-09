@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: budget (実行予算) v20260907H -->
+<!-- BUILD: budget (実行予算) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -71,6 +71,8 @@
 
   .btable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
            box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
+  /* 下部固定の「項目を追加する」バーに最終行が隠れないよう、スクロール末尾に余白を確保 */
+  body.dockon .btable{ padding-bottom:calc(76px + env(safe-area-inset-bottom)); }
   .bhead, .brow{
     display:grid; align-items:start; gap:6px; min-width:1118px;
     grid-template-columns:34px 52px 2.4fr 0.9fr 80px 70px 96px 96px 96px 96px 84px 96px 64px;
@@ -409,7 +411,9 @@
   }
 
   function render(){
-    $('dock').hidden = !(canEdit && projId);
+    const dockOn = !!(canEdit && projId);
+    $('dock').hidden = !dockOn;
+    document.body.classList.toggle('dockon', dockOn);   // 固定バー表示中はスクロール末尾に余白
     $('startalert').hidden = !isStarted(projects.find(p => p.id === projId));
     if (!projId){
       $('sumgrid').hidden = true;
