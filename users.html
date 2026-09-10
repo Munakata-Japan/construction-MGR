@@ -246,12 +246,17 @@
           <button class="btn ghost sm" id="inviteCancel" type="button" hidden>この招待を取り消す</button>
         </div>
         <div id="invitebox" hidden style="margin-bottom:8px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+            <button class="btn sm" id="inviteSend" type="button">📨 招待を送る</button>
+            <button class="btn ghost sm" id="inviteLine" type="button">LINEで送る</button>
+            <button class="btn ghost sm" id="inviteMail" type="button">メールで送る</button>
+          </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <input id="inviteUrl" type="text" readonly
                    style="flex:1 1 320px;min-width:0;min-height:32px;padding:3px 8px;font-size:12.5px;font-family:var(--mono)">
             <button class="btn ghost sm" id="inviteCopy" type="button">コピー</button>
           </div>
-          <p class="tip" style="margin-top:6px">このリンクを本人に送ってください。開いて自分でメール・パスワードを設定すると、自動的にこの利用者としてログインできるようになります（7日間有効）。</p>
+          <p class="tip" style="margin-top:6px"><b>「招待を送る」</b>を押すと、LINE・メール・SMSなどにそのまま送れます（宛名・リンク付き）。相手はリンクを開いてメール・パスワードを決めるだけ（7日間有効）。届いたら本人のスマホで<b>「ホーム画面に追加」</b>すればアプリのように使えます。</p>
         </div>
         <p class="tip" id="inviteHint">
           ログインしない人（日報や勤怠の記録にだけ出てくる職人など）は、招待リンクを発行しないままで登録できます。
@@ -621,6 +626,38 @@
     } catch (e){
       $('inviteUrl').select();
     }
+  });
+
+  /* --- 招待を送る（LINE・メール・SMS などへワンタップ） --- */
+  function inviteMsgText(){
+    const nm = ($('f_name').value || '').trim();
+    const who = nm ? nm + 'さん、' : '';
+    return who + '宗像総合現場管理システムのアカウントを用意しました。'
+      + '下のリンクを開き、メールとパスワードを決めるだけで使えます（7日以内）。'
+      + '\niPhoneはSafari、AndroidはChromeで開いてください。';
+  }
+  $('inviteSend').addEventListener('click', async () => {
+    const url = $('inviteUrl').value; if (!url) return;
+    const text = inviteMsgText();
+    if (navigator.share){
+      try { await navigator.share({ title: '現場管理システムのご招待', text, url }); } catch (e){}
+    } else {
+      try {
+        await navigator.clipboard.writeText(text + '\n' + url);
+        showMsg($('pmsg'), '招待メッセージをコピーしました。LINEやメールに貼り付けて送ってください。', 'ok');
+      } catch (e){ $('inviteUrl').select(); }
+    }
+  });
+  $('inviteLine').addEventListener('click', () => {
+    const url = $('inviteUrl').value; if (!url) return;
+    const t = encodeURIComponent(inviteMsgText() + '\n' + url);
+    window.open('https://line.me/R/msg/text/?' + t, '_blank');
+  });
+  $('inviteMail').addEventListener('click', () => {
+    const url = $('inviteUrl').value; if (!url) return;
+    const subject = encodeURIComponent('現場管理システムのご招待');
+    const body = encodeURIComponent(inviteMsgText() + '\n' + url);
+    location.href = 'mailto:?subject=' + subject + '&body=' + body;
   });
 
   /* ================= 保存 ================= */

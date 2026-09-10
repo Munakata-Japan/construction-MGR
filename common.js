@@ -638,3 +638,132 @@ async function signOut(){
     put();
   }
 })();
+
+/* ============================================================
+   ホーム画面に追加（PWAインストール案内）— 全ページ標準
+   ・アプリとして起動中／PC では出さない
+   ・Android＝ワンタップ導入（beforeinstallprompt）
+   ・iPhone＝Safariの「ホーム画面に追加」を案内（Apple仕様で全自動は不可）
+   ・LINE等アプリ内ブラウザ＝ブラウザで開くよう案内（この状態では追加不可）
+============================================================ */
+(function(){
+  var ua = navigator.userAgent || '';
+  var isIOS = /iP(hone|ad|od)/.test(ua) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+  var inApp = /(Line|FBAN|FBAV|Instagram|Twitter|Messenger|MicroMessenger)/i.test(ua);
+  var standalone = (window.matchMedia &&
+                    window.matchMedia('(display-mode: standalone)').matches) ||
+                   navigator.standalone === true;
+
+  if (standalone) return;             // 既にアプリとして起動中
+  if (!isIOS && !isAndroid) return;   // PCは対象外
+
+  try {
+    var until = parseInt(localStorage.getItem('a2hs_snooze') || '0', 10);
+    if (until && until > Date.now()) return;   // 「あとで」から一定期間は非表示
+  } catch (e) {}
+  function snooze(days){ try { localStorage.setItem('a2hs_snooze', String(Date.now() + days*864e5)); } catch(e){} }
+
+  var deferred = null, ready = false, shown = false;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault(); deferred = e;
+    if (ready && !shown) show('android');
+  });
+
+  function style(){
+    if (document.getElementById('a2hs-style')) return;
+    var s = document.createElement('style'); s.id = 'a2hs-style';
+    s.textContent =
+      '.a2hs{position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#fff;'+
+      'border-top:3px solid var(--safety,#EAA800);box-shadow:0 -6px 22px rgba(0,0,0,.18);'+
+      'padding:10px 12px calc(10px + env(safe-area-inset-bottom));'+
+      'font-family:var(--body,"Noto Sans JP",system-ui,sans-serif);animation:a2up .25s ease}'+
+      '@keyframes a2up{from{transform:translateY(100%)}to{transform:translateY(0)}}'+
+      '.a2hs .rw{display:flex;align-items:center;gap:10px}'+
+      '.a2hs img{width:40px;height:40px;border-radius:10px;flex:0 0 auto}'+
+      '.a2hs .tx{flex:1 1 auto;min-width:0}'+
+      '.a2hs .tx b{display:block;font-size:14px;color:var(--ink,#13385D);line-height:1.3}'+
+      '.a2hs .tx span{display:block;font-size:12px;color:var(--sub,#5a6e82);margin-top:2px}'+
+      '.a2hs .act{flex:0 0 auto;background:var(--ink,#13385D);color:#fff;border:0;border-radius:9px;'+
+      'padding:10px 15px;font-size:13px;font-weight:700;cursor:pointer}'+
+      '.a2hs .x{flex:0 0 auto;background:transparent;border:0;color:#9aa8b5;font-size:22px;'+
+      'line-height:1;padding:2px 6px;cursor:pointer}'+
+      '.a2hs .guide{margin-top:9px;font-size:13px;color:var(--ink,#13385D);line-height:1.75;'+
+      'background:var(--paper,#EBEDE8);border-radius:9px;padding:10px 12px}'+
+      '.a2hs .guide ol{margin:0;padding-left:1.25em}'+
+      '.a2hs .guide .k{display:inline-block;min-width:20px;height:20px;line-height:20px;text-align:center;'+
+      'background:var(--ink,#13385D);color:#fff;border-radius:6px;font-size:12px;padding:0 5px;margin:0 2px}';
+    document.head.appendChild(s);
+  }
+
+  function show(mode){
+    if (shown) return; shown = true;
+    style();
+    var bar = document.createElement('div');
+    bar.className = 'a2hs';
+
+    var titles = {
+      ios:'アプリのように使えます', android:'アプリのように使えます',
+      inapp:'ブラウザで開いてください'
+    };
+    var subs = {
+      ios:'ホーム画面に追加すると全画面で起動します',
+      android:'ホーム画面に追加すると全画面で起動します',
+      inapp:'LINE内のままではホーム画面に追加できません'
+    };
+    var btns = { ios:'追加する', android:'アプリを追加', inapp:'URLをコピー' };
+
+    bar.innerHTML =
+      '<div class="rw">'+
+        '<img src="icons/apple-touch-icon.png" alt="">'+
+        '<div class="tx"><b>'+titles[mode]+'</b><span>'+subs[mode]+'</span></div>'+
+        '<button class="act" type="button">'+btns[mode]+'</button>'+
+        '<button class="x" type="button" aria-label="閉じる">&times;</button>'+
+      '</div>'+
+      '<div class="guide" hidden></div>';
+
+    var act = bar.querySelector('.act');
+    var guide = bar.querySelector('.guide');
+    bar.querySelector('.x').addEventListener('click', function(){ snooze(14); bar.remove(); });
+
+    function openGuide(html){ guide.innerHTML = html; guide.hidden = false; }
+
+    act.addEventListener('click', async function(){
+      if (mode === 'android'){
+        if (deferred){
+          deferred.prompt();
+          try { await deferred.userChoice; } catch(e){}
+          deferred = null; bar.remove();
+        } else {
+          openGuide('<ol><li>右上の <span class="k">⋮</span> をタップ</li>'+
+                    '<li><b>「アプリをインストール」</b>（または「ホーム画面に追加」）をタップ</li></ol>');
+        }
+      } else if (mode === 'ios'){
+        openGuide('<ol><li>画面下の <b>共有ボタン</b> <span class="k">□↑</span> をタップ</li>'+
+                  '<li>メニューを下にスクロールし <b>「ホーム画面に追加」</b> をタップ</li>'+
+                  '<li>右上の <b>「追加」</b> をタップ</li></ol>');
+      } else { // inapp
+        try {
+          await navigator.clipboard.writeText(location.href);
+          openGuide('URLをコピーしました。<br>'+
+            (isIOS ? '右上または下の <span class="k">…</span> から <b>「Safariで開く」</b>、または Safari に貼り付けて開いてください。'
+                   : '右上の <span class="k">⋮</span> から <b>「ブラウザで開く」</b>、または Chrome に貼り付けて開いてください。'));
+        } catch(e){
+          openGuide('このページのURLを Safari／Chrome で開き直してください。');
+        }
+      }
+    });
+
+    document.body.appendChild(bar);
+  }
+
+  function start(){
+    ready = true;
+    if (inApp) return show('inapp');
+    if (isIOS) return show('ios');
+    if (isAndroid) return show('android'); // deferredが無くても案内にフォールバック
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
