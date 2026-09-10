@@ -78,6 +78,32 @@
     .frame .inner{ padding:14px; }
     .frame .modes{ grid-template-columns:1fr 1fr; }
   }
+
+  /* ===== 現場モード（スマホ／アプリ起動時の簡単画面：写真・日報だけ） ===== */
+  .genba{ display:none; }
+  body.genba-on .genba{ display:block; }
+  .genba .ghead{ font-family:var(--disp); font-weight:700; color:var(--ink);
+    font-size:18px; margin:2px 0 14px; padding-left:12px; border-left:5px solid var(--safety); }
+  .gbtn{ display:grid; grid-template-columns:66px 1fr; align-items:stretch;
+    min-height:92px; margin-bottom:12px; border:1px solid var(--ink); border-radius:13px;
+    background:linear-gradient(180deg,#275A91,var(--ink) 65%); color:#fff;
+    text-decoration:none; box-shadow:var(--shadow-2); overflow:hidden; }
+  .gbtn:active{ transform:translateY(1px); box-shadow:var(--shadow-1); }
+  .gbtn .gic{ font-size:31px; display:flex; align-items:center; justify-content:center;
+    background:rgba(234,168,0,.20); }
+  .gbtn.photo{ background:linear-gradient(180deg,#2E6BB0,#13385D 70%); }
+  .gbtn .gtx{ padding:13px 15px; display:flex; flex-direction:column; justify-content:center; gap:3px; }
+  .gbtn .gtx b{ font-size:20px; line-height:1.25; }
+  .gbtn .gtx span{ font-size:13px; color:#DCE6EF; }
+  .gall{ width:100%; margin-top:4px; background:transparent; border:1px dashed var(--rule);
+    color:var(--ink-2); border-radius:10px; padding:12px; font-size:13.5px; cursor:pointer; }
+
+  /* 現場モード中は重い一覧・現況を隠す（「すべて表示」で復帰） */
+  body.genba-on .hud, body.genba-on .grp,
+  body.genba-on .modes, body.genba-on .foot{ display:none; }
+  body.genba-on.showall .hud, body.genba-on.showall .grp,
+  body.genba-on.showall .modes, body.genba-on.showall .foot{ display:revert; }
+  body.genba-on.showall .genba{ margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--rule); }
 </style>
 </head>
 <body>
@@ -92,6 +118,20 @@
 <div class="stage">
  <div class="frame">
   <div class="outer"><div class="inner">
+
+  <!-- 現場モード（スマホ／アプリ起動時：写真・日報だけを大きく） -->
+  <div class="genba">
+    <div class="ghead">現場メニュー</div>
+    <a class="gbtn photo" href="files.html">
+      <span class="gic">📷</span>
+      <span class="gtx"><b>写真を撮る・送る</b><span>現場写真／黒板・書類</span></span>
+    </a>
+    <a class="gbtn report" href="reports.html">
+      <span class="gic">📝</span>
+      <span class="gtx"><b>作業日報</b><span>今日の作業を記入</span></span>
+    </a>
+    <button id="showAll" class="gall" type="button">すべてのメニューを表示 ▾</button>
+  </div>
 
   <!-- 現況 -->
   <div class="hud" id="hud">
@@ -253,61 +293,79 @@
     }
   });
 
-  // 現況
-  const { data, error } = await sb.from('projects')
-    .select('status').eq('is_active', true).eq('is_sample', false);
+  // 現況・保管量・ログイン人数（PC向け。現場モードでは開かない＝素早く起動）
+  async function loadHud(){
+    const { data, error } = await sb.from('projects')
+      .select('status').eq('is_active', true).eq('is_sample', false);
 
-  if (error){
-    $('h_sys').textContent = '不通';
-    $('h_sys').classList.add('ng');
-    showMsg($('msg'), '工事の件数を取得できませんでした。' + error.message, 'err');
-    return;
-  }
-
-  const all  = data.length;
-  const run  = data.filter(p => p.status === 'started').length;
-  const done = data.filter(p => ['completed','invoiced','paid'].includes(p.status)).length;
-
-  $('h_all').textContent  = all;
-  $('h_run').textContent  = run;
-  $('h_done').textContent = done;
-  $('h_sys').textContent  = '正常';
-  $('h_sys').classList.add('ok');
-
-  // 保管量（無料プランの上限 1GB）
-  const LIMIT = 1024 * 1024 * 1024;
-  const st = await sb.rpc('storage_used');
-  if (!st.error && st.data){
-    const b = Number(st.data.bytes) || 0;
-    const n = Number(st.data.files) || 0;
-    const pct = Math.min(100, b / LIMIT * 100);
-    const mb = b / 1024 / 1024;
-    $('h_st').textContent  = `${mb.toFixed(1)}`;
-    $('h_sub').textContent = `/ 1024 MB ・ ${n}件`;
-    $('h_bar').style.width = Math.max(1.5, pct).toFixed(1) + '%';
-
-    const lv = pct >= 80 ? 'full' : (pct >= 50 ? 'warn' : '');
-    if (lv){ $('h_st').classList.add(lv); $('h_bar').classList.add(lv); }
-
-    if (pct >= 80){
-      showMsg($('msg'),
-        '保管領域が残り少なくなっています。上限に達すると、写真だけでなく工事や日報の保存もできなくなります。' +
-        '古い資料の整理か、有料プランへの切り替えをご検討ください。', 'err');
-    } else if (pct >= 50){
-      showMsg($('msg'), `保管領域を ${pct.toFixed(0)}% 使っています。`, 'err');
+    if (error){
+      $('h_sys').textContent = '不通';
+      $('h_sys').classList.add('ng');
+      showMsg($('msg'), '工事の件数を取得できませんでした。' + error.message, 'err');
+      return;
     }
+
+    const all  = data.length;
+    const run  = data.filter(p => p.status === 'started').length;
+    const done = data.filter(p => ['completed','invoiced','paid'].includes(p.status)).length;
+
+    $('h_all').textContent  = all;
+    $('h_run').textContent  = run;
+    $('h_done').textContent = done;
+    $('h_sys').textContent  = '正常';
+    $('h_sys').classList.add('ok');
+
+    // 保管量（無料プランの上限 1GB）
+    const LIMIT = 1024 * 1024 * 1024;
+    const st = await sb.rpc('storage_used');
+    if (!st.error && st.data){
+      const b = Number(st.data.bytes) || 0;
+      const n = Number(st.data.files) || 0;
+      const pct = Math.min(100, b / LIMIT * 100);
+      const mb = b / 1024 / 1024;
+      $('h_st').textContent  = `${mb.toFixed(1)}`;
+      $('h_sub').textContent = `/ 1024 MB ・ ${n}件`;
+      $('h_bar').style.width = Math.max(1.5, pct).toFixed(1) + '%';
+
+      const lv = pct >= 80 ? 'full' : (pct >= 50 ? 'warn' : '');
+      if (lv){ $('h_st').classList.add(lv); $('h_bar').classList.add(lv); }
+
+      if (pct >= 80){
+        showMsg($('msg'),
+          '保管領域が残り少なくなっています。上限に達すると、写真だけでなく工事や日報の保存もできなくなります。' +
+          '古い資料の整理か、有料プランへの切り替えをご検討ください。', 'err');
+      } else if (pct >= 50){
+        showMsg($('msg'), `保管領域を ${pct.toFixed(0)}% 使っています。`, 'err');
+      }
+    }
+
+    // ログイン中の人数（直近5分以内に動きがある人を数える）。
+    async function paintOnline(){
+      const { data, error } = await sb.rpc('online_count', { p_minutes: 5 });
+      if (!error && data !== null && data !== undefined){
+        $('h_online').textContent = `${data}人`;
+      }
+    }
+    await paintOnline();
+    setInterval(paintOnline, 30000);
   }
 
-  // ログイン中の人数（直近5分以内に動きがある人を数える）。
-  // この画面を開いている間は定期的に更新する。
-  async function paintOnline(){
-    const { data, error } = await sb.rpc('online_count', { p_minutes: 5 });
-    if (!error && data !== null && data !== undefined){
-      $('h_online').textContent = `${data}人`;
-    }
+  // スマホ幅、またはアプリ（ホーム画面から）起動時は「現場モード」で開く：
+  // 写真・日報だけを大きく出し、重い一覧・集計は読み込まず素早く起動する。
+  const genba = matchMedia('(max-width:820px)').matches
+    || ((navigator.standalone === true || matchMedia('(display-mode: standalone)').matches)
+        && matchMedia('(pointer:coarse)').matches);
+
+  if (genba){
+    document.body.classList.add('genba-on');
+    $('showAll').addEventListener('click', async () => {
+      document.body.classList.add('showall');
+      $('showAll').hidden = true;
+      await loadHud();
+    }, { once: true });
+  } else {
+    await loadHud();
   }
-  await paintOnline();
-  setInterval(paintOnline, 30000);
 })();
 </script>
 </body>
