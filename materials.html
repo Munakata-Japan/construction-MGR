@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<!-- BUILD: materials (材料ハブ) v20260911A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<title>材料 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{ max-width:1560px; }
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:4px; padding-bottom:6px; }
+  .lead, .ctl, .tabbar, #msg{ flex:0 0 auto; }
+  #view{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
+  .lead{ color:var(--sub); font-size:10.5px; line-height:1.3; margin:0 0 4px; }
+  .bar h1 .pgico{ font-size:14px; margin-right:4px; }
+
+  /* タブ（見方の切替） */
+  .tabbar{ display:flex; gap:0; border-bottom:1px solid var(--rule); margin-bottom:6px; flex-wrap:wrap; }
+  .tabbar button{ border:0; background:none; font-family:var(--body); font-weight:800; font-size:13.5px;
+    color:var(--sub); padding:8px 16px; cursor:pointer; border-bottom:2px solid transparent; }
+  .tabbar button.on{ color:var(--ink); border-bottom-color:var(--safety); }
+  .tabbar button:hover{ color:var(--ink-2); }
+  .tabbar .tinfo{ margin-left:auto; align-self:center; font-size:10.5px; color:var(--sub); padding-right:4px; }
+
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:5px; }
+  .ctl select{ width:auto; min-width:150px; max-width:340px; min-height:30px; }
+  .ctl .sp{ flex:1 1 0; }
+  .seg{ display:inline-flex; border:1px solid var(--ink-2); border-radius:999px; overflow:hidden; }
+  .seg button{ border:0; background:var(--card); color:var(--ink-2); font-weight:800; font-size:12px; padding:5px 13px; min-height:30px; cursor:pointer; }
+  .seg button+button{ border-left:1px solid var(--rule); }
+  .seg button.on{ background:linear-gradient(180deg,#275A91,var(--ink) 65%); color:#fff; }
+
+  /* 一覧（グリッド） */
+  .tbl{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
+  .hd, .rw{ display:grid; align-items:stretch; gap:8px; box-sizing:border-box; max-width:1460px; margin-inline:auto; }
+  .hd{ position:sticky; top:0; z-index:5; background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+    white-space:nowrap; padding:6px 12px; border-bottom:1px solid var(--rule); }
+  .hd > span{ text-align:center; border-right:1px solid var(--rule); padding-right:8px; } .hd > span:last-child{ border-right:none; }
+  .rw{ padding:7px 12px; border-top:1px solid var(--rule-2); font-size:12.5px; background:var(--card); }
+  .rw.click{ cursor:pointer; } .rw.click:hover{ background:#F5F7F3; }
+  .rw.gap{ background:#FCF6E4; } .rw.red{ background:#FBF1EF; }
+  .rw > span{ border-right:1px solid var(--rule-2); padding-right:8px; } .rw > span:last-child{ border-right:none; }
+  .rw .rno{ font-family:var(--mono); font-size:12px; color:var(--sub); text-align:center; }
+  .rw .nm{ font-weight:700; overflow-wrap:break-word; line-height:1.4; }
+  .rw .sub{ font-size:11px; color:var(--sub); } .rw .ctr{ text-align:center; }
+  .rw .num{ font-family:var(--mono); text-align:center; white-space:nowrap; }
+  .stag{ font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:var(--radius-sm); white-space:nowrap; display:inline-block; color:var(--sub); background:#EDEFEA; }
+  .stag.estimate,.stag.gap{ color:#fff; background:var(--alert); } .stag.ordered{ color:#255A91; background:#E7EFF7; }
+  .stag.delivered{ color:var(--ok); background:#EAF2ED; } .stag.inspected{ color:#fff; background:var(--ok); }
+  .altag{ font-size:11px; font-weight:800; padding:2px 8px; border-radius:var(--radius-sm); display:inline-block; }
+  .altag.red{ color:#fff; background:var(--alert); } .altag.amber{ color:#6B4E00; background:#FBF0D4; } .altag.ok{ color:var(--ok); background:#EAF4EC; }
+  .grp{ box-sizing:border-box; padding:5px 12px; display:flex; align-items:center; gap:8px; background:#E9EEF4; border-top:2px solid var(--ink-2); }
+  .grp .gn{ font-weight:800; color:var(--ink); font-size:12.5px; } .grp .gc{ margin-left:auto; font-size:11px; color:var(--sub); }
+  .empty{ padding:34px 16px; text-align:center; color:var(--sub); } .empty b{ display:block; font-size:15px; color:var(--ink); margin-bottom:4px; }
+
+  /* リンク型タブ（予算・見積は既存ページへ：統合準備中） */
+  .linkcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1);
+    padding:22px; max-width:640px; margin:16px auto 0; text-align:center; }
+  .linkcard .ico{ font-size:30px; } .linkcard h3{ font-family:var(--disp); color:var(--ink); margin:8px 0 4px; }
+  .linkcard p{ color:var(--sub); font-size:13px; margin:0 0 14px; }
+
+  /* 詳細/編集パネル */
+  .panel{ position:fixed; inset:0; z-index:60; background:rgba(15,20,30,.5); display:none; }
+  .panel.open{ display:flex; align-items:center; justify-content:center; padding:14px; }
+  .card{ background:var(--card); border-radius:8px; width:min(96vw,520px); max-height:92vh; overflow:auto; box-shadow:0 14px 44px rgba(0,0,0,.45); }
+  .card h2{ font-family:var(--disp); font-size:16px; margin:0; padding:12px 16px; border-bottom:1px solid var(--rule-2); display:flex; gap:8px; align-items:center; }
+  .cbody{ padding:14px 16px 18px; display:flex; flex-direction:column; gap:9px; }
+  .drow{ display:flex; gap:10px; font-size:13px; align-items:baseline; } .drow .k{ flex:0 0 92px; color:var(--sub); font-size:12px; } .drow .v{ font-weight:700; overflow-wrap:anywhere; } .drow .v.num{ font-family:var(--mono); }
+  .fld{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:9px 10px; background:#EEF2F7; border:1px solid var(--rule-2); border-radius:var(--radius); }
+  .fld .k{ flex:0 0 auto; color:var(--ink-2); font-size:12.5px; font-weight:800; } .fld select, .fld input{ flex:1 1 150px; min-height:36px; }
+  .stbtns{ display:flex; gap:6px; flex-wrap:wrap; flex:1 1 auto; } .sbtn{ min-height:34px; } .sbtn.on{ background:var(--ink); color:#fff; border-color:var(--ink); font-weight:800; }
+  .cfoot{ display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap; }
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1><span class="pgico" aria-hidden="true">📦</span>材料</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<div class="wrap">
+  <p class="lead" id="lead"><b>材料・工事の発注と納期を1画面で。</b>同じ台帳を「納期／発注／予算／見積」の見方で切り替えます（見える範囲は権限どおり）。</p>
+
+  <div class="tabbar" id="tabbar"></div>
+
+  <div class="ctl">
+    <select id="fproj"><option value="">工事を選んでください</option></select>
+    <span id="segwrap" hidden><span class="seg"><button id="m_mat" class="on" type="button">材料</button><button id="m_lab" type="button">工事</button></span></span>
+    <span class="sp"></span>
+  </div>
+
+  <div id="msg" class="msg"></div>
+  <div id="view"></div>
+</div>
+
+<div class="panel" id="dpanel"><div class="card"><h2 id="dttl">材料</h2><div class="cbody" id="dbody"></div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const DAY = 86400000;
+  const todayYMD = () => new Date().toISOString().slice(0,10);
+  const addDaysYMD = (ymd,n) => { const d=new Date(ymd+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+  const fmtShort = ymd => { if(!ymd) return '—'; const [y,m,d]=ymd.split('-'); return `${y.slice(2)}/${Number(m)}/${Number(d)}`; };
+  const WARN_DAYS = 7;
+
+  const auth = await requireAuth(); if (!auth) return;
+  const me = auth.me;
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  // ===== 区分で見える範囲を決める（金額は①②のみ、発注先は①②③、編集は①②）=====
+  const tier   = tierOf(me);
+  const MONEY  = tier <= 2;     // 金額・原価
+  const VENDOR = tier <= 3;     // 発注先（業者名）
+  const CANEDIT= tier <= 2;     // 品目編集・発注状況更新
+  // タブ（区分で出し分け）
+  const TABDEF = { delivery:'納期', order:'発注', budget:'予算', estimate:'見積' };
+  const tabs = (tier<=2) ? ['delivery','order','budget','estimate'] : (tier===3) ? ['delivery','order'] : ['delivery'];
+  let tab = tabs[0];
+  try{ const t=localStorage.getItem('mat_tab'); if(t && tabs.includes(t)) tab=t; }catch(e){}
+
+  let projId = new URL(location.href).searchParams.get('p') || '';
+  let matmode = 'material';  // 発注タブの 材料/工事 切替
+  let projects=[], phases=[], partners=[], budgets=[];
+  const pmap = () => Object.fromEntries(phases.map(p=>[p.id,p.name]));
+  const psmap = () => Object.fromEntries(phases.map(p=>[p.id,p]));
+  const ptmap = () => Object.fromEntries(partners.map(p=>[p.id,p.name]));
+  const STATN = { estimate:'未発注', ordered:'発注済み', delivered:'納品済み', inspected:'検査完了', cancelled:'中止' };
+  const amountOf = x => !MONEY ? null : (x.contract_amount!=null?x.contract_amount : x.budget_amount!=null?x.budget_amount : (x.unit_price!=null&&x.quantity!=null)?x.unit_price*x.quantity : null);
+
+  // タブUI
+  function paintTabs(){
+    $('tabbar').innerHTML = tabs.map(t=>`<button data-t="${t}" class="${t===tab?'on':''}" type="button">${TABDEF[t]}</button>`).join('')
+      + `<span class="tinfo">区分：${esc(tierLabel(tier))}${MONEY?'':'（金額は非表示）'}</span>`;
+    $('tabbar').querySelectorAll('button[data-t]').forEach(b=> b.addEventListener('click', ()=>{ tab=b.dataset.t; try{localStorage.setItem('mat_tab',tab);}catch(e){} paintTabs(); render(); }));
+    $('segwrap').hidden = (tab!=='order');
+  }
+
+  async function loadRefs(){
+    const [pj,pt] = await Promise.all([
+      sb.from('projects').select('id, project_no, name').eq('is_active',true).order('project_no',{ascending:false}),
+      sb.from('partners').select('id, name').eq('is_active',true),
+    ]);
+    projects = pj.data||[]; partners = pt.data||[];
+    $('fproj').innerHTML = '<option value="">工事を選んでください</option>' +
+      projects.map(p=>`<option value="${p.id}"${p.id===projId?' selected':''}>${esc(p.project_no||'')} ${esc(p.name)}</option>`).join('');
+  }
+
+  async function loadData(){
+    if (!projId){ budgets=[]; phases=[]; return; }
+    const baseCols = 'id,project_id,phase_id,category,item_name,quantity,unit,status,scheduled_delivery_date,delivered_on,lead_time_days,order_date,procurement_type,is_import,estimate_partner_id,seq,note';
+    const cols = baseCols + (MONEY ? ',unit_price,budget_amount,contract_amount,amount' : '');   // 金額は①②のみ取得（構造的非表示）
+    const [b,p] = await Promise.all([
+      sb.from('phase_budget_items').select(cols).eq('project_id', projId),
+      sb.from('project_phases').select('id,project_id,name,seq,start_date').eq('project_id', projId).eq('is_active', true),
+    ]);
+    if (b.error){ showMsg($('msg'), '読み込めませんでした。'+b.error.message, 'err'); budgets=[]; } else budgets = b.data||[];
+    phases = p.data||[];
+  }
+
+  // ===== 納期タブ（管制塔：未発注×発注期限×工程） =====
+  function classify(x, phase){
+    const start = phase ? phase.start_date : null;
+    const isLabor = (x.category==='labor');
+    const dd = x.scheduled_delivery_date || null;
+    const target = isLabor ? start : dd;
+    const lead = (x.lead_time_days==null||x.lead_time_days==='') ? null : Number(x.lead_time_days);
+    const deadline = (target && lead!==null) ? addDaysYMD(target, -lead) : null;
+    const est = (x.status==='estimate');
+    const buf = WARN_DAYS + (!isLabor && x.is_import?14:0) + (!isLabor && x.procurement_type==='made_to_order'?7:0);
+    const T = todayYMD();
+    if (!isLabor && dd && start && dd>start) return {lv:'red',rank:0,text:'着工に間に合いません',deadline};
+    if (est && deadline && deadline<T) return {lv:'red',rank:1,text:'発注期限を過ぎています',deadline};
+    if (est && deadline && deadline<=addDaysYMD(T,buf)) return {lv:'amber',rank:2,text:'まもなく発注期限',deadline};
+    if (!target) return {lv:'amber',rank:3,text:(isLabor?'着工日が未定':'納品予定日が未定'),deadline};
+    return {lv:'ok',rank:4,text:(est?'発注期限まで余裕あり':(isLabor?'着手待ち':'納品待ち')),deadline};
+  }
+  function renderDelivery(){
+    const PM=pmap(), PS=psmap();
+    let rows = budgets.filter(x=> x.status==='estimate' || x.status==='ordered')
+      .map(x=>({x, a:classify(x, x.phase_id?PS[x.phase_id]:null)}));
+    rows.sort((a,b)=> a.a.rank-b.a.rank || String(a.a.deadline||'9999').localeCompare(String(b.a.deadline||'9999')));
+    if (!rows.length){ $('view').innerHTML = `<div class="tbl"><div class="empty"><b>未納品の材料はありません</b>実行予算で品目を登録すると、ここに納期リスクが出ます。</div></div>`; return; }
+    const gt = 'grid-template-columns:44px 150px 1.3fr 1.6fr 104px 104px;min-width:840px';
+    let h = `<div class="tbl"><div class="hd" style="${gt}"><span class="rno">NO</span><span>アラート</span><span>工程</span><span>材料</span><span>納品予定</span><span>発注期限</span></div>`;
+    rows.forEach((o,i)=>{ const x=o.x, a=o.a;
+      h += `<div class="rw ${a.lv==='red'?'red':''} ${CANEDIT?'click':''}" data-id="${x.id}" style="${gt}">
+        <span class="rno">${i+1}</span>
+        <span class="ctr"><span class="altag ${a.lv}">${esc(a.text)}</span></span>
+        <span class="ctr"><span class="sub">${x.phase_id&&PM[x.phase_id]?esc(PM[x.phase_id]):'工事全体'}</span></span>
+        <span><span class="nm">${esc(x.item_name||'（無題）')}</span> <span class="stag ${x.status}">${STATN[x.status]||x.status}</span>${x.quantity!=null?`<span class="sub"> ${x.quantity}${x.unit?esc(x.unit):''}</span>`:''}</span>
+        <span class="num">${fmtShort(x.scheduled_delivery_date)}</span>
+        <span class="num">${a.deadline?fmtShort(a.deadline):'—'}</span>
+      </div>`; });
+    h += `</div>`; $('view').innerHTML = h;
+    if (CANEDIT) $('view').querySelectorAll('.rw.click').forEach(el=> el.addEventListener('click', ()=> openDetail(el.dataset.id,'delivery')));
+  }
+
+  // ===== 発注タブ（発注状況・発注先／金額は①②のみ・工程まとめ） =====
+  function renderOrder(){
+    const PM=pmap(), PS=psmap(), PT=ptmap();
+    let items = budgets.filter(x=> x.status!=='cancelled').filter(x=> matmode==='material'? x.category==='material' : x.category!=='material');
+    const pseq = x => (x.phase_id && PS[x.phase_id]) ? (PS[x.phase_id].seq??9999) : 100000;
+    items.sort((a,b)=> pseq(a)-pseq(b) || String(a.item_name||'').localeCompare(String(b.item_name||''),'ja'));
+    if (!items.length){ $('view').innerHTML = `<div class="tbl"><div class="empty"><b>該当する品目がありません</b>実行予算で品目を登録すると集約されます。</div></div>`; return; }
+    const cols = ['44px','96px','1.6fr','1fr']; const hd=['NO','状態','品目','工程'];
+    if (VENDOR){ cols.push('150px'); hd.push('発注先'); }
+    if (MONEY){ cols.push('120px'); hd.push('金額(原価)'); }
+    cols.push('104px'); hd.push('納品予定');
+    const gt = `grid-template-columns:${cols.join(' ')};min-width:${VENDOR?(MONEY?'980px':'880px'):'760px'}`;
+    let h = `<div class="tbl"><div class="hd" style="${gt}">${hd.map((t,i)=>`<span${i===0?' class="rno"':''}>${t}</span>`).join('')}</div>`;
+    let cur=null, n=0;
+    items.forEach(x=>{ const gk=x.phase_id||('P:'+x.project_id);
+      if (gk!==cur){ cur=gk; const cnt=items.filter(y=>(y.phase_id||('P:'+y.project_id))===gk).length;
+        h += `<div class="grp"><span>🏗</span><span class="gn">${x.phase_id&&PM[x.phase_id]?esc(PM[x.phase_id]):'工事全体'}</span><span class="gc">${cnt}件</span></div>`; }
+      n++; const st=x.status||'estimate', amt=amountOf(x), deliv=x.scheduled_delivery_date||x.delivered_on;
+      let cells = `<span class="rno">${n}</span><span class="ctr"><span class="stag ${st==='estimate'?'gap':st}">${STATN[st]||st}</span></span>`
+        + `<span><span class="nm" style="font-size:12.5px">${esc(x.item_name||'（無題）')}</span>${x.quantity!=null?`<span class="sub"> ${x.quantity}${x.unit?esc(x.unit):''}</span>`:''}</span>`
+        + `<span class="ctr"><span class="sub">${x.phase_id&&PM[x.phase_id]?esc(PM[x.phase_id]):'工事全体'}</span></span>`;
+      if (VENDOR) cells += `<span class="ctr"><span class="sub">${x.estimate_partner_id&&PT[x.estimate_partner_id]?esc(PT[x.estimate_partner_id]):'—'}</span></span>`;
+      if (MONEY)  cells += `<span class="num">${amt!=null?fmtMoney(amt):'—'}</span>`;
+      cells += `<span class="num">${fmtShort(deliv)}</span>`;
+      h += `<div class="rw ${st==='estimate'?'gap':''} ${CANEDIT?'click':''}" data-id="${x.id}" style="${gt}">${cells}</div>`;
+    });
+    h += `</div>`; $('view').innerHTML = h;
+    if (CANEDIT) $('view').querySelectorAll('.rw.click').forEach(el=> el.addEventListener('click', ()=> openDetail(el.dataset.id,'order')));
+  }
+
+  // ===== 予算・見積タブ（①②：段階実装として既存ページへ） =====
+  function renderLink(kind){
+    const url = (kind==='budget'?'budget.html':'genka.html') + (projId?`?p=${projId}`:'');
+    const t = kind==='budget' ? { ico:'📘', h:'実行予算（着工前原価台帳）', p:'品目・数量・単価・金額・予算・決定額・差額を管理します。' }
+                              : { ico:'⚖️', h:'業者見積・原価決定', p:'各社の見積を比べ、採用して原価（決定額）を決めます。' };
+    $('view').innerHTML = `<div class="linkcard"><div class="ico">${t.ico}</div><h3>${t.h}</h3><p>${t.p}<br><span style="font-size:11.5px">※このタブは統合準備中です。当面は専用ページで操作します（同じ台帳です）。</span></p>`
+      + `<a class="btn" href="${url}">${t.h}を開く →</a></div>`;
+  }
+
+  function render(){
+    if (!projId){ $('view').innerHTML = `<div class="tbl"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、材料の納期・発注状況が出ます。</div></div>`; return; }
+    if (tab==='delivery') return renderDelivery();
+    if (tab==='order') return renderOrder();
+    if (tab==='budget') return renderLink('budget');
+    if (tab==='estimate') return renderLink('estimate');
+  }
+
+  // ===== 詳細＋発注状況の更新（①②） =====
+  function openDetail(id, from){
+    const x = budgets.find(b=>b.id===id); if(!x) return;
+    const PM=pmap(), PT=ptmap(), PS=psmap();
+    const st=x.status||'estimate', amt=amountOf(x), deliv=x.scheduled_delivery_date||x.delivered_on;
+    $('dttl').innerHTML = `<span class="stag ${st==='estimate'?'gap':st}">${STATN[st]||st}</span> ${esc(x.item_name||'（無題）')}`;
+    const row=(k,v)=>`<div class="drow"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+    const rowN=(k,v)=>`<div class="drow"><span class="k">${k}</span><span class="v num">${v}</span></div>`;
+    let body = row('工程', x.phase_id&&PM[x.phase_id]?esc(PM[x.phase_id]):'工事全体')
+      + row('費目', x.category==='material'?'材料':'工事・労務')
+      + rowN('数量', x.quantity!=null?`${x.quantity}${x.unit?esc(x.unit):''}`:'—');
+    if (VENDOR) body += row('発注先', x.estimate_partner_id&&PT[x.estimate_partner_id]?esc(PT[x.estimate_partner_id]):'—');
+    if (MONEY)  body += rowN('金額(原価)', amt!=null?fmtMoney(amt):'—');
+    body += rowN('納品予定', fmtShort(deliv));
+
+    // 発注状況（①②）
+    body += `<div class="fld"><span class="k">発注状況</span><span class="stbtns">`
+      + ['estimate','ordered','delivered','cancelled'].map(s=>`<button class="btn ghost sm sbtn${st===s?' on':''}" data-st="${s}" type="button">${({estimate:'未発注',ordered:'発注する',delivered:'納品済み',cancelled:'中止・不要'})[s]}</button>`).join('')
+      + `</span></div>`;
+    // 納期・リードタイム・工程（①②）
+    const isLabor = x.category==='labor';
+    body += `<div class="fld"><span class="k">納品予定日</span><input id="d_sdd" type="date" value="${x.scheduled_delivery_date||''}"${isLabor?' disabled':''}>`
+      + `<span class="k">リードタイム</span><input id="d_lead" type="number" min="0" step="1" style="flex:0 1 90px" value="${x.lead_time_days??''}"></div>`;
+    const ps = phases.filter(p=>p.project_id===x.project_id).sort((a,b)=>(a.seq??9999)-(b.seq??9999));
+    body += `<div class="fld"><span class="k">工程</span><select id="d_phase"><option value="">工事全体（工程なし）</option>`
+      + ps.map(p=>`<option value="${p.id}"${p.id===x.phase_id?' selected':''}>${esc(p.name||'')}</option>`).join('') + `</select></div>`;
+    body += `<div class="cfoot"><button class="btn sm" id="d_save" type="button">保存する</button><span style="flex:1 1 auto"></span><button class="btn ghost sm" id="d_close" type="button">閉じる</button></div>`;
+    $('dbody').innerHTML = body;
+    $('dpanel').classList.add('open');
+    $('d_close').addEventListener('click', ()=> $('dpanel').classList.remove('open'));
+    $('dbody').querySelectorAll('.sbtn').forEach(b=> b.addEventListener('click', ()=> setStatus(x, b.dataset.st)));
+    $('d_save').addEventListener('click', ()=> saveEdit(x));
+  }
+  async function setStatus(x, st){
+    if (!st || st===(x.status||'estimate')){ $('dpanel').classList.remove('open'); return; }
+    const { error } = await sb.from('phase_budget_items').update({ status:st }).eq('id', x.id);
+    if (error){ showMsg($('msg'),'発注状況を更新できませんでした。'+error.message,'err'); return; }
+    $('dpanel').classList.remove('open'); await loadData(); render();
+    showMsg($('msg'), `「${x.item_name||'品目'}」を「${STATN[st]||st}」にしました。`, 'ok');
+  }
+  async function saveEdit(x){
+    const isLabor = x.category==='labor';
+    const patch = {
+      scheduled_delivery_date: isLabor ? null : ($('d_sdd').value||null),
+      lead_time_days: $('d_lead').value===''? null : Number($('d_lead').value),
+      phase_id: $('d_phase').value || null,
+    };
+    const { error } = await sb.from('phase_budget_items').update(patch).eq('id', x.id);
+    if (error){ showMsg($('msg'),'保存できませんでした。'+error.message,'err'); return; }
+    $('dpanel').classList.remove('open'); await loadData(); render();
+    showMsg($('msg'),'保存しました。','ok');
+  }
+  $('dpanel').addEventListener('click', e=>{ if(e.target===$('dpanel')) $('dpanel').classList.remove('open'); });
+
+  // イベント
+  $('fproj').addEventListener('change', async ()=>{ projId=$('fproj').value;
+    const u=new URL(location.href); projId?u.searchParams.set('p',projId):u.searchParams.delete('p'); history.replaceState(null,'',u);
+    await loadData(); render(); });
+  $('m_mat').addEventListener('click', ()=>{ matmode='material'; $('m_mat').classList.add('on'); $('m_lab').classList.remove('on'); render(); });
+  $('m_lab').addEventListener('click', ()=>{ matmode='labor'; $('m_lab').classList.add('on'); $('m_mat').classList.remove('on'); render(); });
+
+  paintTabs();
+  await loadRefs();
+  await loadData();
+  render();
+})();
+</script>
+</body>
+</html>
