@@ -145,6 +145,17 @@
   <div class="who" id="who"></div>
 </header>
 
+<style>
+  .gtab{ flex:0 0 auto; display:flex; gap:0; background:var(--card); border-bottom:1px solid var(--rule); padding:0 8px; }
+  .gtab a{ font-family:var(--body); font-weight:800; font-size:13px; color:var(--sub); text-decoration:none; padding:7px 15px; border-bottom:2px solid transparent; white-space:nowrap; }
+  .gtab a.on{ color:var(--ink); border-bottom-color:var(--safety); } .gtab a:hover{ color:var(--ink-2); }
+  .gtab[hidden], .gtab a[hidden]{ display:none; }
+</style>
+<nav class="gtab" id="gtab" hidden>
+  <a data-k="daily" href="reports.html">日報</a>
+  <a data-k="photo" href="files.html">写真・書類</a>
+  <a data-k="hrs" href="hourensou.html">報・連・相</a>
+</nav>
 <div class="wrap">
   <div class="ctl">
     <select id="proj"><option value="">工事を選んでください</option></select>
@@ -322,6 +333,23 @@
 <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("gtab"); if(!bar) return;
+  const allow = tierOf(a.me)<=2 ? ["daily","photo","hrs"] : ["daily","photo"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="photo") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
 <script>
 (async function(){
   const $ = id => document.getElementById(id);
