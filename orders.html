@@ -178,6 +178,18 @@
   <div class="who" id="who"></div>
 </header>
 
+<style>
+  .ztab{ flex:0 0 auto; display:flex; gap:0; background:var(--card); border-bottom:1px solid var(--rule); padding:0 8px; }
+  .ztab a{ font-family:var(--body); font-weight:800; font-size:13px; color:var(--sub); text-decoration:none; padding:7px 15px; border-bottom:2px solid transparent; white-space:nowrap; }
+  .ztab a.on{ color:var(--ink); border-bottom-color:var(--safety); } .ztab a:hover{ color:var(--ink-2); }
+  .ztab[hidden], .ztab a[hidden]{ display:none; }
+</style>
+<nav class="ztab" id="ztab" hidden>
+  <a data-k="delivery" href="order-alerts.html">納期</a>
+  <a data-k="order" href="orders.html">発注</a>
+  <a data-k="budget" href="budget.html">予算</a>
+  <a data-k="estimate" href="genka.html">見積</a>
+</nav>
 <div class="wrap">
   <p class="lead" id="lead" hidden>
     <b>すべての発注（材料・工事）の台帳</b>です。着工前原価台帳の全品目を集約し、上のタブで<b>材料発注／工事発注</b>を切り替え、<b>発注抜け（未発注）</b>を点検します。原価は業者見積で決定（「業者見積・原価決定」）、品目や発注状態の編集は「実行予算」「工程表」から。発注後の入荷（納品予定）は「材料到着スケジュール」で確認できます。
@@ -221,6 +233,23 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("ztab"); if(!bar) return;
+  const allow = tierOf(a.me)<=2 ? ["delivery","order","budget","estimate"] : ["delivery"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="order") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
 <script>
 (async function(){
   const $ = id => document.getElementById(id);
