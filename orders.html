@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: orders (材工発注) v20260909F -->
+<!-- BUILD: orders (材工発注) v20260911A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -150,6 +150,10 @@
     padding:9px 10px; background:#EEF2F7; border:1px solid var(--rule-2); border-radius:var(--radius); }
   .dmove .k{ flex:0 0 auto; color:var(--ink-2); font-size:12.5px; font-weight:800; }
   .dmove select{ flex:1 1 160px; min-width:140px; min-height:36px; }
+  /* 発注状況ボタン（現在の状態を強調＝単一の正） */
+  .dstat .stbtns{ display:flex; gap:6px; flex-wrap:wrap; flex:1 1 auto; }
+  .dstat .sbtn{ min-height:34px; }
+  .dstat .sbtn.on{ background:var(--ink); color:#fff; border-color:var(--ink); font-weight:800; }
 
   .mlbl{ display:none; }
   @media (max-width:860px){
@@ -448,6 +452,15 @@
       + row('発注先', x.estimate_partner_id&&PT[x.estimate_partner_id]?esc(PT[x.estimate_partner_id]):'—')
       + rowN('納品予定', deliv?fmtShort(deliv):'—')
       + (x.note?row('備考', esc(x.note)):'')
+      + `<div class="dmove dstat">
+           <span class="k">発注状況</span>
+           <span class="stbtns">
+             <button class="btn ghost sm sbtn${st==='estimate'?' on':''}" data-st="estimate" type="button">未発注</button>
+             <button class="btn ghost sm sbtn${st==='ordered'?' on':''}" data-st="ordered" type="button">発注する</button>
+             <button class="btn ghost sm sbtn${st==='delivered'?' on':''}" data-st="delivered" type="button">納品済み</button>
+             <button class="btn ghost sm sbtn${st==='cancelled'?' on':''}" data-st="cancelled" type="button">中止・不要</button>
+           </span>
+         </div>`
       + `<div class="dmove">
            <span class="k">工程を移す</span>
            <select id="d_move">${moveOpts(x)}</select>
@@ -463,6 +476,17 @@
     $('d_close').addEventListener('click', () => $('dpanel').classList.remove('open'));
     $('d_del').addEventListener('click', () => delItem(x));
     $('d_moveBtn').addEventListener('click', () => moveItem(x));
+    $('dbody').querySelectorAll('.sbtn').forEach(b => b.addEventListener('click', () => setStatus(x, b.dataset.st)));
+  }
+
+  // 発注状況を台帳(phase_budget_items.status)へ直接更新＝単一の正。材料到着・実行予算・工程表すべて即反映。
+  async function setStatus(x, st){
+    if (!st || st === (x.status || 'estimate')){ $('dpanel').classList.remove('open'); return; }
+    const { error } = await sb.from('phase_budget_items').update({ status: st }).eq('id', x.id);
+    if (error){ showMsg($('msg'), '発注状況を更新できませんでした。' + error.message, 'err'); return; }
+    $('dpanel').classList.remove('open');
+    await loadData(); render();
+    showMsg($('msg'), `「${x.item_name||'品目'}」を「${STATN[st]||st}」にしました。`, 'ok');
   }
 
   // 付け替え先の工程プルダウン（この品目の工事の工程＋工事全体）

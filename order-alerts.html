@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: order-alerts (材料到着スケジュール) v20260909A -->
+<!-- BUILD: order-alerts (材料到着スケジュール) v20260911A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -196,7 +196,7 @@
 
 <div class="wrap">
   <p class="lead" id="lead" hidden>
-    発注した材料が<b>いつ現場に入荷するか（納品予定日）</b>を管理します。工程の着工に間に合うか、<b>納品予定が未定の材料</b>はないかを一目で確認できます。行をクリックすると現地納品予定日・リードタイムをその場で入力でき、「未設定のみ」で埋めるべき項目だけを絞り込めます。※発注そのものは「材工発注」ページで行います。
+    <b>いま進めている／これから進める工事</b>のために、<b>まだ発注していない材料・間に合わない材料</b>を常に浮かび上がらせる管制塔です。工程開始日と<b>発注期限（納品予定日−リードタイム）</b>を突き合わせ、至急対応を上に並べます。行をクリックすると<b>発注状況（未発注／発注済み／納品済み／中止）・現地納品予定日・リードタイム・工程</b>をその場で更新でき（＝台帳に直接反映）、着工前に赤（間に合わない）をつぶせます。
   </p>
 
   <div class="ctl">
@@ -231,6 +231,13 @@
   <div class="ebody">
     <div id="emsg" class="msg"></div>
     <div class="ename" id="e_name"></div>
+    <div class="erow"><label for="e_status">発注状況</label>
+      <select id="e_status">
+        <option value="estimate">未発注（発注が必要）</option>
+        <option value="ordered">発注済み（納品待ち）</option>
+        <option value="delivered">納品済み（一覧から外れます）</option>
+        <option value="cancelled">中止・不要（材料なし等）</option>
+      </select></div>
     <div class="erow"><label for="e_cat">費目</label>
       <select id="e_cat"><option value="material">材料費</option><option value="labor">外注・労務費</option></select></div>
     <div class="erow"><label for="e_phase">関わる工程</label><select id="e_phase"></select></div>
@@ -530,6 +537,7 @@
     const x = items.find(m => m.id === id); if (!x) return;
     editing = x;
     $('e_name').textContent = x.item_name || '（名称未設定）';
+    $('e_status').value = x.status || 'estimate';
     $('e_cat').value  = x.category || 'material';
     $('e_phase').innerHTML = phaseOptions(x.project_id, x.phase_id || '');
     $('e_sdd').value  = x.scheduled_delivery_date || '';
@@ -547,7 +555,9 @@
   $('esave').addEventListener('click', async () => {
     if (!editing) return;
     const isLabor = $('e_cat').value === 'labor';
+    const newStatus = $('e_status').value || 'estimate';
     const patch = {
+      status: newStatus,   // 発注状況＝台帳(phase_budget_items)の単一の正。ここが管制塔の“未発注/発注済み”シグナルの根拠
       category: $('e_cat').value,
       phase_id: $('e_phase').value || null,
       lead_time_days: $('e_lead').value === '' ? null : Number($('e_lead').value),
@@ -558,6 +568,10 @@
     $('esave').disabled = false; $('esave').textContent = '保存する';
     if (error){ showMsg($('emsg'), '保存できませんでした。' + error.message, 'err'); return; }
     Object.assign(editing, patch);   // ローカルへ反映
+    // 納品済み・中止は「未納品の管制塔」から外れるので一覧から除く
+    if (newStatus !== 'estimate' && newStatus !== 'ordered'){
+      items = items.filter(m => m.id !== editing.id);
+    }
     closeEdit();
     render();
     showMsg($('msg'), '保存しました。', 'ok');
