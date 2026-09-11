@@ -116,6 +116,19 @@
   </div>
 </header>
 
+<style>
+  .xtab{ flex:0 0 auto; display:flex; gap:0; background:var(--card); border-bottom:1px solid var(--rule); padding:0 8px; }
+  .xtab a{ font-family:var(--body); font-weight:800; font-size:13px; color:var(--sub); text-decoration:none; padding:7px 15px; border-bottom:2px solid transparent; white-space:nowrap; }
+  .xtab a.on{ color:var(--ink); border-bottom-color:var(--safety); } .xtab a:hover{ color:var(--ink-2); }
+  .xtab[hidden], .xtab a[hidden]{ display:none; }
+</style>
+<nav class="xtab" id="xtab" hidden>
+  <a data-k="partners" href="partners.html">取引先</a>
+  <a data-k="users" href="users.html">社員</a>
+  <a data-k="permissions" href="permissions.html">権限</a>
+  <a data-k="workflow" href="workflow.html">ワークフロー図</a>
+</nav>
+
 <div class="stage" id="stage">
   <div class="canvas" id="canvas">
     <svg class="links" id="links"><defs>
@@ -245,6 +258,23 @@ flowchart LR
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("xtab"); if(!bar) return;
+  const t = tierOf(a.me);
+  const allow = t===1 ? ["partners","users","permissions","workflow"] : ["partners","workflow"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="workflow") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
 <script>
 (function(){
