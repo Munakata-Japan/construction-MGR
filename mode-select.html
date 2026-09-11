@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: mode-select (セレクトモード) v20260908G -->
+<!-- BUILD: mode-select (セレクトモード) v20260911A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -354,11 +354,12 @@
     setInterval(paintOnline, 30000);
   }
 
-  // スマホ幅、またはアプリ（ホーム画面から）起動時は「現場モード」で開く：
-  // 写真・日報だけを大きく出し、重い一覧・集計は読み込まず素早く起動する。
-  const genba = matchMedia('(max-width:820px)').matches
-    || ((navigator.standalone === true || matchMedia('(display-mode: standalone)').matches)
-        && matchMedia('(pointer:coarse)').matches);
+  // スマホ／タブレット（タッチ端末）で、幅が狭い or アプリ（ホーム画面）起動のときだけ
+  // 「現場モード」で開く：写真・日報だけを大きく出し、重い一覧・集計は読み込まず素早く起動。
+  // ※PC（マウス＝pointer:fine）はウィンドウ幅が狭くても現場モードにしない。
+  const touch = matchMedia('(pointer:coarse)').matches;
+  const standalone = (navigator.standalone === true) || matchMedia('(display-mode: standalone)').matches;
+  const genba = touch && (matchMedia('(max-width:820px)').matches || standalone);
 
   if (genba){
     document.body.classList.add('genba-on');
