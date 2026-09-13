@@ -115,8 +115,6 @@
 <nav class="xtab" id="xtab" hidden>
   <a data-k="partners" href="partners.html">取引先</a>
   <a data-k="users" href="users.html">社員</a>
-  <a data-k="permissions" href="permissions.html">権限</a>
-  <a data-k="workflow" href="workflow.html">ワークフロー図</a>
 </nav>
 <div class="wrap">
   <div id="msg" class="msg"></div>
@@ -300,7 +298,7 @@
   const a = await requireAuth(); if(!a) return;
   const bar = document.getElementById("xtab"); if(!bar) return;
   const t = tierOf(a.me);
-  const allow = t===1 ? ["partners","users","permissions","workflow"] : ["partners","workflow"];
+  const allow = t===1 ? ["partners","users"] : ["partners"];
   const p = new URL(location.href).searchParams.get("p") || "";
   let shown=0;
   bar.querySelectorAll("a[data-k]").forEach(function(el){
