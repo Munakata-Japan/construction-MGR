@@ -1,6 +1,6 @@
 /* ============================================================
    宗像総合管理システム  Service Worker（ネットワーク優先）
-   BUILD: sw v20260904A
+   BUILD: sw v20260914A
    ------------------------------------------------------------
    目的: GitHub Pages はHTMLに「キャッシュしない」HTTPヘッダーを
    付けられず、変更後に毎回ハード再読み込みが必要だった。
@@ -43,8 +43,10 @@ self.addEventListener('fetch', (e) => {
 
   e.respondWith((async () => {
     try {
-      // まずネットワーク（＝常に最新）
-      const fresh = await fetch(req);
+      // まずネットワーク（＝常に最新）。
+      // GitHub Pages が付ける max-age（既定10分）のHTTPキャッシュを避け、
+      // オンライン時は毎回サーバーの最新を取得する（古い版を拾わない）。
+      const fresh = await fetch(req, { cache: 'no-store' });
       if (fresh && fresh.status === 200 && fresh.type === 'basic'){
         const cache = await caches.open(CACHE);
         cache.put(req, fresh.clone());    // オフライン用の控え
