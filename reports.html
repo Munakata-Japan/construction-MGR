@@ -81,9 +81,10 @@
 </header>
 
 <style>
-  .gtab{ flex:0 0 auto; display:flex; gap:0; background:var(--card); border-bottom:1px solid var(--rule); padding:0 8px; }
-  .gtab a{ font-family:var(--body); font-weight:800; font-size:13px; color:var(--sub); text-decoration:none; padding:7px 15px; border-bottom:2px solid transparent; white-space:nowrap; }
-  .gtab a.on{ color:var(--ink); border-bottom-color:var(--safety); } .gtab a:hover{ color:var(--ink-2); }
+  .gtab{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; background:var(--card); border-bottom:1px solid var(--rule); padding:9px 12px; }
+  .gtab a{ font-family:var(--body); font-weight:800; font-size:13.5px; color:var(--ink-2); text-decoration:none; padding:9px 20px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .gtab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .gtab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
   .gtab[hidden], .gtab a[hidden]{ display:none; }
 </style>
 <nav class="gtab" id="gtab" hidden>
