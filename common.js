@@ -767,3 +767,146 @@ async function signOut(){
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
 })();
+
+/* ============================================================
+   多言語対応（日本語 / 简体中文 / English）— 全ページ共通
+   ------------------------------------------------------------
+   ヘッダーに言語スイッチを追加。ページ内の日本語UI文字列を辞書で照合して
+   選択言語へ置換する（要素ごとのタグ付け不要）。動的に描画される一覧・表は
+   MutationObserver で自動翻訳。辞書に無い語・データ（氏名/数値/日付等）は
+   そのまま日本語のまま＝壊れない。曖昧語（例：単独の「工事」）は誤訳を避け
+   あえて未収録にしている。辞書は随時追加で網羅度を上げられる。
+============================================================ */
+(function(){
+  const LANGS = [['ja','日本語'],['zh','简体中文'],['en','English']];
+  const KEY = 'mgr_lang';
+  function getLang(){ try{ return localStorage.getItem(KEY) || 'ja'; }catch(e){ return 'ja'; } }
+  function setLang(l){ try{ localStorage.setItem(KEY, l); }catch(e){} }
+
+  // 日本語 → { zh:簡体字, en:English }
+  const DICT = {
+    '宗像総合管理システム':{zh:'宗像综合管理系统',en:'Munakata Management System'},
+    '管理者':{zh:'管理员',en:'Administrator'},'経営者':{zh:'经营者',en:'Executive'},
+    '現場監督':{zh:'现场监督',en:'Site Manager'},'作業員':{zh:'作业员',en:'Worker'},
+    '外注':{zh:'外包',en:'Subcontractor'},'協力業者':{zh:'协作单位',en:'Partner'},
+    '◂ メニュー':{zh:'◂ 菜单',en:'◂ Menu'},'◂ 戻る':{zh:'◂ 返回',en:'◂ Back'},
+    'メニュー':{zh:'菜单',en:'Menu'},'戻る':{zh:'返回',en:'Back'},'出る':{zh:'退出',en:'Sign out'},
+    '閉じる':{zh:'关闭',en:'Close'},'保存':{zh:'保存',en:'Save'},'保存する':{zh:'保存',en:'Save'},
+    '登録':{zh:'登记',en:'Register'},'登録する':{zh:'登记',en:'Register'},
+    '削除':{zh:'删除',en:'Delete'},'編集':{zh:'编辑',en:'Edit'},'追加':{zh:'添加',en:'Add'},
+    'キャンセル':{zh:'取消',en:'Cancel'},'開く':{zh:'打开',en:'Open'},
+    'すべて展開':{zh:'全部展开',en:'Expand all'},'すべて畳む':{zh:'全部折叠',en:'Collapse all'},
+    '絞り込み':{zh:'筛选',en:'Filter'},'使い方':{zh:'使用方法',en:'Help'},
+    '？使い方':{zh:'？使用方法',en:'? Help'},'？使い方 ▼':{zh:'？使用方法 ▼',en:'? Help ▼'},
+    '取り込む':{zh:'导入',en:'Import'},'＋ 書類を取り込む':{zh:'＋ 导入文件',en:'+ Import file'},
+    '見本':{zh:'示例',en:'Sample'},'付箋':{zh:'便签',en:'Notes'},'凡例':{zh:'图例',en:'Legend'},
+    '見方':{zh:'查看方法',en:'Guide'},'全体':{zh:'全部',en:'Fit'},
+    'ガント':{zh:'甘特图',en:'Gantt'},'ネットワーク':{zh:'网络图',en:'Network'},
+    '改訂の履歴':{zh:'修订历史',en:'Revisions'},'工程表を改定する':{zh:'修订工程表',en:'Revise schedule'},
+    '工程を追加する':{zh:'添加工序',en:'Add phase'},'＋工種':{zh:'＋工种',en:'+ Trade'},
+    '＋ 工種を追加':{zh:'＋ 添加工种',en:'+ Add trade'},
+    '基本':{zh:'基本',en:'Basics'},'現場管理':{zh:'现场管理',en:'Site Management'},
+    '損益':{zh:'损益',en:'Profit & Loss'},'勤怠':{zh:'考勤',en:'Attendance'},
+    '工事案件':{zh:'工程项目',en:'Projects'},'一覧・登録・編集':{zh:'列表・登记・编辑',en:'List / Register / Edit'},
+    '設定':{zh:'设置',en:'Settings'},'権限マトリクス':{zh:'权限矩阵',en:'Permissions Matrix'},
+    'ワークフロー図':{zh:'工作流程图',en:'Workflow'},'システム全体の流れ（最新版）':{zh:'系统整体流程（最新版）',en:'System overview (latest)'},
+    '工程表':{zh:'工程表',en:'Schedule'},'ガント・ネットワーク':{zh:'甘特图・网络图',en:'Gantt / Network'},
+    '材工':{zh:'材料与施工',en:'Materials & Labor'},'現場の記録':{zh:'现场记录',en:'Site Records'},
+    '報・連・相':{zh:'报・联・商',en:'Report / Contact / Consult'},'書類':{zh:'文件',en:'Documents'},
+    '打刻':{zh:'打卡',en:'Clock in/out'},'勤怠の確認':{zh:'考勤确认',en:'Attendance'},'準備中':{zh:'准备中',en:'Coming soon'},
+    '見積':{zh:'报价',en:'Estimate'},'予算':{zh:'预算',en:'Budget'},'納期':{zh:'交期',en:'Delivery'},
+    '日報':{zh:'日报',en:'Daily Report'},'写真・書類':{zh:'照片・文件',en:'Photos & Docs'},
+    '安全書類':{zh:'安全文件',en:'Safety Docs'},'竣工図書':{zh:'竣工图书',en:'Handover Docs'},
+    '出来高':{zh:'完成量',en:'Progress'},'設計変更':{zh:'设计变更',en:'Change Orders'},
+    '取引先':{zh:'客户/供应商',en:'Partners'},'社員':{zh:'员工',en:'Staff'},'権限':{zh:'权限',en:'Permissions'},
+    '未着手':{zh:'未开始',en:'Not started'},'着手中':{zh:'进行中',en:'In progress'},
+    '完了':{zh:'完成',en:'Done'},'中断':{zh:'中断',en:'Paused'},'余裕なし':{zh:'无余裕',en:'No slack'},
+    '材料':{zh:'材料',en:'Material'},'材料費':{zh:'材料费',en:'Material cost'},
+    '外注・労務費':{zh:'外包・人工费',en:'Labor cost'},'最安':{zh:'最低价',en:'Lowest'},
+    '区分':{zh:'类别',en:'Type'},'品名':{zh:'品名',en:'Item'},'数量':{zh:'数量',en:'Qty'},
+    '単価':{zh:'单价',en:'Unit price'},'金額':{zh:'金额',en:'Amount'},'工程':{zh:'工序',en:'Phase'},
+    '着工':{zh:'开工',en:'Start'},'進捗':{zh:'进度',en:'Progress'},'採用':{zh:'采用',en:'Adopt'},
+    '日付':{zh:'日期',en:'Date'},'種別':{zh:'种类',en:'Type'},'件名':{zh:'标题',en:'Title'},
+    '登録者':{zh:'登记人',en:'Registered by'},'操作':{zh:'操作',en:'Actions'},
+    '納品予定日':{zh:'预计交货日',en:'Est. delivery'},'納品日':{zh:'交货日',en:'Delivered'},
+    '発注日':{zh:'下单日',en:'Order date'},'リードタイム':{zh:'交货周期',en:'Lead time'},
+    '発注状況':{zh:'下单状态',en:'Order status'},'未発注':{zh:'未下单',en:'Not ordered'},
+    '発注済み':{zh:'已下单',en:'Ordered'},'納品済み':{zh:'已交货',en:'Delivered'},
+    '業者見積・原価決定':{zh:'供应商报价・成本确定',en:'Vendor Estimates & Cost'},
+    '出来高・進捗':{zh:'完成量・进度',en:'Progress'},'損益・粗利':{zh:'损益・毛利',en:'Profit & Margin'},
+    '利用者':{zh:'用户',en:'Users'},'作業日報':{zh:'作业日报',en:'Daily Report'},
+    '材工発注':{zh:'材料与施工下单',en:'Material & Labor Orders'},
+    '材料到着スケジュール':{zh:'材料到货计划',en:'Material Delivery'},'実行予算':{zh:'执行预算',en:'Working Budget'},
+    '保管書類':{zh:'存档文件',en:'Stored Docs'},'ひな型':{zh:'模板',en:'Templates'},
+    'ログイン':{zh:'登录',en:'Sign in'},'メールアドレス':{zh:'邮箱地址',en:'Email'},
+    'パスワード':{zh:'密码',en:'Password'},'ログインする':{zh:'登录',en:'Sign in'}
+  };
+
+  const lang = getLang();
+  function tr(s){
+    if (s == null) return null;
+    const key = String(s).trim();
+    if (!key) return null;
+    const e = DICT[key];
+    if (!e) return null;
+    const v = e[lang];
+    return (v && v !== key) ? v : null;
+  }
+  function translateNode(node){
+    if (!node) return;
+    if (node.nodeType === 3){
+      const raw = node.nodeValue;
+      const t = tr(raw);
+      if (t !== null){
+        const lead = (raw.match(/^\s*/)||[''])[0], trail = (raw.match(/\s*$/)||[''])[0];
+        node.nodeValue = lead + t + trail;
+      }
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    const tag = node.tagName;
+    if (tag === 'SCRIPT' || tag === 'STYLE' || (node.classList && node.classList.contains('langsel'))) return;
+    if (node.hasAttribute){
+      ['placeholder','title'].forEach(a => {
+        if (node.hasAttribute(a)){ const t = tr(node.getAttribute(a)); if (t !== null) node.setAttribute(a, t); }
+      });
+      if (tag === 'INPUT' && /^(button|submit|reset)$/i.test(node.getAttribute('type')||'')){
+        const t = tr(node.value); if (t !== null) node.value = t;
+      }
+    }
+    for (let c = node.firstChild; c; c = c.nextSibling) translateNode(c);
+  }
+  function translateAll(){
+    if (lang === 'ja') return;
+    if (document.body) translateNode(document.body);
+    const t = tr(document.title); if (t !== null) document.title = t;
+  }
+  function injectSwitcher(){
+    const bar = document.querySelector('.bar');
+    if (!bar || bar.querySelector('.langsel')) return;
+    const sel = document.createElement('select');
+    sel.className = 'langsel';
+    sel.setAttribute('aria-label','Language');
+    sel.style.cssText = 'min-height:26px;font-size:12px;border-radius:6px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.14);color:#fff;padding:0 6px;margin-left:8px;flex:0 0 auto;cursor:pointer;';
+    LANGS.forEach(function(pair){
+      const o = document.createElement('option'); o.value = pair[0]; o.textContent = pair[1]; o.style.color = '#111';
+      if (pair[0] === lang) o.selected = true; sel.appendChild(o);
+    });
+    sel.addEventListener('change', function(){ setLang(sel.value); location.reload(); });
+    const who = bar.querySelector('.who');
+    if (who) who.after(sel); else bar.appendChild(sel);
+  }
+  function boot(){
+    try{ document.documentElement.lang = lang === 'zh' ? 'zh-CN' : (lang === 'en' ? 'en' : 'ja'); }catch(e){}
+    injectSwitcher();
+    translateAll();
+    if (lang !== 'ja' && window.MutationObserver && document.body){
+      const obs = new MutationObserver(function(muts){
+        for (var i=0;i<muts.length;i++){ var an=muts[i].addedNodes; for (var j=0;j<an.length;j++){ try{ translateNode(an[j]); }catch(e){} } }
+      });
+      obs.observe(document.body, { childList:true, subtree:true });
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
