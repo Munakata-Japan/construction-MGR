@@ -209,6 +209,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script src="estimate-ai.js"></script>
 <script>
 (async function(){ try{
   const a = await requireAuth(); if(!a) return;
@@ -328,6 +329,45 @@
     return out;
   }
 
+  /* 見積書AI転記：確認済みの明細を、既存品目に紐づけ or 新規作成し、その見積先の単価を登録 */
+  async function importFromAI(pid, rows){
+    if (!projId) throw new Error('工事が選択されていません');
+    const norm = s => (s || '').replace(/\s+/g, '').toLowerCase();
+    const ITEM_COLS = 'id,phase_id,category,item_name,estimate_partner_id,quantity,unit,unit_price,amount,status,cost_stage,note,seq,discipline,sort_order';
+    let created = 0, quoted = 0;
+    let seqBase = (items.length ? Math.max(...items.map(x => x.seq || 0)) : 0) + 10;
+    for (const r of rows){
+      if (!r.name) continue;
+      const amount = r.amount != null ? r.amount
+        : (r.unit_price != null && r.quantity != null ? r.unit_price * r.quantity : null);
+      // 同名・同区分の既存品目があれば紐づけ、無ければ新規作成
+      let item = items.find(x => x.category === r.category && norm(x.item_name) === norm(r.name));
+      if (!item){
+        const body = {
+          organization_id: me.organization_id, project_id: projId, phase_id: null,
+          category: r.category, item_name: r.name,
+          quantity: r.quantity, unit: r.unit || null,
+          status: 'estimate', cost_stage: 'estimate',
+          note: r.note || null, seq: seqBase, created_by: me.id
+        };
+        seqBase += 10;
+        const { data, error } = await sb.from('phase_budget_items').insert(body).select(ITEM_COLS).maybeSingle();
+        if (error) throw new Error('品目の作成に失敗：' + error.message);
+        item = data; if (item) items.push(item);
+        created++;
+      }
+      if (!item) continue;
+      const { error: e2 } = await sb.from('budget_item_quotes').upsert(
+        { organization_id: me.organization_id, project_id: projId, budget_item_id: item.id, partner_id: pid, unit_price: r.unit_price, amount },
+        { onConflict: 'budget_item_id,partner_id' });
+      if (e2) throw new Error('見積金額の保存に失敗：' + e2.message);
+      quoted++;
+    }
+    await Promise.all([loadItems(), loadQuotes()]);
+    render();
+    showMsg($('msg'), `AI転記：新規品目 ${created} 件・見積金額 ${quoted} 件を登録しました。`, 'ok');
+  }
+
   /* ================= 描画 ================= */
   function sectionsOf(){
     const sections = [];
@@ -373,7 +413,7 @@
         <div class="vh"><span class="vn">見積先${i + 1}</span>${isLow ? '<span class="vbadge">最安</span>' : ''}</div>
         <select data-slot="${i}" ${isMgr ? '' : 'disabled'}>${opts(pid)}</select>
         <div class="vtot"><span class="t">大合計</span><span class="v">${pid ? fmtMoney(grand[pid]) : '—'}</span></div>
-        ${pid ? `<div class="vfiles">${fchips}${isMgr ? `<button class="btn ghost sm add" data-addfile="${pid}" type="button">＋見積書</button>` : ''}</div>` : ''}
+        ${pid ? `<div class="vfiles">${fchips}${isMgr ? `<button class="btn ghost sm add" data-addfile="${pid}" type="button">＋見積書</button><button class="btn sm add" data-aiimport="${pid}" type="button">🤖 AI転記</button>` : ''}</div>` : ''}
       </div>`;
     }).join('');
 
@@ -385,6 +425,16 @@
     });
     $('vends').querySelectorAll('[data-addfile]').forEach(b =>
       b.addEventListener('click', () => { uploadFor = b.dataset.addfile; $('filepick').click(); }));
+    $('vends').querySelectorAll('[data-aiimport]').forEach(b =>
+      b.addEventListener('click', () => {
+        const pid = b.dataset.aiimport;
+        const p = partners.find(x => x.id === pid);
+        if (!window.EstimateAI){ showMsg($('msg'), 'AI転記モジュールを読み込めませんでした。', 'err'); return; }
+        EstimateAI.open({
+          partnerName: p ? p.name : '',
+          onImport: rows => importFromAI(pid, rows)
+        });
+      }));
     $('vends').querySelectorAll('[data-open]').forEach(a =>
       a.addEventListener('click', e => { e.preventDefault(); openFile(a.dataset.open); }));
     $('vends').querySelectorAll('[data-delfile]').forEach(x =>
