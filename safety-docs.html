@@ -43,8 +43,9 @@
 
   /* アップロード（管理者のみ） */
   .up{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1);
-    padding:10px 12px; margin-bottom:8px; display:grid; gap:8px;
+    padding:8px 12px; margin-bottom:6px; display:grid; gap:8px;
     grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); align-items:end; }
+  .up[hidden]{ display:none !important; }
   .up label{ display:flex; flex-direction:column; gap:3px; font-size:11px; color:var(--sub); font-weight:700; }
   .up input, .up select{ min-height:38px; font-size:14px; }
   .up .drop{ grid-column:1/-1; border:2px dashed var(--ink-2); border-radius:var(--radius); background:#F3F6FA;
@@ -127,6 +128,7 @@
     <p class="lead"><b>提出・実施された安全書類</b>（KY活動表・新規入場者教育・施工体制図・労災保険 ほか）を、
       <b>工事・日付・書類種別</b>で保管します。<b>現場全員が閲覧</b>できます。追加・削除は管理者（経営者・現場監督）のみ。</p>
 
+    <button class="btn sm" id="upToggle" type="button" hidden style="margin-bottom:6px">＋ 書類を取り込む</button>
     <div class="up" id="upbox" hidden>
       <label>工事
         <select id="u_proj"><option value="">（工事共通／全社）</option></select>
@@ -315,7 +317,11 @@
   function addFiles(fl){ picked = picked.concat([...fl]); refreshGo(); }
 
   if (isMgr){
-    $('upbox').hidden = false;
+    $('upToggle').hidden = false;   // 取込フォームは既定で畳み、ボタンで開閉（一覧を広く）
+    $('upToggle').addEventListener('click', () => {
+      $('upbox').hidden = !$('upbox').hidden;
+      $('upToggle').classList.toggle('on', !$('upbox').hidden);
+    });
     try { $('u_date').value = new Date().toISOString().slice(0,10); } catch(e){}
     $('drop').addEventListener('click', () => $('pick').click());
     $('pick').addEventListener('change', e => addFiles(e.target.files));
