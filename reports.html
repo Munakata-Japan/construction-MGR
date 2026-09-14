@@ -90,7 +90,6 @@
 <nav class="gtab" id="gtab" hidden>
   <a data-k="daily" href="reports.html">日報</a>
   <a data-k="photo" href="files.html">写真・書類</a>
-  <a data-k="hrs" href="hourensou.html">報・連・相</a>
 </nav>
 <div class="wrap">
   <div class="ctl">
@@ -250,7 +249,7 @@
 (async function(){ try{
   const a = await requireAuth(); if(!a) return;
   const bar = document.getElementById("gtab"); if(!bar) return;
-  const allow = tierOf(a.me)<=2 ? ["daily","photo","hrs"] : ["daily","photo"];
+  const allow = ["daily","photo"];
   const p = new URL(location.href).searchParams.get("p") || "";
   let shown=0;
   bar.querySelectorAll("a[data-k]").forEach(function(el){
