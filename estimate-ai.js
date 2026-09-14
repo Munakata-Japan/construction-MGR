@@ -230,6 +230,11 @@
         .eai-t input.num{ text-align:right; font-family:var(--mono,monospace); }
         .eai-t td:nth-child(1){ min-width:200px; } .eai-t td:nth-child(7){ min-width:140px; }
         .eai-del{ border:0; background:transparent; color:var(--alert,#C53826); font-size:18px; cursor:pointer; line-height:1; }
+        .eai-src{ margin-top:14px; }
+        .eai-srchd{ font-size:12.5px; font-weight:800; color:var(--sub,#55684B); margin-bottom:6px; }
+        .eai-srcimgs{ max-height:560px; overflow:auto; border:1px solid var(--rule,#C2C7C0); border-radius:6px; background:#F5F7F3; padding:8px; }
+        .eai-srcimgs img{ display:block; width:100%; height:auto; margin:0 auto 8px; box-shadow:0 1px 5px rgba(22,50,79,.25); border-radius:3px; }
+        .eai-srcimgs img:last-child{ margin-bottom:0; }
         .eai-ft{ display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap; }
         .eai-ft .sp{ flex:1 1 auto; }
         .eai-hide{ display:none; }
@@ -265,6 +270,10 @@
               <span class="sp"></span>
               <span class="eai-note-s" id="eaiSum"></span>
               <button class="eai-btn" id="eaiSave" type="button">この見積先に登録</button>
+            </div>
+            <div class="eai-src" id="eaiSource">
+              <div class="eai-srchd">見積書の原本（読み取り元）― 上の行と見比べてください</div>
+              <div class="eai-srcimgs" id="eaiSrcImgs"></div>
             </div>
           </div>
         </div>
@@ -315,6 +324,9 @@
       try {
         setStatus('見積書を画像に変換しています…');
         const images = await fileToImages(file);
+        // 原本を先に表示（AIの読み取り中から見比べられるように）
+        $('eaiSrcImgs').innerHTML = images.map(u => `<img src="${u}" alt="見積書ページ">`).join('');
+        $('eaiReview').classList.remove('eai-hide');
         setStatus(`AIが読み取っています…（${images.length}ページ）`);
         const resp = await callClaude(images, apiKey);
         const data = parseItems(resp);
@@ -324,12 +336,11 @@
         $('eaiTotals').textContent =
           `小計 ${yen(docTotals.subtotal)}　／　消費税 ${yen(docTotals.tax)}　／　合計 ${yen(docTotals.total)}（見積書の記載）`;
         $('eaiMeta').classList.remove('eai-hide');
-        if (!items.length) { setStatus('明細を読み取れませんでした。別のページ／画像でお試しください。', 'err'); $('eaiRun').disabled = false; return; }
         $('eaiTbody').innerHTML = items.map(reviewRowHtml).join('');
         bindTable();
-        $('eaiReview').classList.remove('eai-hide');
         refreshSum();
-        setStatus(`${items.length} 件を読み取りました。内容を確認・修正して「この見積先に登録」を押してください。`, 'ok');
+        if (!items.length) { setStatus('明細を自動で読み取れませんでした。下の原本を見ながら「＋ 行を足す」で入力できます。', 'err'); $('eaiRun').disabled = false; return; }
+        setStatus(`${items.length} 件を読み取りました。下の原本と見比べて確認・修正し「この見積先に登録」を押してください。`, 'ok');
       } catch (err) {
         setStatus('読み取りに失敗しました：' + (err && err.message ? err.message : err), 'err');
       }
