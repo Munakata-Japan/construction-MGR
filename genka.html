@@ -31,7 +31,7 @@
   html, body{ height:100%; }
   body{ overflow:hidden; display:flex; flex-direction:column; }
   .bar{ flex:0 0 auto; }
-  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:4px; padding-bottom:6px; }
+  .wrap{ flex:1 1 auto; min-height:0; max-width:none; display:flex; flex-direction:column; overflow:hidden; padding:4px 14px 6px; }
   .lead, .ctl, #msg, .vends, .sumgrid, .count{ flex:0 0 auto; }
   #ctable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
 
@@ -44,15 +44,15 @@
   .ctl .tog{ display:flex; gap:6px; }
 
   /* ===== 見積先スロット（最大4社） ===== */
-  .vends{ display:grid; gap:6px; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); margin-bottom:6px; align-items:start; }
+  .vends{ display:grid; gap:8px; grid-template-columns:repeat(4, minmax(0, 1fr)); margin-bottom:6px; }
   .vslot{
     background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
-    box-shadow:var(--shadow-1); padding:5px 8px; display:flex; flex-direction:column; gap:3px;
+    box-shadow:var(--shadow-1); padding:6px 9px; display:flex; flex-direction:column; gap:4px;
   }
   .vslot .vh{ display:flex; align-items:center; gap:6px; }
-  .vslot .vn{ font-size:10px; color:var(--sub); font-weight:700; white-space:nowrap; }
-  .vslot .vh select{ flex:1 1 auto; min-width:0; }
-  .vslot select{ min-height:32px; width:100%; }
+  .vslot .vn{ font-size:10.5px; color:var(--sub); font-weight:700; white-space:nowrap; }
+  .vslot .vbadge{ flex:0 0 auto; }
+  .vslot select{ min-height:34px; width:100%; }
   .vslot .vtot{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
   .vslot .vtot .t{ font-size:10px; color:var(--sub); }
   .vslot .vtot .v{ font-family:var(--mono); font-weight:700; font-size:14px; color:var(--ink); }
@@ -142,6 +142,7 @@
     .wrap{ flex:none; height:auto; overflow:visible; display:block; }
     #ctable{ display:block; }
     .ctable{ flex:none; max-height:70vh; }
+    .vends{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
   }
 </style>
 </head>
@@ -154,11 +155,11 @@
 </header>
 
 <style>
-  .ztab{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; background:var(--card); border-bottom:1px solid var(--rule); padding:9px 12px; }
-  .ztab a{ font-family:var(--body); font-weight:800; font-size:13.5px; color:var(--ink-2); text-decoration:none; padding:9px 20px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .ztab{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--card); border-bottom:1px solid var(--rule); padding:3px 10px; }
+  .ztab a{ font-family:var(--body); font-weight:800; font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:4px 14px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
   .ztab a:hover{ border-color:var(--ink); color:var(--ink); }
   .ztab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
-  .ztab .zarr{ color:var(--sub); font-weight:800; font-size:15px; user-select:none; }
+  .ztab .zarr{ color:var(--sub); font-weight:800; font-size:13px; user-select:none; }
   .ztab[hidden], .ztab a[hidden]{ display:none; }
 </style>
 <nav class="ztab" id="ztab" hidden>
@@ -414,7 +415,8 @@
         `<span class="fchip"><a href="#" data-open="${f.id}" title="${esc(f.original_name || '見積書')}">${esc(f.original_name || '見積書')}</a>` +
         (isMgr ? `<span class="x" data-delfile="${f.id}" title="削除">×</span>` : '') + `</span>`).join('');
       return `<div class="vslot ${isLow ? 'low' : ''}">
-        <div class="vh"><span class="vn">見積先${i + 1}</span>${isLow ? '<span class="vbadge">最安</span>' : ''}<select data-slot="${i}" ${isMgr ? '' : 'disabled'}>${opts(pid)}</select></div>
+        <div class="vh"><span class="vn">見積先${i + 1}</span>${isLow ? '<span class="vbadge">最安</span>' : ''}</div>
+        <select data-slot="${i}" ${isMgr ? '' : 'disabled'}>${opts(pid)}</select>
         <div class="vtot"><span class="t">大合計</span><span class="v">${pid ? fmtMoney(grand[pid]) : '—'}</span></div>
         ${pid ? `<div class="vfiles">${fchips}${isMgr ? `<button class="btn ghost sm add" data-addfile="${pid}" type="button">＋見積書</button><button class="btn sm add" data-aiimport="${pid}" type="button">🤖 AI転記</button>` : ''}</div>` : ''}
       </div>`;
