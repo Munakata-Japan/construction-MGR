@@ -778,7 +778,7 @@ async function signOut(){
    あえて未収録にしている。辞書は随時追加で網羅度を上げられる。
 ============================================================ */
 (function(){
-  const LANGS = [['ja','日本語'],['zh','简体中文'],['en','English']];
+  const LANGS = [['ja','🌐 日本語'],['zh','🌐 简体中文'],['en','🌐 English']];
   const KEY = 'mgr_lang';
   function getLang(){ try{ return localStorage.getItem(KEY) || 'ja'; }catch(e){ return 'ja'; } }
   function setLang(l){ try{ localStorage.setItem(KEY, l); }catch(e){} }
@@ -887,7 +887,7 @@ async function signOut(){
     const sel = document.createElement('select');
     sel.className = 'langsel';
     sel.setAttribute('aria-label','Language');
-    sel.style.cssText = 'min-height:26px;font-size:12px;border-radius:6px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.14);color:#fff;padding:0 6px;margin-left:8px;flex:0 0 auto;cursor:pointer;';
+    sel.style.cssText = 'width:auto;max-width:150px;min-width:0;min-height:28px;font-size:12.5px;font-weight:700;border-radius:6px;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.16);color:#fff;padding:0 8px;margin-left:8px;flex:0 0 auto;cursor:pointer;';
     LANGS.forEach(function(pair){
       const o = document.createElement('option'); o.value = pair[0]; o.textContent = pair[1]; o.style.color = '#111';
       if (pair[0] === lang) o.selected = true; sel.appendChild(o);
