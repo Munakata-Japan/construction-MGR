@@ -241,6 +241,18 @@ body > header.bar{ flex:0 0 auto; }
 }
 .bar2.today{ box-shadow:0 0 0 2px #E8720C, 0 2px 4px rgba(22,50,79,.25), 0 1px 2px rgba(22,50,79,.18); }
 
+/* 受電・売電開始＝工程行に載せず、カレンダーの縦列を色付けして示すマイルストーン */
+.mscol{ position:relative; pointer-events:none; z-index:4; }
+.mscol.ms-jyuden{ background:rgba(0,149,217,.14); box-shadow:inset 2px 0 0 #0095D9, inset -2px 0 0 #0095D9; }
+.mscol.ms-baiden{ background:rgba(35,133,84,.15); box-shadow:inset 2px 0 0 #238554, inset -2px 0 0 #238554; }
+.mslbl{ position:absolute; top:2px; left:50%; transform:translateX(-50%); pointer-events:auto; cursor:pointer;
+  border:0; color:#fff; font-family:var(--disp); font-weight:700; font-size:10px; line-height:1.4; padding:1px 6px;
+  border-radius:var(--radius-sm); white-space:nowrap; z-index:6; box-shadow:0 2px 5px rgba(22,50,79,.3); }
+.mscol.ms-jyuden .mslbl{ background:linear-gradient(180deg,#33B1E6,#0095D9 70%); }
+.mscol.ms-baiden .mslbl{ background:linear-gradient(180deg,#2FA96C,#238554 70%); }
+.mslbl:hover{ filter:brightness(1.08); }
+.mslbl:focus-visible{ outline:3px solid var(--safety); outline-offset:1px; }
+
 .bar2{
   z-index:2; align-self:center; height:var(--bh,20px); border-radius:var(--radius-sm); cursor:pointer;
   display:flex; align-items:center; padding:0 6px; gap:5px; margin:0 1px;
@@ -449,6 +461,8 @@ body > header.bar{ flex:0 0 auto; }
     <span><i style="background:var(--alert);border-radius:50%;width:10px;height:10px"></i>発注：期限超過</span>
     <span style="color:var(--sub)">▼＝材料の納品予定日（<b style="color:var(--ok)">緑</b>=間に合う/<b style="color:#C08A00">橙</b>=納品待ち/<b style="color:var(--alert)">赤</b>=間に合わない）</span>
     <span style="color:var(--sub)"><b style="color:var(--alert)">⚠</b>＝着工に間に合わない材料あり（バー赤枠）</span>
+    <span><i style="background:rgba(0,149,217,.2);box-shadow:inset 2px 0 0 #0095D9,inset -2px 0 0 #0095D9"></i>受電（カレンダー縦列）</span>
+    <span><i style="background:rgba(35,133,84,.2);box-shadow:inset 2px 0 0 #238554,inset -2px 0 0 #238554"></i>売電開始（カレンダー縦列）</span>
   </div>
 </div>
 
@@ -783,6 +797,8 @@ body > header.bar{ flex:0 0 auto; }
 
   let cats = [], wts = [], partners = [], users = [], projects = [];
   let projId = null, phases = [], deps = [], orders = [], materials = [], editing = null, view = 'gantt';
+  // 受電・売電開始は工程行に載せず、カレンダー縦列（色付き）で示す（工事行・並び替えから除外）
+  const isMilestoneName = nm => { const s = (nm || '').replace(/\s/g,''); return s === '受電' || s === '売電開始'; };
   let oediting = null;
   let zoomW = null;          // 日の幅（px）。null なら画面に合わせる
   let manualNameW = null;    // 工程欄の幅（px）。null なら自動
@@ -1115,7 +1131,10 @@ body > header.bar{ flex:0 0 auto; }
     const w0 = n2d(Math.min(...ds));
     const wN = n2d(Math.max(...de));
     const W  = Math.round((wN - w0) / DAY) + 1;   // 表示する日数
-    const N  = phases.length;
+    // 受電・売電開始は工程行に載せず、カレンダー縦列（色付き）で示す（工事行からは除外）
+    const msPhases  = phases.filter(p => isMilestoneName(p.name));
+    const rowPhases = phases.filter(p => !isMilestoneName(p.name));
+    const N  = rowPhases.length;
     const wIdx = n => Math.round((n2d(n) - w0) / DAY);
 
     // 本日の位置（縦線と、かかっている帯の強調に使う）
@@ -1174,12 +1193,23 @@ body > header.bar{ flex:0 0 auto; }
            `<div class="todayline" style="left:50%">` +
            `<span class="todaylbl">${md(t)}</span></div></div>`;
     }
+    // 受電・売電開始の縦列（その日のカレンダー列を色付け。ラベルはクリックで編集）
+    msPhases.forEach(p => {
+      const dn = d2n(p.start_date || p.end_date);
+      if (!dn) return;
+      const idx = wIdx(dn);
+      if (idx < 0 || idx >= W) return;
+      const cls = (p.name || '').replace(/\s/g,'') === '受電' ? 'ms-jyuden' : 'ms-baiden';
+      h += `<div class="mscol ${cls}" style="grid-column:${idx+3};grid-row:1 / -1">` +
+           `<button class="mslbl" type="button" data-id="${p.id}" ` +
+           `title="${esc(p.name)}　${fmtDate(p.start_date || p.end_date)}（クリックで編集）">${esc(p.name)}</button></div>`;
+    });
     // 横の区切りと段の色分け
     for (let r = 0; r < N; r++)
       h += `<div class="grule${r % 2 ? ' alt' : ''}" style="grid-column:1 / -1;grid-row:${r+2}"></div>`;
 
     // 番号・工程名・帯
-    phases.forEach((p, r) => {
+    rowPhases.forEach((p, r) => {
       const cat = cats.find(c => c.id === p.cost_category_id);
       const sub = `${cat ? esc(cat.name) : '—'}${Number(p.planned_mandays) ? ' ・ ' + p.planned_mandays + '人工' : ''}`;
       const alt = r % 2 ? ' alt' : '';
@@ -1242,6 +1272,11 @@ body > header.bar{ flex:0 0 auto; }
         if (Date.now() < suppressBarClickUntil) return;
         openPanel(phases.find(x => x.id === b.dataset.id));
       }));
+    $('gantt').querySelectorAll('.mslbl').forEach(b =>
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        openPanel(phases.find(x => x.id === b.dataset.id));
+      }));
     // 工程名・帯の日付がセル幅より長い場合は、はみ出す前にフォントを少しずつ縮める
     const shrinkToFit = (el, from, floor) => {
       let size = from;
@@ -1293,7 +1328,8 @@ body > header.bar{ flex:0 0 auto; }
       const anchorDate = (ph && ph.start_date) ? ph.start_date : o.due_date;
       const wi = wIdx2(d2n(anchorDate));
       if (wi < 0 || wi >= W) return;
-      const ri = ph ? phases.findIndex(p => p.id === o.phase_id) : -1;
+      // 行の位置はマイルストーンを除いた「工事行」の並びで数える
+      const ri = ph ? phases.filter(p => !isMilestoneName(p.name)).findIndex(p => p.id === o.phase_id) : -1;
       const col = cols[wi];
       const row = rows[ri >= 0 ? ri : 0];
       if (!col || !row) return;
@@ -1463,6 +1499,8 @@ body > header.bar{ flex:0 0 auto; }
     if (!tbl) return;
     armedRow = null;
 
+    // data-row は「工事行（マイルストーンを除いた並び）」上の位置
+    const rowPhases = phases.filter(p => !isMilestoneName(p.name));
     const rowEls = r => tbl.querySelectorAll(`[data-row="${r}"]`);
     let pressTimer = null, sx = 0, sy = 0;
     const cancelPress = () => { clearTimeout(pressTimer); pressTimer = null; };
@@ -1478,7 +1516,7 @@ body > header.bar{ flex:0 0 auto; }
         sx = e.clientX; sy = e.clientY;
         pressTimer = setTimeout(() => {
           pressTimer = null;
-          const p = phases[r];
+          const p = rowPhases[r];
           if (!p) return;
           if (confirm(`「${p.name}」の順番を入れ替えますか？\nOKを押した後、この行をつかんで別の行までドラッグしてください。`)){
             armedRow = r;
@@ -1505,7 +1543,7 @@ body > header.bar{ flex:0 0 auto; }
       armedRow = null;
 
       // この行に紐づく発注の付箋も一緒に追従させる
-      const p = phases[r];
+      const p = rowPhases[r];
       const onotesBox = $('onotes');
       const noteEls = (p ? orders.filter(o => o.phase_id === p.id && o.due_date && o.status !== 'cancelled') : [])
         .map(o => ({ id: o.id, el: onotesBox?.querySelector(`.onote[data-id="${o.id}"]`) }))
@@ -1579,9 +1617,13 @@ body > header.bar{ flex:0 0 auto; }
   }
 
   async function reorderPhase(fromIdx, toIdx){
+    // fromIdx/toIdx は工事行（マイルストーン除外）の位置。実配列 phases 上で並べ替える
+    const rows = phases.filter(p => !isMilestoneName(p.name));
+    const moved = rows[fromIdx], target = rows[toIdx];
+    if (!moved || !target) return;
     const arr = phases.slice();
-    const [moved] = arr.splice(fromIdx, 1);
-    arr.splice(toIdx, 0, moved);
+    arr.splice(arr.indexOf(moved), 1);
+    arr.splice(arr.indexOf(target), 0, moved);
 
     const updates = [];
     arr.forEach((p, i) => {
