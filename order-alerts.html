@@ -195,16 +195,21 @@
 </header>
 
 <style>
-  .ztab{ flex:0 0 auto; display:flex; gap:0; background:var(--card); border-bottom:1px solid var(--rule); padding:0 8px; }
-  .ztab a{ font-family:var(--body); font-weight:800; font-size:13px; color:var(--sub); text-decoration:none; padding:7px 15px; border-bottom:2px solid transparent; white-space:nowrap; }
-  .ztab a.on{ color:var(--ink); border-bottom-color:var(--safety); } .ztab a:hover{ color:var(--ink-2); }
+  .ztab{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; background:var(--card); border-bottom:1px solid var(--rule); padding:9px 12px; }
+  .ztab a{ font-family:var(--body); font-weight:800; font-size:13.5px; color:var(--ink-2); text-decoration:none; padding:9px 20px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .ztab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .ztab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .ztab .zarr{ color:var(--sub); font-weight:800; font-size:15px; user-select:none; }
   .ztab[hidden], .ztab a[hidden]{ display:none; }
 </style>
 <nav class="ztab" id="ztab" hidden>
-  <a data-k="delivery" href="order-alerts.html">納期</a>
-  <a data-k="order" href="orders.html">発注</a>
-  <a data-k="budget" href="budget.html">予算</a>
   <a data-k="estimate" href="genka.html">見積</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="budget" href="budget.html">予算</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="order" href="orders.html">発注</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="delivery" href="order-alerts.html">納期</a>
 </nav>
 <div class="wrap">
   <p class="lead" id="lead" hidden>
