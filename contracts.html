@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<!-- BUILD: contracts (契約関係) v20260917A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>契約関係 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{ max-width:1200px; }
+  .lead{ color:var(--sub); font-size:11px; line-height:1.5; margin:6px 0 6px; }
+  .lead b{ color:var(--ink); }
+
+  /* 受注／発注書 切替 */
+  .seg{ display:inline-flex; border:1px solid var(--ink-2); border-radius:999px; overflow:hidden; margin:6px 0 8px; }
+  .seg button{ border:0; background:var(--card); color:var(--ink-2); font-family:var(--body); font-weight:800;
+    font-size:12.5px; padding:6px 18px; min-height:32px; cursor:pointer; white-space:nowrap; }
+  .seg button+button{ border-left:1px solid var(--rule); }
+  .seg button.on{ background:linear-gradient(180deg,#275A91,var(--ink) 65%); color:#fff; }
+
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+  .ctl select{ width:auto; min-width:150px; max-width:320px; min-height:34px; flex:0 1 auto; }
+  .ctl .sp{ flex:1 1 0; }
+
+  /* 登録フォーム（既定で畳む） */
+  .cform{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1);
+    padding:10px 12px; margin-bottom:8px; display:grid; gap:8px;
+    grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); align-items:end; }
+  .cform[hidden]{ display:none !important; }
+  .cform label{ display:flex; flex-direction:column; gap:3px; font-size:11px; color:var(--sub); font-weight:700; }
+  .cform input, .cform select, .cform textarea{ min-height:38px; font-size:14px; }
+  .cform .amtrow{ display:flex; gap:6px; align-items:center; }
+  .cform .amtrow input{ flex:1 1 auto; text-align:right; font-family:var(--mono); }
+  .cform .chk{ display:flex; align-items:center; gap:5px; font-size:12px; white-space:nowrap; }
+  .cform .drop{ grid-column:1/-1; border:2px dashed var(--ink-2); border-radius:var(--radius); background:#F3F6FA;
+    padding:12px; text-align:center; color:var(--ink-2); font-weight:700; font-size:12.5px; cursor:pointer; }
+  .cform .drop.has{ border-style:solid; background:#EAF1F8; }
+  .cform .go{ grid-column:1/-1; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+  .count{ margin:2px 0 6px; font-size:11px; color:var(--sub); }
+  .list{ display:grid; gap:8px; }
+
+  .cc{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1); overflow:hidden; }
+  .cc .top{ display:grid; grid-template-columns:40px 1fr auto; align-items:stretch; }
+  .cc .rno{ display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:12px;
+    color:var(--sub); background:#F5F7F2; border-right:1px solid var(--rule-2); }
+  .cc .body{ padding:8px 12px; min-width:0; }
+  .cc .cp{ font-family:var(--disp); font-weight:700; font-size:14.5px; color:var(--ink); line-height:1.35; overflow-wrap:anywhere; }
+  .cc .meta{ font-size:12px; color:var(--sub); line-height:1.6; display:flex; flex-wrap:wrap; gap:2px 14px; margin-top:2px; }
+  .cc .meta .amt{ font-family:var(--mono); font-weight:700; color:var(--ink); }
+  .cc .side{ padding:8px 12px; display:flex; flex-direction:column; gap:5px; align-items:stretch; justify-content:center; }
+  .cc .side .btn{ min-height:32px; padding:4px 12px; font-size:12.5px; white-space:nowrap; }
+  .cc .fl{ display:inline-flex; align-items:center; gap:4px; font-size:11.5px; }
+  .cc .fl a{ color:var(--ink-2); text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px; }
+
+  /* AI要点整理の表示 */
+  .sum{ border-top:1px solid var(--rule-2); background:#FBFCFA; padding:8px 12px; }
+  .sum .sh{ font-size:11px; font-weight:800; color:var(--ink-2); letter-spacing:.04em; margin-bottom:5px; display:flex; align-items:center; gap:8px; }
+  .sum .sh .ai{ background:var(--ink); color:#fff; border-radius:999px; padding:1px 8px; font-size:10px; }
+  .sum .pt{ display:grid; grid-template-columns:132px 1fr; gap:2px 10px; font-size:12.5px; align-items:start; }
+  .sum .pt .k{ color:var(--sub); font-weight:700; }
+  .sum .pt .v{ color:var(--ink); overflow-wrap:anywhere; line-height:1.5; }
+  .sum .notes{ margin-top:6px; font-size:11.5px; color:var(--sub); }
+  .sum .stat{ font-size:11.5px; color:var(--sub); }
+
+  .empty{ padding:30px 16px; text-align:center; color:var(--sub); }
+  .empty b{ display:block; font-size:15px; color:var(--ink); margin-bottom:4px; }
+
+  /* APIキー */
+  .keybar{ background:#F1F3EF; border:1px solid var(--rule-2); border-radius:8px; padding:8px 10px; margin-bottom:8px;
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12px; }
+  .keybar input{ flex:1 1 260px; min-width:0; min-height:34px; }
+
+  @media (max-width:820px){
+    .cc .top{ grid-template-columns:32px 1fr; }
+    .cc .side{ grid-column:1/-1; flex-direction:row; flex-wrap:wrap; border-top:1px solid var(--rule-2); }
+    .sum .pt{ grid-template-columns:104px 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1><span class="pgico" aria-hidden="true" style="margin-right:4px">📑</span>契約関係</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<div class="wrap">
+  <div class="seg" role="tablist">
+    <button type="button" id="s_recv" class="on">受注（クライアント）</button>
+    <button type="button" id="s_issue">発注書（協力会社）</button>
+  </div>
+
+  <p class="lead" id="lead"><b>受注</b>＝クライアントとの請負契約書、<b>発注書</b>＝協力会社への発注契約書を保管します。
+    契約書PDFを取り込み、<b>「🤖 AI要点整理」</b>を押すと、金額・工期・支払条件・違約金など重要ポイントを抜き出して表示します（閲覧は経営者・現場監督）。</p>
+
+  <div class="ctl">
+    <select id="fproj"><option value="">すべての工事</option></select>
+    <select id="fpart"><option value="">すべての相手先</option></select>
+    <span class="sp"></span>
+    <button class="btn sm" id="addBtn" type="button">＋ 契約を登録</button>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <!-- 登録フォーム（既定で畳む） -->
+  <div class="cform" id="cform" hidden>
+    <label>工事（任意）
+      <select id="f_proj"><option value="">（工事共通／未指定）</option></select>
+    </label>
+    <label>相手先（取引先）
+      <select id="f_part"><option value="">（取引先から選ぶ）</option></select>
+    </label>
+    <label>相手先名（自由記入・未登録先はこちら）
+      <input id="f_cpname" type="text" placeholder="例：〇〇電力株式会社">
+    </label>
+    <label>契約名
+      <input id="f_title" type="text" placeholder="例：2M村山蓄電所 電気工事 請負契約書">
+    </label>
+    <label>契約番号（任意）
+      <input id="f_no" type="text" placeholder="注文番号・契約番号">
+    </label>
+    <label>請負金額
+      <span class="amtrow"><input id="f_amt" type="number" inputmode="numeric" placeholder="金額">
+        <label class="chk"><input id="f_taxin" type="checkbox">税込</label></span>
+    </label>
+    <label>契約日
+      <input id="f_cdate" type="date">
+    </label>
+    <label>工期（着工）
+      <input id="f_pstart" type="date">
+    </label>
+    <label>工期（完成）
+      <input id="f_pend" type="date">
+    </label>
+    <label>備考（任意）
+      <input id="f_note" type="text" placeholder="特記事項など">
+    </label>
+    <div class="drop" id="drop">📎 契約書PDF/画像を選ぶ（クリック or ドロップ）
+      <div class="stat" id="f_fname" style="font-weight:400;margin-top:3px;color:var(--sub)"></div>
+    </div>
+    <input id="pick" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden>
+    <div class="go">
+      <button class="btn" id="save" type="button">保存する</button>
+      <button class="btn ghost sm" id="cancel" type="button">キャンセル</button>
+      <span class="stat" id="savestat"></span>
+    </div>
+  </div>
+
+  <p class="count" id="count"></p>
+  <div class="list" id="list"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const auth = await requireAuth(); if (!auth) return;
+  const me = auth.me;
+  const isMgr = tierOf(me) <= 2;
+  paintBar(me, await loadOrgName(me.organization_id));
+  if (!isMgr){
+    document.querySelector('.wrap').innerHTML =
+      '<div class="empty"><b>閲覧できません</b>契約関係は経営者・現場監督のみが利用できます。</div>';
+    return;
+  }
+
+  const BUCKET = 'project-files';
+  const AI_KEY = 'munakata_mgr_anthropic_api_key';
+  const MODEL = 'claude-sonnet-5';
+  const msg = $('msg');
+
+  let kind = 'received';          // received=受注 / issued=発注書
+  let projects = [], partners = [], rows = [];
+
+  /* ============ 読み込み ============ */
+  async function loadRefs(){
+    const [pj, pt] = await Promise.all([
+      sb.from('projects').select('id,project_no,name').eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('partners').select('id,name').eq('is_active', true).order('name')
+    ]);
+    projects = pj.data || []; partners = pt.data || [];
+    const pjOpts = projects.map(p => `<option value="${p.id}">${esc(p.project_no || '')} ${esc(p.name)}</option>`).join('');
+    $('fproj').innerHTML = '<option value="">すべての工事</option>' + pjOpts;
+    $('f_proj').innerHTML = '<option value="">（工事共通／未指定）</option>' + pjOpts;
+    const ptOpts = partners.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    $('fpart').innerHTML = '<option value="">すべての相手先</option>' + ptOpts;
+    $('f_part').innerHTML = '<option value="">（取引先から選ぶ）</option>' + ptOpts;
+  }
+
+  async function loadRows(){
+    const { data, error } = await sb.from('contracts')
+      .select('*').eq('kind', kind).eq('is_active', true).order('created_at', { ascending:false });
+    if (error){
+      if (/relation .* does not exist|schema cache/i.test(error.message || ''))
+        showMsg(msg, '契約テーブルがまだありません。Supabase で phase24_contracts.sql を実行してください。', 'err');
+      else showMsg(msg, '読み込めませんでした。' + error.message, 'err');
+      rows = []; render(); return;
+    }
+    rows = data || []; render();
+  }
+
+  /* ============ 描画 ============ */
+  function partName(r){ const p = partners.find(x => x.id === r.partner_id); return (p && p.name) || r.counterparty || '（相手先未設定）'; }
+  function projName(id){ const p = projects.find(x => x.id === id); return p ? `${p.project_no || ''} ${p.name}` : ''; }
+
+  function render(){
+    const fp = $('fproj').value, fpt = $('fpart').value;
+    const list = rows.filter(r => (!fp || r.project_id === fp) && (!fpt || r.partner_id === fpt));
+    $('count').textContent = `${list.length} 件`;
+    if (!list.length){
+      $('list').innerHTML = `<div class="empty"><b>${kind==='received'?'受注':'発注書'}の契約がありません</b>「＋ 契約を登録」から契約書を取り込めます。</div>`;
+      return;
+    }
+    $('list').innerHTML = list.map((r, i) => cardHtml(r, i + 1)).join('');
+    // events
+    $('list').querySelectorAll('[data-open]').forEach(b => b.onclick = () => openFile(b.dataset.open));
+    $('list').querySelectorAll('[data-ai]').forEach(b => b.onclick = () => runAI(b.dataset.ai, b));
+    $('list').querySelectorAll('[data-del]').forEach(b => b.onclick = () => delRow(b.dataset.del));
+  }
+
+  function cardHtml(r, no){
+    const amt = r.contract_amount != null ? `${fmtMoney(r.contract_amount)}${r.tax_included ? '（税込）' : ''}` : '';
+    const period = (r.period_start || r.period_end) ? `工期 ${fmtDate(r.period_start) || '—'}〜${fmtDate(r.period_end) || '—'}` : '';
+    const meta = [
+      projName(r.project_id),
+      amt ? `<span class="amt">${amt}</span>` : '',
+      r.contract_date ? `契約日 ${fmtDate(r.contract_date)}` : '',
+      period,
+      r.contract_no ? `No.${esc(r.contract_no)}` : ''
+    ].filter(Boolean).join('<span> ・ </span>');
+    const file = r.storage_path
+      ? `<span class="fl">📎 <a href="#" data-open="${r.id}" title="${esc(r.original_name || '契約書')}">${esc(r.original_name || '契約書を開く')}</a></span>`
+      : '<span class="fl" style="color:var(--sub)">ファイル未取込</span>';
+    return `<div class="cc">
+      <div class="top">
+        <div class="rno">${no}</div>
+        <div class="body">
+          <div class="cp">${esc(partName(r))}${r.title ? '　' + esc(r.title) : ''}</div>
+          <div class="meta">${meta}</div>
+          <div style="margin-top:3px">${file}</div>
+        </div>
+        <div class="side">
+          <button class="btn sm" data-ai="${r.id}" type="button">${r.ai_summary ? '🤖 再整理' : '🤖 AI要点整理'}</button>
+          <button class="btn ghost sm" data-del="${r.id}" type="button">削除</button>
+        </div>
+      </div>
+      <div class="sum" id="sum_${r.id}">${sumHtml(r)}</div>
+    </div>`;
+  }
+
+  function sumHtml(r){
+    if (!r.ai_summary) return '<span class="stat">まだAI要点整理をしていません。契約書を取り込んで「🤖 AI要点整理」を押してください。</span>';
+    let s; try { s = typeof r.ai_summary === 'string' ? JSON.parse(r.ai_summary) : r.ai_summary; } catch(e){ s = null; }
+    if (!s || !Array.isArray(s.points)) return '<span class="stat">要点データを読めませんでした。もう一度「🤖 再整理」を押してください。</span>';
+    const pts = s.points.filter(p => p && p.label && p.value)
+      .map(p => `<div class="k">${esc(p.label)}</div><div class="v">${esc(p.value)}</div>`).join('');
+    const at = r.ai_summary_at ? new Date(r.ai_summary_at).toLocaleString('ja-JP') : '';
+    return `<div class="sh"><span class="ai">AI要点整理</span><span style="font-weight:400;color:var(--sub);font-size:11px">${at}</span></div>
+      <div class="pt">${pts}</div>${s.notes ? `<div class="notes">補足：${esc(s.notes)}</div>` : ''}`;
+  }
+
+  async function openFile(id){
+    const r = rows.find(x => x.id === id); if (!r || !r.storage_path) return;
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(r.storage_path, 3600);
+    if (error || !data){ showMsg(msg, 'ファイルを開けませんでした。' + (error?.message || ''), 'err'); return; }
+    window.open(data.signedUrl, '_blank');
+  }
+
+  async function delRow(id){
+    const r = rows.find(x => x.id === id); if (!r) return;
+    if (!confirm('この契約を削除しますか？（契約書ファイルも削除されます）')) return;
+    if (r.storage_path) await sb.storage.from(BUCKET).remove([r.storage_path]).catch(()=>{});
+    const { error } = await sb.from('contracts').delete().eq('id', id);
+    if (error){ showMsg(msg, '削除できませんでした。' + error.message, 'err'); return; }
+    rows = rows.filter(x => x.id !== id); render();
+    showMsg(msg, '削除しました。', 'ok');
+  }
+
+  /* ============ 登録フォーム ============ */
+  let pickedFile = null;
+  $('addBtn').onclick = () => { const f = $('cform'); f.hidden = !f.hidden; if (!f.hidden) $('f_title').focus(); };
+  $('cancel').onclick = () => { $('cform').hidden = true; resetForm(); };
+  $('drop').onclick = () => $('pick').click();
+  $('pick').onchange = e => { pickedFile = e.target.files[0] || null; $('f_fname').textContent = pickedFile ? pickedFile.name : ''; $('drop').classList.toggle('has', !!pickedFile); };
+  ['dragover','dragleave','drop'].forEach(ev => $('drop').addEventListener(ev, e => {
+    e.preventDefault();
+    if (ev === 'drop'){ pickedFile = (e.dataTransfer.files || [])[0] || null; $('f_fname').textContent = pickedFile ? pickedFile.name : ''; $('drop').classList.toggle('has', !!pickedFile); }
+  }));
+  function resetForm(){
+    ['f_cpname','f_title','f_no','f_amt','f_cdate','f_pstart','f_pend','f_note'].forEach(id => $(id).value = '');
+    $('f_proj').value = ''; $('f_part').value = ''; $('f_taxin').checked = false;
+    pickedFile = null; $('f_fname').textContent = ''; $('drop').classList.remove('has');
+  }
+
+  $('save').onclick = async () => {
+    const title = $('f_title').value.trim();
+    const cpname = $('f_cpname').value.trim();
+    const partId = $('f_part').value || null;
+    if (!title && !cpname && !partId){ showMsg(msg, '契約名か相手先のどちらかは入れてください。', 'err'); return; }
+    $('save').disabled = true; $('savestat').textContent = '保存しています…';
+    try {
+      let storage_path = null, original_name = null, mime_type = null, byte_size = null;
+      if (pickedFile){
+        const stamp = new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14);
+        const safe = pickedFile.name.replace(/[^\w.\-一-龠ぁ-んァ-ヶー]/g,'_');
+        storage_path = `${me.organization_id}/contracts/${kind}/${stamp}_${safe}`;
+        const up = await sb.storage.from(BUCKET).upload(storage_path, pickedFile, { contentType: pickedFile.type || 'application/octet-stream' });
+        if (up.error){ throw new Error('ファイルの保存に失敗：' + up.error.message); }
+        original_name = pickedFile.name; mime_type = pickedFile.type || null; byte_size = pickedFile.size || null;
+      }
+      const body = {
+        organization_id: me.organization_id, kind,
+        project_id: $('f_proj').value || null, partner_id: partId,
+        counterparty: cpname || null, title: title || null, contract_no: $('f_no').value.trim() || null,
+        contract_amount: $('f_amt').value === '' ? null : Number($('f_amt').value),
+        tax_included: $('f_taxin').checked,
+        contract_date: $('f_cdate').value || null,
+        period_start: $('f_pstart').value || null, period_end: $('f_pend').value || null,
+        note: $('f_note').value.trim() || null,
+        storage_path, original_name, mime_type, byte_size, created_by: me.id
+      };
+      const { error } = await sb.from('contracts').insert(body);
+      if (error){ throw new Error(error.message); }
+      $('cform').hidden = true; resetForm();
+      showMsg(msg, '契約を登録しました。', 'ok');
+      await loadRows();
+    } catch (e){
+      showMsg(msg, '登録できませんでした：' + (e.message || e), 'err');
+    }
+    $('save').disabled = false; $('savestat').textContent = '';
+  };
+
+  /* ============ AI要点整理 ============ */
+  function getKey(){ try { return localStorage.getItem(AI_KEY) || ''; } catch(e){ return ''; } }
+  function setKey(k){ try { k ? localStorage.setItem(AI_KEY, k) : localStorage.removeItem(AI_KEY); } catch(e){} }
+
+  async function ensureKey(){
+    let k = getKey();
+    if (k) return k;
+    k = prompt('AI要点整理には Anthropic APIキー（sk-ant-…）が必要です。\n（このブラウザにのみ保存され、Anthropic以外へ送信しません）\nキーを貼り付けてください：');
+    if (k){ k = k.trim(); setKey(k); }
+    return k || '';
+  }
+
+  async function fileToImages(blob){
+    const t = (blob.type || '').toLowerCase();
+    if (t.startsWith('image/')){
+      const dataUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
+      return [dataUrl];
+    }
+    const lib = await loadPdfLib();
+    const buf = await blob.arrayBuffer();
+    const pdf = await lib.getDocument({ data: buf }).promise;
+    const imgs = [];
+    const pages = Math.min(pdf.numPages, 15);   // 長い契約書は先頭15ページまで
+    for (let i = 1; i <= pages; i++){
+      const page = await pdf.getPage(i);
+      const vp = page.getViewport({ scale: 1.8 });
+      const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+      const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      imgs.push(cv.toDataURL('image/jpeg', 0.82));
+    }
+    return imgs;
+  }
+
+  const SYS = `あなたは日本の建設業の契約書（受注＝請負契約書 / 発注書）を読み、重要ポイントを漏れなく抽出する専門家です。
+添付の契約書画像を読み、契約書に「実際に記載されている内容」に基づいて要点を抽出してください。推測で埋めない。読み取れない項目は省く。
+次の観点を可能な限り拾う（該当が無ければ省略可）：
+- 発注者（注文者）／受注者（請負者）
+- 工事名・工事場所・工事内容
+- 請負金額（税抜/税込の別も）
+- 契約日／工期（着工〜完成）
+- 支払条件（前払金・出来高・検査後・支払時期など、記載のまま）
+- 遅延損害金・違約金・ペナルティ（率や金額）
+- 契約不適合責任（瑕疵担保）の期間・範囲
+- 変更・追加工事の扱い（金額・工期の変更方法）
+- 検査・引渡し
+- 契約解除・中止の条件
+- 保証・保険（履行保証・前払保証・工事保険など）
+- 特記事項・その他の重要な取り決め
+【出力】JSON以外を一切含めず、次の形だけを返す：
+{ "points": [ {"label":"発注者","value":"…"}, {"label":"請負金額","value":"…（税抜）"} ], "notes":"補足があれば" }
+valueは契約書の記載に基づく簡潔な日本語要約。Markdownや前置きは禁止。`;
+
+  async function callClaude(images, apiKey){
+    const content = images.map(u => { const m=/^data:(image\/[^;]+);base64,/.exec(u); return { type:'image', source:{ type:'base64', media_type:m?m[1]:'image/jpeg', data:u.split(',')[1] } }; });
+    content.push({ type:'text', text:'この契約書の重要ポイントを、指示通りJSONだけで抽出してください。' });
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{ 'x-api-key':apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true', 'content-type':'application/json' },
+      body: JSON.stringify({ model:MODEL, max_tokens:2500, system:SYS, messages:[{ role:'user', content }] })
+    });
+    if (!res.ok){ const t = await res.text(); throw new Error(`APIエラー (${res.status}): ${t.substring(0,300)}`); }
+    return res.json();
+  }
+  function parseResp(resp){
+    const tc = (resp.content || []).find(c => c.type === 'text'); if (!tc) throw new Error('AIの応答が空です');
+    let raw = tc.text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/i,'');
+    let obj; try { obj = JSON.parse(raw); } catch(e){ const s=raw.indexOf('{'), en=raw.lastIndexOf('}'); obj = JSON.parse(raw.substring(s, en+1)); }
+    return { points: Array.isArray(obj.points) ? obj.points : [], notes: obj.notes || '' };
+  }
+
+  async function runAI(id, btn){
+    const r = rows.find(x => x.id === id); if (!r) return;
+    if (!r.storage_path){ showMsg(msg, '先に契約書ファイルを取り込んでください（登録時に添付、または削除して登録し直し）。', 'err'); return; }
+    const key = await ensureKey(); if (!key){ showMsg(msg, 'APIキーが未設定です。', 'err'); return; }
+    const box = $('sum_' + id);
+    btn.disabled = true; const orig = btn.textContent; btn.textContent = '整理中…';
+    box.innerHTML = '<span class="stat">契約書を読み取っています…</span>';
+    try {
+      const { data:urlData, error:ue } = await sb.storage.from(BUCKET).createSignedUrl(r.storage_path, 600);
+      if (ue || !urlData) throw new Error('ファイル取得に失敗');
+      const blob = await (await fetch(urlData.signedUrl)).blob();
+      box.innerHTML = '<span class="stat">画像に変換しています…</span>';
+      const images = await fileToImages(blob);
+      box.innerHTML = `<span class="stat">AIが要点を整理しています…（${images.length}ページ）</span>`;
+      const resp = await callClaude(images, key);
+      const parsed = parseResp(resp);
+      if (!parsed.points.length){ box.innerHTML = '<span class="stat">要点を抽出できませんでした。別のファイルでお試しください。</span>'; btn.disabled=false; btn.textContent=orig; return; }
+      const at = new Date().toISOString();
+      const { error } = await sb.from('contracts').update({ ai_summary: parsed, ai_summary_at: at }).eq('id', id);
+      if (error) throw new Error('要点の保存に失敗：' + error.message);
+      r.ai_summary = parsed; r.ai_summary_at = at;
+      box.innerHTML = sumHtml(r);
+      btn.textContent = '🤖 再整理';
+      showMsg(msg, 'AI要点整理が完了しました。', 'ok');
+    } catch (e){
+      box.innerHTML = `<span class="stat" style="color:var(--alert)">失敗：${esc(e.message || String(e))}</span>`;
+      btn.textContent = orig;
+    }
+    btn.disabled = false;
+  }
+
+  /* ============ 切替・フィルタ ============ */
+  function setKind(k){
+    kind = k;
+    $('s_recv').classList.toggle('on', k === 'received');
+    $('s_issue').classList.toggle('on', k === 'issued');
+    $('lead').innerHTML = k === 'received'
+      ? '<b>受注</b>＝クライアントとの請負契約書を保管。契約書PDFを取り込み、<b>「🤖 AI要点整理」</b>で金額・工期・支払条件・違約金など重要ポイントを抜き出します（閲覧は経営者・現場監督）。'
+      : '<b>発注書</b>＝協力会社への発注契約書を保管。契約書PDFを取り込み、<b>「🤖 AI要点整理」</b>で発注先・金額・工期・特記など重要ポイントを抜き出します（閲覧は経営者・現場監督）。';
+    loadRows();
+  }
+  $('s_recv').onclick = () => setKind('received');
+  $('s_issue').onclick = () => setKind('issued');
+  $('fproj').onchange = render;
+  $('fpart').onchange = render;
+
+  /* ============ 起動 ============ */
+  await loadRefs();
+  await loadRows();
+})();
+</script>
+</body>
+</html>
