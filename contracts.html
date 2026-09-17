@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: contracts (契約関係) v20260917A -->
+<!-- BUILD: contracts (契約関係) v20260917B -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -77,6 +77,8 @@
   .sum .pt{ display:grid; grid-template-columns:132px 1fr; gap:2px 10px; font-size:12.5px; align-items:start; }
   .sum .pt .k{ color:var(--sub); font-weight:700; }
   .sum .pt .v{ color:var(--ink); overflow-wrap:anywhere; line-height:1.5; }
+  .sum .pt .v .src{ display:block; color:var(--sub); font-size:11.5px; line-height:1.45; margin-top:2px;
+    padding-left:8px; border-left:2px solid var(--rule-2); }
   .sum .notes{ margin-top:6px; font-size:11.5px; color:var(--sub); }
   .sum .stat{ font-size:11.5px; color:var(--sub); }
 
@@ -273,11 +275,25 @@
     if (!r.ai_summary) return '<span class="stat">まだAI要点整理をしていません。契約書を取り込んで「🤖 AI要点整理」を押してください。</span>';
     let s; try { s = typeof r.ai_summary === 'string' ? JSON.parse(r.ai_summary) : r.ai_summary; } catch(e){ s = null; }
     if (!s || !Array.isArray(s.points)) return '<span class="stat">要点データを読めませんでした。もう一度「🤖 再整理」を押してください。</span>';
-    const pts = s.points.filter(p => p && p.label && p.value)
-      .map(p => `<div class="k">${esc(p.label)}</div><div class="v">${esc(p.value)}</div>`).join('');
+    const srcLang = s.source_lang || '';
+    const isJa = !srcLang || /日本語|japanese|\bja\b/i.test(srcLang);
+    const pts = s.points.map(p => {
+      if (!p || !p.label) return '';
+      const ja = p.value_ja || p.value || '';      // 旧形式(.value)にも対応
+      const src = p.value_src || '';
+      if (!ja && !src) return '';
+      let v = `<div class="v">${esc(ja || src)}`;
+      if (src && src !== ja && !isJa) v += `<span class="src">原文：${esc(src)}</span>`;
+      v += '</div>';
+      return `<div class="k">${esc(p.label)}</div>${v}`;
+    }).filter(Boolean).join('');
     const at = r.ai_summary_at ? new Date(r.ai_summary_at).toLocaleString('ja-JP') : '';
-    return `<div class="sh"><span class="ai">AI要点整理</span><span style="font-weight:400;color:var(--sub);font-size:11px">${at}</span></div>
-      <div class="pt">${pts}</div>${s.notes ? `<div class="notes">補足：${esc(s.notes)}</div>` : ''}`;
+    const notes = s.notes_ja || s.notes || '';
+    const notesSrc = s.notes_src || '';
+    const langTag = srcLang ? `<span style="font-weight:400;color:var(--sub);font-size:11px">原文言語：${esc(srcLang)}</span>` : '';
+    return `<div class="sh"><span class="ai">AI要点整理</span>${langTag}<span style="font-weight:400;color:var(--sub);font-size:11px;margin-left:auto">${at}</span></div>
+      <div class="pt">${pts}</div>
+      ${notes ? `<div class="notes">補足：${esc(notes)}${notesSrc && !isJa ? '（原文：' + esc(notesSrc) + '）' : ''}</div>` : ''}`;
   }
 
   async function openFile(id){
@@ -385,24 +401,22 @@
     return imgs;
   }
 
-  const SYS = `あなたは日本の建設業の契約書（受注＝請負契約書 / 発注書）を読み、重要ポイントを漏れなく抽出する専門家です。
-添付の契約書画像を読み、契約書に「実際に記載されている内容」に基づいて要点を抽出してください。推測で埋めない。読み取れない項目は省く。
-次の観点を可能な限り拾う（該当が無ければ省略可）：
-- 発注者（注文者）／受注者（請負者）
-- 工事名・工事場所・工事内容
-- 請負金額（税抜/税込の別も）
-- 契約日／工期（着工〜完成）
-- 支払条件（前払金・出来高・検査後・支払時期など、記載のまま）
-- 遅延損害金・違約金・ペナルティ（率や金額）
-- 契約不適合責任（瑕疵担保）の期間・範囲
-- 変更・追加工事の扱い（金額・工期の変更方法）
-- 検査・引渡し
-- 契約解除・中止の条件
-- 保証・保険（履行保証・前払保証・工事保険など）
-- 特記事項・その他の重要な取り決め
+  const SYS = `あなたは建設業の契約書（受注＝請負契約書 / 発注書）を読み、重要ポイントを漏れなく抽出する専門家です。
+契約書は日本語・中国語・英語のいずれか（混在もあり得る）。まず契約書の主たる言語(source_lang)を判定してください。
+添付画像を読み、契約書に「実際に記載されている内容」に基づいて要点を抽出。推測で埋めない。読み取れない項目は省く。
+
+【必ず両言語で出す（重要）】各要点の値は「日本語(value_ja)」と「原文の言語(value_src)」の両方を出す。
+- 原文が日本語のときは value_src を value_ja と同じにしてよい。
+- 原文が中国語/英語のときは、value_src は原文の言語のまま（訳さず契約書の表現を保持）、value_ja はその日本語訳。
+- 金額・数値・固有名詞は原文の表記も保つ（value_src）。ラベル(label)は日本語で統一。
+
+次の観点を可能な限り拾う（該当が無ければ省略可）：発注者/受注者・工事名/場所/内容・請負金額(税抜/税込の別)・契約日/工期(着工〜完成)・支払条件(前払金/出来高/検査後/時期)・遅延損害金/違約金/ペナルティ(率・金額)・契約不適合責任(瑕疵担保)の期間/範囲・変更/追加工事の扱い・検査/引渡し・契約解除/中止の条件・保証/保険(履行保証/前払保証/工事保険)・特記事項/その他の重要な取り決め。
+
 【出力】JSON以外を一切含めず、次の形だけを返す：
-{ "points": [ {"label":"発注者","value":"…"}, {"label":"請負金額","value":"…（税抜）"} ], "notes":"補足があれば" }
-valueは契約書の記載に基づく簡潔な日本語要約。Markdownや前置きは禁止。`;
+{ "source_lang": "日本語|中国語|英語",
+  "points": [ {"label":"発注者","value_ja":"…（日本語）","value_src":"…（原文のまま）"} ],
+  "notes_ja":"補足があれば（日本語）","notes_src":"補足があれば（原文の言語）" }
+Markdownや前置きは禁止。`;
 
   async function callClaude(images, apiKey){
     const content = images.map(u => { const m=/^data:(image\/[^;]+);base64,/.exec(u); return { type:'image', source:{ type:'base64', media_type:m?m[1]:'image/jpeg', data:u.split(',')[1] } }; });
@@ -410,7 +424,7 @@ valueは契約書の記載に基づく簡潔な日本語要約。Markdownや前�
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
       headers:{ 'x-api-key':apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true', 'content-type':'application/json' },
-      body: JSON.stringify({ model:MODEL, max_tokens:2500, system:SYS, messages:[{ role:'user', content }] })
+      body: JSON.stringify({ model:MODEL, max_tokens:4000, system:SYS, messages:[{ role:'user', content }] })
     });
     if (!res.ok){ const t = await res.text(); throw new Error(`APIエラー (${res.status}): ${t.substring(0,300)}`); }
     return res.json();
@@ -419,7 +433,12 @@ valueは契約書の記載に基づく簡潔な日本語要約。Markdownや前�
     const tc = (resp.content || []).find(c => c.type === 'text'); if (!tc) throw new Error('AIの応答が空です');
     let raw = tc.text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/i,'');
     let obj; try { obj = JSON.parse(raw); } catch(e){ const s=raw.indexOf('{'), en=raw.lastIndexOf('}'); obj = JSON.parse(raw.substring(s, en+1)); }
-    return { points: Array.isArray(obj.points) ? obj.points : [], notes: obj.notes || '' };
+    return {
+      source_lang: obj.source_lang || '',
+      points: Array.isArray(obj.points) ? obj.points : [],
+      notes_ja: obj.notes_ja || obj.notes || '',
+      notes_src: obj.notes_src || ''
+    };
   }
 
   async function runAI(id, btn){
