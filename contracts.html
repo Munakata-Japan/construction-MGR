@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: contracts (契約関係) v20260917B -->
+<!-- BUILD: contracts (契約関係) v20260917C -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -339,8 +339,12 @@
       let storage_path = null, original_name = null, mime_type = null, byte_size = null;
       if (pickedFile){
         const stamp = new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14);
-        const safe = pickedFile.name.replace(/[^\w.\-一-龠ぁ-んァ-ヶー]/g,'_');
-        storage_path = `${me.organization_id}/contracts/${kind}/${stamp}_${safe}`;
+        // Supabase Storage のキーは ASCII のみ許可。中国語/日本語などのファイル名は
+        // ここで弾かれる（Invalid key）ため、保存キーは日時＋乱数＋拡張子の ASCII 名にする。
+        // 実際のファイル名は original_name 列に保持して表示に使う。
+        const extm = (pickedFile.name.match(/\.[A-Za-z0-9]{1,8}$/) || [''])[0].toLowerCase();
+        const rand = Math.random().toString(36).slice(2, 8);
+        storage_path = `${me.organization_id}/contracts/${kind}/${stamp}_${rand}${extm}`;
         const up = await sb.storage.from(BUCKET).upload(storage_path, pickedFile, { contentType: pickedFile.type || 'application/octet-stream' });
         if (up.error){ throw new Error('ファイルの保存に失敗：' + up.error.message); }
         original_name = pickedFile.name; mime_type = pickedFile.type || null; byte_size = pickedFile.size || null;
