@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- BUILD: schedule (工程表) v20260724E -->
+<!-- BUILD: schedule (工程表) v20260724E
+     v20260928a: 印刷ボタンを追加。A3横で紙幅に収まるよう、印刷時のみ手動ズーム状態を無視して紙幅で再計算(工程が長い工程表が紙からはみ出る問題への対応)。 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -235,6 +236,22 @@ body > header.bar{ flex:0 0 auto; }
   .ctl select{ min-width:150px; }
   .legend{ display:none; }
 }
+
+/* ---------- 印刷 ---------- */
+@media print{
+  @page{ size: A3 landscape; margin: 10mm; }
+  html,body{ height:auto !important; overflow:visible !important; }
+  header.bar .barbtn, .ctl, .dock, .flash,
+  .drop, .panel{ display:none !important; }
+  #tblock{ display:flex !important; }
+  .legend{ display:flex !important; }
+  .view{ position:static !important; height:auto !important; overflow:visible !important; }
+  .view > div{ position:static !important; inset:auto !important; }
+  .gwrap{ overflow:visible !important; height:auto !important; }
+  .gtable{ min-height:0 !important; }
+  .nwrap{ height:auto !important; min-height:180mm !important; }
+  .olay, #onotes{ display:none !important; } /* 付箋は画面専用。印刷では帯と番号だけ出す */
+}
 </style>
 </head>
 <body>
@@ -260,6 +277,7 @@ body > header.bar{ flex:0 0 auto; }
   </div>
   <button class="btn ghost sm" id="notebtn">付箋</button>
   <button class="btn ghost sm" id="ordbtn">発注</button>
+  <button class="btn ghost sm" id="printbtn">印刷</button>
   <button class="warnbtn" id="alertbtn" hidden></button>
   <button class="btn ghost sm" id="guidebtn" hidden>見方</button>
   <span class="sp"></span>
@@ -816,8 +834,8 @@ body > header.bar{ flex:0 0 auto; }
     }).join('');
   }
 
-  /* ---- ガント：画面に収める ---- */
-  function drawGantt(slack){
+  /* ---- ガント：画面に収める(printWidthPx指定時は印刷用に紙幅へ収める) ---- */
+  function drawGantt(slack, printWidthPx, printHeightPx){
     const ds = phases.map(p => d2n(p.start_date)).filter(Boolean);
     const de = phases.map(p => d2n(p.end_date)).filter(Boolean);
     const pr = projects.find(x => x.id === projId) || {};
@@ -837,21 +855,22 @@ body > header.bar{ flex:0 0 auto; }
     const N  = phases.length;
     const wIdx = n => Math.floor((n2d(n) - w0) / (7*DAY));
 
-    // 画面の高さから1行の高さを決める
-    const boxH = $('gantt').clientHeight || 480;
-    const boxW = $('gantt').clientWidth  || 900;
+    // 画面(または紙)の高さから1行の高さを決める。項目が少なければ紙いっぱいに広げ、多ければ22pxを下限に複数ページへ流す
     const HEAD = 32;
+    const boxW = printWidthPx || $('gantt').clientWidth || 900;
+    const boxH = printHeightPx || $('gantt').clientHeight || 480;
     const rowH = Math.max(22, Math.floor((boxH - HEAD) / N));
     const dense = rowH < 34;
     const barH = Math.max(12, Math.min(20, rowH - 6));
     const nameW = Math.max(120, Math.min(200, Math.floor(boxW * 0.17)));
     const fitW  = Math.max(26, Math.floor((boxW - nameW - 40) / W));
-    const colW  = zoomW ? Math.max(20, Math.min(400, zoomW)) : fitW;
+    const useZoom = zoomW && !printWidthPx; // 印刷は常に紙幅優先(手動ズーム状態を無視)
+    const colW  = useZoom ? Math.max(20, Math.min(400, zoomW)) : fitW;
     $('z_fit').classList.toggle('on', !zoomW);
 
     const NOW = 40;                       // 番号欄の幅
     let h = `<div class="gtable${dense ? ' dense' : ''}" style="` +
-            `grid-template-columns:${NOW}px ${nameW}px repeat(${W}, ${zoomW ? colW + 'px' : 'minmax(' + colW + 'px, 1fr)'});` +
+            `grid-template-columns:${NOW}px ${nameW}px repeat(${W}, ${useZoom ? colW + 'px' : 'minmax(' + colW + 'px, 1fr)'});` +
             `grid-template-rows:${HEAD}px repeat(${N}, ${rowH}px);--bh:${barH}px">`;
 
     // 見出し
@@ -1336,6 +1355,24 @@ body > header.bar{ flex:0 0 auto; }
     zoomW = Math.max(20, Math.round(curColW() / 1.25)); redrawGantt();
   });
   $('z_fit').addEventListener('click', () => { zoomW = null; redrawGantt(); });
+
+  // 印刷：A3横で紙幅に収める(工程が長い工程表も、手動ズーム状態を無視して紙幅優先で再計算)
+  $('printbtn').addEventListener('click', () => window.print());
+  const A3_PRINTABLE_W_MM = 400;             // 420mm - 左右余白10mm×2
+  const A3_PRINTABLE_H_MM = 277;             // 297mm - 上下余白10mm×2 (ヘッダー等除く目安)
+  const PX_PER_MM = 96 / 25.4;
+  let _printSavedZoom;
+  window.addEventListener('beforeprint', () => {
+    _printSavedZoom = zoomW;
+    if (view === 'gantt' && phases.length){
+      const { slack } = computeSlack();
+      drawGantt(slack, Math.round(A3_PRINTABLE_W_MM * PX_PER_MM), Math.round(A3_PRINTABLE_H_MM * PX_PER_MM));
+    }
+  });
+  window.addEventListener('afterprint', () => {
+    zoomW = _printSavedZoom;
+    redrawGantt();
+  });
 
   // 発注の知らせ
   $('alertbtn').addEventListener('click', () => {
