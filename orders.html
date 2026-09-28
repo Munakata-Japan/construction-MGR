@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<!-- BUILD: orders (材工発注) v20260911A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>材工発注 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{ max-width:1560px; }
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:4px; padding-bottom:6px; }
+  .lead, .ctl, #msg, .count, #sumgrid{ flex:0 0 auto; }
+  #otable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
+  .lead{ color:var(--sub); font-size:10.5px; line-height:1.28; margin:0 0 4px; }
+  .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
+
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:4px; }
+  .ctl select{ width:auto; min-width:140px; max-width:320px; min-height:30px; flex:0 1 auto; }
+  /* 材料発注／工事発注 の切替タブ（このページの主モード） */
+  .modeseg{ display:inline-flex; border:1px solid var(--ink-2); border-radius:999px; overflow:hidden; flex:0 0 auto; }
+  .modeseg button{ border:0; background:var(--card); color:var(--ink-2); font-family:var(--body); font-weight:800;
+    font-size:12.5px; padding:5px 15px; min-height:30px; cursor:pointer; white-space:nowrap; }
+  .modeseg button+button{ border-left:1px solid var(--rule); }
+  .modeseg button.on{ background:linear-gradient(180deg,#275A91,var(--ink) 65%); color:#fff; }
+  .ctl .fl-lb{ font-size:10px; font-weight:800; color:var(--ink-2); letter-spacing:.06em;
+    padding:3px 8px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; white-space:nowrap; }
+  .fl-help{ font-size:10px; font-weight:700; color:var(--sub); background:transparent;
+    border:1px solid var(--rule-2); border-radius:999px; padding:3px 8px; cursor:pointer; white-space:nowrap; }
+  .fl-help:hover{ background:#EEF1EA; color:var(--ink-2); }
+  #fproj{ font-weight:700; border-color:var(--ink-2); box-shadow:inset 0 0 0 1px rgba(37,90,145,.15); }
+  .ctl .sp{ flex:1 1 0; }
+  .newbtn{ flex:0 0 auto; }
+
+  .sumgrid{ display:grid; gap:5px; grid-template-columns:repeat(4, minmax(120px,1fr)); margin:0 0 5px; max-width:720px; }
+  .sumcard{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:3px 10px; display:flex; align-items:center; gap:7px; position:relative; overflow:hidden; }
+  .sumcard .ico{ font-size:12px; line-height:1; flex:0 0 auto; }
+  .sumcard .t{ font-size:10.5px; color:var(--sub); margin:0; font-weight:700; white-space:nowrap; }
+  .sumcard .v{ font-family:var(--mono); font-weight:800; font-size:16px; color:var(--ink); margin-left:auto; line-height:1; }
+  .sumcard .v small{ font-size:9.5px; font-weight:700; color:var(--sub); margin-left:1px; }
+  .sumcard.danger{ background:linear-gradient(180deg,#C7412F,var(--alert)); border-color:#8F2A1D; box-shadow:0 2px 10px rgba(190,60,44,.35); }
+  .sumcard.danger .ico, .sumcard.danger .t, .sumcard.danger .v, .sumcard.danger .v small{ color:#fff; }
+  .sumcard.danger::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:rgba(255,224,214,.75); opacity:0; }
+  .sumcard.warn{ background:#FBF3E2; border-color:#E7C866; }
+  .sumcard.warn .ico, .sumcard.warn .v{ color:#8A6200; }
+  .sumcard.ok{ background:#EAF4EC; border-color:#BFE0C7; }
+  .sumcard.ok .ico, .sumcard.ok .v{ color:var(--ok); }
+  .sumcard.info{ padding-left:12px; }
+  .sumcard.info::before{ content:""; position:absolute; left:0; top:4px; bottom:4px; width:3px; border-radius:2px; background:var(--ink-2); }
+  @media (prefers-reduced-motion:no-preference){
+    .sumcard{ animation:cardin .38s ease both; }
+    .sumcard:nth-child(2){ animation-delay:.06s; } .sumcard:nth-child(3){ animation-delay:.12s; } .sumcard:nth-child(4){ animation-delay:.18s; }
+    @keyframes cardin{ from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+    .sumcard.danger::after{ animation:blinkfade .45s ease-in-out .3s 8 alternate both; }
+    @keyframes blinkfade{ from{opacity:0} to{opacity:.75} }
+  }
+
+  .count{ margin:2px 0 4px; font-size:10.5px; color:var(--sub); }
+  .sorthint{ margin:0 0 4px; font-size:10.5px; color:var(--sub); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .sorthint b{ color:var(--ink-2); font-weight:800; }
+  .sorthint .tip{ color:var(--sub); }
+
+  .otable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
+  .ohead, .orow{ display:grid; align-items:stretch; gap:8px; max-width:1440px; margin-inline:auto; box-sizing:border-box; }
+  .m-one .ohead, .m-one .orow{ min-width:820px; grid-template-columns:44px 96px 1.6fr 1fr 150px 120px 104px; }
+  .m-all .ohead, .m-all .orow{ min-width:980px; grid-template-columns:44px 96px 1.4fr 1fr 1fr 150px 120px 104px; }
+  .ohead{ position:sticky; top:0; z-index:5; background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+    white-space:nowrap; align-items:stretch; padding:6px 12px; border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0; }
+  .ohead > span{ text-align:center; border-right:1px solid var(--rule); padding-right:8px; }
+  .ohead > span:last-child{ border-right:none; padding-right:0; }
+  /* Excel風の並べ替え：タップできる列見出し */
+  .ohead .sh{ cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:center; gap:3px; }
+  .ohead .sh:hover{ color:var(--ink-2); }
+  .ohead .sh.on{ color:var(--ink); font-weight:800; }
+  .ohead .sh .ar{ font-style:normal; font-size:9px; line-height:1; color:var(--ink-2); }
+  .ohead .sh:focus-visible{ outline:2px solid var(--ink-2); outline-offset:1px; border-radius:3px; }
+  .orow{ padding:6px 12px; border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
+    font-size:14px; text-align:left; width:100%; font-family:var(--body); color:inherit; text-decoration:none; }
+  .orow:hover{ background:#F5F7F3; }
+  .orow.over{ background:#FBF1EF; } .orow.over:hover{ background:#F8E4DF; }
+  .orow.gap{ background:#FCF6E4; } .orow.gap:hover{ background:#F7EFCF; }
+  .orow > span{ border-right:1px solid var(--rule-2); padding-right:8px; }
+  .orow > span:last-child{ border-right:none; padding-right:0; }
+  .orow .rno{ font-family:var(--mono); font-size:12px; color:var(--sub); text-align:center; }
+  .orow .nm{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-weight:700; }
+  .orow .sub{ font-size:11.5px; color:var(--sub); line-height:1.35; }
+  .orow .ctr{ text-align:center; }
+  .orow .num{ font-family:var(--mono); text-align:center; white-space:nowrap; font-size:12.5px; }
+
+  .stag{ font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:var(--radius-sm); white-space:nowrap;
+    display:inline-block; color:var(--sub); background:#EDEFEA; }
+  .stag.planned{ color:#6B4E00; background:#FBF0D4; }
+  .stag.ordered{ color:#255A91; background:#E7EFF7; }
+  .stag.delivered{ color:var(--ok); background:#EAF2ED; }
+  .stag.inspected{ color:#fff; background:var(--ok); }
+  .stag.cancelled{ color:var(--sub); background:#EDEFEA; text-decoration:line-through; }
+  .stag.gap{ color:#fff; background:var(--alert); }
+  .scope{ font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; white-space:nowrap; display:inline-block; }
+  .scope.in{ background:#E3EBF3; color:var(--ink-2); }
+  .scope.ex{ background:#F7E7E3; color:#8C2A1D; }
+  .due.over{ color:var(--alert); font-weight:800; }
+  .due.near{ color:#8A6200; font-weight:700; }
+  .empty{ padding:34px 16px; text-align:center; color:var(--sub); }
+  .empty b{ display:block; font-size:15px; color:var(--ink); margin-bottom:4px; }
+
+  /* 工程の見出し帯（工程毎にまとめる） */
+  .ogroup{ max-width:1440px; margin-inline:auto; box-sizing:border-box; padding:5px 12px;
+    display:flex; align-items:center; gap:8px; background:#E9EEF4; border-top:2px solid var(--ink-2); }
+  .m-one .ogroup{ min-width:820px; } .m-all .ogroup{ min-width:980px; }
+  .ogroup .gpi{ font-size:12px; line-height:1; flex:0 0 auto; }
+  .ogroup .gpn{ font-weight:800; color:var(--ink); font-size:12.5px; }
+  .ogroup .gpj{ font-size:11px; color:var(--sub); }
+  .ogroup .gpc{ margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--sub); white-space:nowrap; }
+
+  /* 品目の詳細パネル（材工発注の中で完結） */
+  .panel{ position:fixed; inset:0; z-index:60; background:rgba(15,20,30,.5); display:none; }
+  .panel.open{ display:flex; align-items:center; justify-content:center; padding:14px; }
+  .card{ background:var(--card); border-radius:8px; width:min(96vw,540px); max-height:92vh; overflow:auto; box-shadow:0 14px 44px rgba(0,0,0,.45); }
+  .card h2{ font-family:var(--disp); font-size:16px; margin:0; padding:12px 16px; border-bottom:1px solid var(--rule-2); display:flex; align-items:center; gap:8px; }
+  .cbody{ padding:14px 16px 18px; display:flex; flex-direction:column; gap:9px; }
+  .drow{ display:flex; gap:10px; font-size:13.5px; align-items:baseline; }
+  .drow .k{ flex:0 0 92px; color:var(--sub); font-size:12.5px; }
+  .drow .val{ font-weight:700; overflow-wrap:anywhere; }
+  .drow .val.num{ font-family:var(--mono); }
+  .cfoot{ display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  /* 工程の付け替え（詳細パネル内） */
+  .dmove{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px;
+    padding:9px 10px; background:#EEF2F7; border:1px solid var(--rule-2); border-radius:var(--radius); }
+  .dmove .k{ flex:0 0 auto; color:var(--ink-2); font-size:12.5px; font-weight:800; }
+  .dmove select{ flex:1 1 160px; min-width:140px; min-height:36px; }
+  /* 発注状況ボタン（現在の状態を強調＝単一の正） */
+  .dstat .stbtns{ display:flex; gap:6px; flex-wrap:wrap; flex:1 1 auto; }
+  .dstat .sbtn{ min-height:34px; }
+  .dstat .sbtn.on{ background:var(--ink); color:#fff; border-color:var(--ink); font-weight:800; }
+
+  .mlbl{ display:none; }
+  @media (max-width:860px){
+    body{ height:auto; overflow:visible; display:block; }
+    .wrap{ flex:none; height:auto; overflow:visible; display:block; }
+    #otable{ display:block; }
+    .otable{ flex:none; max-height:none; overflow:visible; }
+    .ohead{ display:none; }
+    .m-one .orow, .m-all .orow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
+    .m-one .ogroup, .m-all .ogroup{ min-width:0; }
+    .orow > span{ border-right:none; padding-right:0; text-align:left; }
+    .orow .num, .orow .rno, .orow .ctr{ text-align:left; }
+    .mlbl{ display:inline; color:var(--sub); font-weight:700; font-size:11px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1><span class="pgico" aria-hidden="true">🧾</span>材工発注</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<style>
+  .ztab{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--card); border-bottom:1px solid var(--rule); padding:3px 10px; }
+  .ztab a{ font-family:var(--body); font-weight:800; font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:4px 14px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .ztab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .ztab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .ztab .zarr{ color:var(--sub); font-weight:800; font-size:13px; user-select:none; }
+  .ztab[hidden], .ztab a[hidden]{ display:none; }
+</style>
+<nav class="ztab" id="ztab" hidden>
+  <a data-k="estimate" href="genka.html">見積</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="budget" href="budget.html">予算</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="order" href="orders.html">発注</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="delivery" href="order-alerts.html">納期</a>
+</nav>
+<div class="wrap">
+  <p class="lead" id="lead" hidden>
+    <b>すべての発注（材料・工事）の台帳</b>です。着工前原価台帳の全品目を集約し、上のタブで<b>材料発注／工事発注</b>を切り替え、<b>発注抜け（未発注）</b>を点検します。原価は業者見積で決定（「業者見積・原価決定」）、品目や発注状態の編集は「実行予算」「工程表」から。発注後の入荷（納品予定）は「材料到着スケジュール」で確認できます。
+  </p>
+
+  <div class="ctl">
+    <div class="modeseg" id="modeseg" role="tablist">
+      <button type="button" id="m_mat" class="on">材料発注</button>
+      <button type="button" id="m_lab">工事発注</button>
+    </div>
+    <span class="fl-lb">絞り込み</span>
+    <button class="fl-help" id="helpBtn" type="button">？使い方 ▼</button>
+    <select id="fproj"><option value="">すべての工事</option></select>
+    <select id="fphase"><option value="">すべての工程</option></select>
+    <select id="fstat">
+      <option value="all">すべての状態</option>
+      <option value="gap">未発注（発注抜け）</option>
+      <option value="ordered">発注済み</option>
+      <option value="delivered">納品済み</option>
+      <option value="inspected">検査完了</option>
+    </select>
+    <span class="sp"></span>
+    <a class="btn ghost sm newbtn" href="genka.html">業者見積・原価決定</a>
+    <a class="btn sm newbtn" id="newbtn" href="#">＋ 発注を作る（工程表）</a>
+  </div>
+
+  <div class="sumgrid" id="sumgrid" hidden></div>
+  <div id="msg" class="msg"></div>
+  <div class="sorthint" id="sorthint" hidden></div>
+  <div id="otable"></div>
+</div>
+
+<!-- 品目の詳細（材工発注の中で完結。別ページへ飛ばさない） -->
+<div class="panel" id="dpanel">
+  <div class="card">
+    <h2 id="dttl">品目</h2>
+    <div class="cbody" id="dbody"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("ztab"); if(!bar) return;
+  const allow = tierOf(a.me)<=2 ? ["delivery","order","budget","estimate"] : ["delivery"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="order") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const DAY = 86400000;
+  const d2n = s => Math.round(new Date(s + 'T00:00:00').getTime() / DAY);
+  const OSTAT = { planned:'これから出す', ordered:'発注済み', delivered:'届いた', cancelled:'取りやめ' };
+  function fmtShort(ymd){ if (!ymd) return ''; const [y,m,d] = ymd.split('-'); return `${y.slice(2)}/${Number(m)}/${Number(d)}`; }
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  // 使い方の開閉（一覧を最大化するため既定は畳む）
+  const HELPKEY = 'orders_help_open';
+  function applyHelp(){ let o=false; try{o=localStorage.getItem(HELPKEY)==='1';}catch(e){} $('lead').hidden=!o; $('helpBtn').textContent = o?'？使い方 ▲':'？使い方 ▼'; }
+  $('helpBtn').addEventListener('click', ()=>{ let o=false; try{o=localStorage.getItem(HELPKEY)==='1';}catch(e){} try{localStorage.setItem(HELPKEY,o?'0':'1');}catch(e){} applyHelp(); });
+  applyHelp();
+
+  let projects = [], phases = [], partners = [], users = [], orders = [], budgets = [];
+
+  // 工事の記憶（材料調達などと同じ挙動）
+  const qs = new URL(location.href).searchParams;
+  let projId = qs.get('p') || '';
+  let matmode = (qs.get('m') === 'labor') ? 'labor' : 'material';   // 材料発注(material)／工事発注(labor)
+
+  // 並べ替え（Excel風：列見出しをタップで昇順/降順を切替）。既定は工程。
+  let sortKey = 'phase', sortDir = 1;   // dir: 1=昇順, -1=降順
+  try { const s = JSON.parse(localStorage.getItem('orders_sort') || 'null'); if (s && s.k){ sortKey = s.k; sortDir = (s.d === -1 ? -1 : 1); } } catch(e){}
+
+  async function loadRefs(){
+    const [pj, pt, us] = await Promise.all([
+      sb.from('projects').select('id, project_no, name').eq('is_active', true).order('project_no'),
+      sb.from('partners').select('id, name').eq('is_active', true),
+      sb.from('app_users').select('id, name').eq('is_active', true),
+    ]);
+    projects = pj.data || []; partners = pt.data || []; users = us.data || [];
+    $('fproj').innerHTML = '<option value="">すべての工事</option>' +
+      projects.map(p => `<option value="${p.id}"${p.id===projId?' selected':''}>${esc(p.project_no||'')} ${esc(p.name)}</option>`).join('');
+  }
+
+  // このページは「すべての発注の台帳（正）」。着工前原価台帳(phase_budget_items)の
+  // 全品目（材料・工事）を集約して表示する。材料到着スケジュール・実行予算と同じ品目。
+  async function loadData(){
+    let bq = sb.from('phase_budget_items').select('*');
+    let pq = sb.from('project_phases').select('id,project_id,name,seq').eq('is_active', true);
+    if (projId){ bq = bq.eq('project_id', projId); pq = pq.eq('project_id', projId); }
+    const [b, p] = await Promise.all([bq, pq]);
+    if (b.error){
+      showMsg($('msg'), /relation .* does not exist|schema cache/i.test(b.error.message||'')
+        ? 'データベースに実行予算の表がまだありません。Supabase で phase3_budget.sql を実行してください。'
+        : '読み込めませんでした。' + b.error.message, 'err');
+    }
+    budgets = b.data || []; phases = p.data || [];
+  }
+
+  const STATN = { estimate:'未発注', ordered:'発注済み', delivered:'納品済み', inspected:'検査完了', cancelled:'中止' };
+  const pmap = () => Object.fromEntries(phases.map(p => [p.id, p.name]));
+  const ptmap = () => Object.fromEntries(partners.map(p => [p.id, p.name]));
+  const projmap = () => Object.fromEntries(projects.map(p => [p.id, p]));
+  // 原価：決定額(相見積後) → 予算 → 単価×数量 の順で採用
+  const amountOf = x => (x.contract_amount != null ? x.contract_amount
+                       : x.budget_amount != null ? x.budget_amount
+                       : (x.unit_price != null && x.quantity != null) ? x.unit_price * x.quantity : null);
+
+  // 工程で絞り込むためのプルダウンを作る（選択は可能なら維持）
+  function populatePhaseFilter(){
+    const cur = $('fphase').value;
+    const isAll = !projId;
+    const PJ = projmap();
+    const ps = phases.slice().sort((a,b)=>
+        String((PJ[a.project_id]||{}).project_no||'').localeCompare(String((PJ[b.project_id]||{}).project_no||''),'ja',{numeric:true})
+     || (a.seq??9999)-(b.seq??9999));
+    let opts = '<option value="">すべての工程</option>'
+      + ps.map(p=>{ const pj = PJ[p.project_id];
+          const lbl = (isAll && pj ? esc(pj.project_no||'')+' ' : '') + esc(p.name||'');
+          return `<option value="${p.id}">${lbl}</option>`; }).join('')
+      + '<option value="__none__">工事全体（工程なし）</option>';
+    $('fphase').innerHTML = opts;
+    if (cur && $('fphase').querySelector(`option[value="${cur}"]`)) $('fphase').value = cur;
+  }
+
+  function render(){
+    const isAll = !projId;
+    const PM = pmap(), PT = ptmap(), PJ = projmap();
+    const fstat = $('fstat').value;
+
+    // タブ：材料タブ＝費目=材料／工事タブ＝材料以外（労務など。未分類も工事側で拾う）
+    let items = budgets.filter(x => x.status !== 'cancelled')
+      .filter(x => matmode === 'material' ? x.category === 'material' : x.category !== 'material');
+
+    // 工程で絞り込み（選んだ工程の部材だけ表示。集計もその工程だけになる）
+    const fphase = $('fphase').value;
+    if (fphase === '__none__') items = items.filter(x => !x.phase_id);
+    else if (fphase) items = items.filter(x => x.phase_id === fphase);
+
+    const nGap     = items.filter(x => (x.status||'estimate') === 'estimate').length;
+    const nOrdered = items.filter(x => x.status === 'ordered').length;
+    const nDone    = items.filter(x => x.status === 'delivered' || x.status === 'inspected').length;
+    const total    = items.reduce((s,x)=> s + (amountOf(x)||0), 0);
+
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML =
+      `<div class="sumcard ${nGap>0?'danger':'ok'}"><span class="ico">${nGap>0?'⚠':'✓'}</span><span class="t">発注抜け（未発注）</span><span class="v">${nGap}<small>件</small></span></div>`
+    + `<div class="sumcard info"><span class="ico">📦</span><span class="t">発注済み</span><span class="v">${nOrdered}<small>件</small></span></div>`
+    + `<div class="sumcard ok"><span class="ico">✓</span><span class="t">納品・検査完了</span><span class="v">${nDone}<small>件</small></span></div>`
+    + `<div class="sumcard info"><span class="ico">¥</span><span class="t">原価合計</span><span class="v" style="font-size:13px">${fmtMoney(total)}</span></div>`;
+
+    // 並べ替えの状態を表示（列見出しをタップで変更できることも案内）
+    const SKN = { phase:'工程', status:'状態', name:'品目', project:'工事', partner:'発注先', amount:'金額', deliv:'納品予定' };
+    $('sorthint').hidden = false;
+    $('sorthint').innerHTML = `↕ 並べ替え：<b>${SKN[sortKey]||'工程'}（${sortDir===1?'昇順':'降順'}）</b>`
+      + `<span class="tip">— 列見出しをタップで並べ替え（再タップで昇順⇄降順）</span>`;
+
+    // 絞り込み
+    let rows = items.slice();
+    if (fstat === 'gap') rows = rows.filter(x => (x.status||'estimate') === 'estimate');
+    else if (fstat !== 'all') rows = rows.filter(x => x.status === fstat);
+
+    // ===== 並べ替え（Excel風）：sortKey の列で昇順/降順。既定は工程。=====
+    const sto = { estimate:0, ordered:1, delivered:2, inspected:3 };
+    const PS = Object.fromEntries(phases.map(p => [p.id, p.seq ?? 9999]));
+    const pseq = x => (x.phase_id && PS[x.phase_id] != null) ? PS[x.phase_id] : 100000;   // 工事全体は末尾
+    const pjno = x => { const j = PJ[x.project_id]; return j ? String(j.project_no || '') : ''; };
+    const jcmp = (a,b) => String(a==null?'':a).localeCompare(String(b==null?'':b), 'ja', { numeric:true });
+    const gkeyOf = x => x.phase_id || ('P:' + x.project_id);   // 工程なしは工事単位でまとめる
+    const cmps = {
+      // 工程：工事→工程順→状態→品目名（工程毎にまとまる）
+      phase:   (a,b)=> jcmp(pjno(a),pjno(b)) || pseq(a)-pseq(b) || (sto[a.status]??9)-(sto[b.status]??9) || jcmp(a.item_name,b.item_name),
+      status:  (a,b)=> (sto[a.status]??9)-(sto[b.status]??9) || pseq(a)-pseq(b) || jcmp(a.item_name,b.item_name),
+      name:    (a,b)=> jcmp(a.item_name,b.item_name),
+      project: (a,b)=> jcmp(pjno(a),pjno(b)) || pseq(a)-pseq(b) || jcmp(a.item_name,b.item_name),
+      partner: (a,b)=> jcmp(PT[a.estimate_partner_id]||'～～', PT[b.estimate_partner_id]||'～～') || pseq(a)-pseq(b),
+      amount:  (a,b)=> ((amountOf(a)==null?-1:amountOf(a)) - (amountOf(b)==null?-1:amountOf(b))) || jcmp(a.item_name,b.item_name),
+      deliv:   (a,b)=> jcmp(a.scheduled_delivery_date||a.delivered_on||'9999-99-99', b.scheduled_delivery_date||b.delivered_on||'9999-99-99'),
+    };
+    const cmp = cmps[sortKey] || cmps.phase;
+    rows.sort((a,b)=> cmp(a,b) * sortDir);
+
+    // 工程で並べたときだけ、工程の見出し帯でまとめる
+    const grouped = (sortKey === 'phase');
+    const gcount = {};
+    if (grouped) rows.forEach(x => { const k = gkeyOf(x); gcount[k] = (gcount[k]||0) + 1; });
+
+    if (!rows.length){
+      $('otable').innerHTML = `<div class="empty"><b>${fstat==='gap'?'発注抜けはありません':'該当する品目がありません'}</b>${fstat==='gap'?'この費目はすべて発注済みです。':'実行予算で品目を登録すると、ここに集約されます。'}</div>`;
+      return;
+    }
+
+    // 見出し（列をタップで並べ替え。▲昇順／▼降順）
+    const arrow = k => sortKey===k ? (sortDir===1?'▲':'▼') : '';
+    const th = (k,label) => `<span class="sh${sortKey===k?' on':''}" data-sort="${k}" role="button" tabindex="0" aria-label="${label}で並べ替え">${label}<i class="ar">${arrow(k)}</i></span>`;
+
+    const cls = isAll ? 'm-all' : 'm-one';
+    let h = `<div class="otable ${cls}"><div class="ohead">`
+      + `<span class="rno">NO</span>`
+      + th('status','状態') + th('name','品目') + th('phase','工程')
+      + (isAll ? th('project','工事') : '')
+      + th('partner','発注先') + th('amount','金額(原価)') + th('deliv','納品予定')
+      + `</div>`;
+
+    let curKey = null, n = 0;
+    rows.forEach((x) => {
+      const pj = PJ[x.project_id];
+      const st = x.status || 'estimate';
+      const gap = (st === 'estimate');
+      const amt = amountOf(x);
+      const deliv = x.scheduled_delivery_date || x.delivered_on || null;
+      // 工程で並べたときは、工程が変わるたびに見出し帯を差し込む
+      if (grouped){
+        const gkey = gkeyOf(x);
+        if (gkey !== curKey){
+          curKey = gkey;
+          const gname = PM[x.phase_id] ? esc(PM[x.phase_id]) : '工事全体';
+          h += `<div class="ogroup"><span class="gpi" aria-hidden="true">🏗</span><span class="gpn">${gname}</span>`
+             + (isAll && pj ? `<span class="gpj">${esc(pj.name)}</span>` : '')
+             + `<span class="gpc">${gcount[gkey]}件</span></div>`;
+        }
+      }
+      n++;
+      h += `<div class="orow ${gap?'gap':''}" data-id="${x.id}" role="button" tabindex="0">
+        <span class="rno"><b class="mlbl">No. </b>${n}</span>
+        <span class="ctr"><span class="stag ${gap?'gap':st}">${STATN[st]||st}</span></span>
+        <span><span class="nm" style="font-size:12.5px">${esc(x.item_name||'（無題）')}</span>${x.quantity!=null?`<span class="sub">${x.quantity}${x.unit?esc(x.unit):''}</span>`:''}</span>
+        <span class="ctr"><span class="sub" style="font-size:12.5px">${PM[x.phase_id]?esc(PM[x.phase_id]):'工事全体'}</span></span>
+        ${isAll?`<span class="ctr"><span class="sub" style="font-size:12px">${pj?esc(pj.name):''}</span></span>`:''}
+        <span class="ctr"><span class="sub" style="font-size:12.5px">${x.estimate_partner_id&&PT[x.estimate_partner_id]?esc(PT[x.estimate_partner_id]):'—'}</span></span>
+        <span class="num">${amt!=null?fmtMoney(amt):'—'}</span>
+        <span class="num">${deliv?fmtShort(deliv):'—'}</span>
+      </div>`;
+    });
+    h += `</div>`;
+    $('otable').innerHTML = h;
+
+    // 列見出しのタップで並べ替え（同じ列を再タップで昇順⇄降順）
+    $('otable').querySelectorAll('.ohead .sh').forEach(el => {
+      const doSort = () => {
+        const k = el.dataset.sort;
+        if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+        try { localStorage.setItem('orders_sort', JSON.stringify({ k:sortKey, d:sortDir })); } catch(e){}
+        render();
+      };
+      el.addEventListener('click', doSort);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doSort(); } });
+    });
+    $('otable').querySelectorAll('.orow').forEach(el => {
+      const open = () => openDetail(el.dataset.id);
+      el.addEventListener('click', open);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
+    });
+  }
+
+  /* ===== 品目の詳細＋削除（材工発注の中で完結・別ページへ飛ばさない） ===== */
+  function openDetail(id){
+    const x = budgets.find(b => b.id === id); if (!x) return;
+    const PM = pmap(), PT = ptmap(), PJ = projmap();
+    const pj = PJ[x.project_id], st = x.status || 'estimate', amt = amountOf(x);
+    const deliv = x.scheduled_delivery_date || x.delivered_on || null;
+    $('dttl').innerHTML = `<span class="stag ${st==='estimate'?'gap':st}">${STATN[st]||st}</span> ${esc(x.item_name||'（無題）')}`;
+    const row = (k,v) => `<div class="drow"><span class="k">${k}</span><span class="val">${v}</span></div>`;
+    const rowN = (k,v) => `<div class="drow"><span class="k">${k}</span><span class="val num">${v}</span></div>`;
+    $('dbody').innerHTML =
+        row('工事', pj?esc(pj.name):'—')
+      + row('工程', PM[x.phase_id]?esc(PM[x.phase_id]):'工事全体')
+      + row('費目', x.category==='material'?'材料':(x.category==='labor'?'工事・労務':(x.category?esc(x.category):'—')))
+      + rowN('数量', x.quantity!=null?`${x.quantity}${x.unit?esc(x.unit):''}`:'—')
+      + rowN('単価', x.unit_price!=null?fmtMoney(x.unit_price):'—')
+      + rowN('金額(原価)', amt!=null?fmtMoney(amt):'—')
+      + row('発注先', x.estimate_partner_id&&PT[x.estimate_partner_id]?esc(PT[x.estimate_partner_id]):'—')
+      + rowN('納品予定', deliv?fmtShort(deliv):'—')
+      + (x.note?row('備考', esc(x.note)):'')
+      + `<div class="dmove dstat">
+           <span class="k">発注状況</span>
+           <span class="stbtns">
+             <button class="btn ghost sm sbtn${st==='estimate'?' on':''}" data-st="estimate" type="button">未発注</button>
+             <button class="btn ghost sm sbtn${st==='ordered'?' on':''}" data-st="ordered" type="button">発注する</button>
+             <button class="btn ghost sm sbtn${st==='delivered'?' on':''}" data-st="delivered" type="button">納品済み</button>
+             <button class="btn ghost sm sbtn${st==='cancelled'?' on':''}" data-st="cancelled" type="button">中止・不要</button>
+           </span>
+         </div>`
+      + `<div class="dmove">
+           <span class="k">工程を移す</span>
+           <select id="d_move">${moveOpts(x)}</select>
+           <button class="btn ghost sm" id="d_moveBtn" type="button">この工程へ移す</button>
+         </div>`
+      + `<div class="cfoot">
+           <button class="btn danger sm" id="d_del" type="button">この品目を削除</button>
+           <span style="flex:1 1 auto"></span>
+           <a class="btn ghost sm" href="budget.html?p=${x.project_id}">実行予算で編集</a>
+           <button class="btn sm" id="d_close" type="button">閉じる</button>
+         </div>`;
+    $('dpanel').classList.add('open');
+    $('d_close').addEventListener('click', () => $('dpanel').classList.remove('open'));
+    $('d_del').addEventListener('click', () => delItem(x));
+    $('d_moveBtn').addEventListener('click', () => moveItem(x));
+    $('dbody').querySelectorAll('.sbtn').forEach(b => b.addEventListener('click', () => setStatus(x, b.dataset.st)));
+  }
+
+  // 発注状況を台帳(phase_budget_items.status)へ直接更新＝単一の正。材料到着・実行予算・工程表すべて即反映。
+  async function setStatus(x, st){
+    if (!st || st === (x.status || 'estimate')){ $('dpanel').classList.remove('open'); return; }
+    const { error } = await sb.from('phase_budget_items').update({ status: st }).eq('id', x.id);
+    if (error){ showMsg($('msg'), '発注状況を更新できませんでした。' + error.message, 'err'); return; }
+    $('dpanel').classList.remove('open');
+    await loadData(); render();
+    showMsg($('msg'), `「${x.item_name||'品目'}」を「${STATN[st]||st}」にしました。`, 'ok');
+  }
+
+  // 付け替え先の工程プルダウン（この品目の工事の工程＋工事全体）
+  function moveOpts(x){
+    const ps = phases.filter(p => p.project_id === x.project_id).sort((a,b)=>(a.seq??9999)-(b.seq??9999));
+    return `<option value="__none__"${!x.phase_id?' selected':''}>工事全体（工程なし）</option>`
+      + ps.map(p=>`<option value="${p.id}"${p.id===x.phase_id?' selected':''}>${esc(p.name||'')}</option>`).join('');
+  }
+
+  // 品目の工程を個別に付け替える（phase_id を更新）
+  async function moveItem(x){
+    const sel = $('d_move'); if (!sel) return;
+    const newPhase = (sel.value === '__none__') ? null : sel.value;
+    if ((newPhase||null) === (x.phase_id||null)){ showMsg($('msg'), '同じ工程です。変更はありません。', ''); return; }
+    const nm = newPhase ? ((phases.find(p=>p.id===newPhase)||{}).name || 'その工程') : '工事全体（工程なし）';
+    if (!confirm(`「${x.item_name||'この品目'}」を\n「${nm}」へ移します。よろしいですか？`)) return;
+    const { error } = await sb.from('phase_budget_items').update({ phase_id:newPhase }).eq('id', x.id);
+    if (error){ showMsg($('msg'), '工程を移せませんでした。' + error.message, 'err'); return; }
+    $('dpanel').classList.remove('open');
+    await loadData(); populatePhaseFilter(); render();
+    showMsg($('msg'), `「${x.item_name||'品目'}」を「${nm}」へ移しました。`, 'ok');
+  }
+
+  async function delItem(x){
+    if (!confirm(`「${x.item_name||'この品目'}」を削除します。\nこの品目に紐づく発注があれば、その発注（明細を含む）も一緒に削除します。\n実行予算・材料到着スケジュールからも消えます。よろしいですか？`)) return;
+    // 外部キー制約（phase_orders.budget_item_id → phase_budget_items）を先に解消：
+    // この品目に紐づく発注(phase_orders)と、その明細(phase_order_items)を先に削除する。
+    try {
+      const ord = await sb.from('phase_orders').select('id').eq('budget_item_id', x.id);
+      const orderIds = (ord.data || []).map(o => o.id);
+      if (orderIds.length){
+        await sb.from('phase_order_items').delete().in('phase_order_id', orderIds);   // 明細（無ければ0件）
+        const dOrd = await sb.from('phase_orders').delete().in('id', orderIds);
+        if (dOrd.error) throw dOrd.error;
+      }
+    } catch (e){ showMsg($('msg'), '紐づく発注を外せませんでした。' + ((e && e.message) || e), 'err'); return; }
+    const { error } = await sb.from('phase_budget_items').delete().eq('id', x.id);
+    if (error){ showMsg($('msg'), '削除できませんでした。' + error.message, 'err'); return; }
+    $('dpanel').classList.remove('open');
+    await loadData(); render();
+  }
+  $('dpanel').addEventListener('click', e => { if (e.target === $('dpanel')) $('dpanel').classList.remove('open'); });
+
+  // イベント
+  $('fproj').addEventListener('change', async () => {
+    projId = $('fproj').value;
+    const u = new URL(location.href); projId ? u.searchParams.set('p', projId) : u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+    $('newbtn').href = 'schedule.html?panel=orders' + (projId?`&p=${projId}`:'');
+    $('fphase').value = '';                 // 工事を変えたら工程の絞り込みは解除
+    await loadData(); populatePhaseFilter(); render();
+  });
+  $('fphase').addEventListener('change', render);
+  $('fstat').addEventListener('change', render);
+
+  // 材料発注／工事発注 の切替
+  function setMode(m){
+    matmode = m;
+    $('m_mat').classList.toggle('on', m === 'material');
+    $('m_lab').classList.toggle('on', m === 'labor');
+    const u = new URL(location.href); m === 'labor' ? u.searchParams.set('m','labor') : u.searchParams.delete('m');
+    history.replaceState(null, '', u);
+    render();
+  }
+  $('m_mat').addEventListener('click', () => setMode('material'));
+  $('m_lab').addEventListener('click', () => setMode('labor'));
+
+  // 初期タブの表示を（?m=labor のときに）合わせる
+  $('m_mat').classList.toggle('on', matmode === 'material');
+  $('m_lab').classList.toggle('on', matmode === 'labor');
+
+  await loadRefs();
+  $('newbtn').href = 'schedule.html?panel=orders' + (projId?`&p=${projId}`:'');
+  await loadData();
+  populatePhaseFilter();
+  render();
+})();
+</script>
+</body>
+</html>

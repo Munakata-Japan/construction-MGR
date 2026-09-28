@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<!-- BUILD: order-alerts (材料到着スケジュール) v20260911A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>材料到着スケジュール ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  /* 横に長い表を扱うため、共通の960pxより広く使う */
+  .wrap{ max-width:1560px; }
+
+  /* ページ自体はスクロールさせず、表の中だけをスクロールさせる（二重スクロール防止） */
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:4px; padding-bottom:6px; }
+  .lead, .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
+  #atable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
+  .lead{ color:var(--sub); font-size:10.5px; line-height:1.28; margin:0 0 4px; }
+
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:4px; }
+  .ctl select{ width:auto; min-width:150px; max-width:340px; min-height:30px; flex:0 1 auto; }
+  .ctl .sp{ flex:1 1 0; }
+  /* フィルタ＝操作の役割を明示。工事選択は起点なので強調 */
+  .ctl .fl-lb{ font-size:10px; font-weight:800; color:var(--ink-2); letter-spacing:.06em;
+    padding:3px 8px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; white-space:nowrap; }
+  /* 使い方（説明）は既定で畳んで一覧を最大化。押すと開く */
+  .fl-help{ font-size:10px; font-weight:700; color:var(--sub); background:transparent;
+    border:1px solid var(--rule-2); border-radius:999px; padding:3px 8px; cursor:pointer; white-space:nowrap; }
+  .fl-help:hover{ background:#EEF1EA; color:var(--ink-2); }
+  #fproj{ font-weight:700; border-color:var(--ink-2); box-shadow:inset 0 0 0 1px rgba(37,90,145,.15); }
+  /* ヘッダー＝ページの識別。役割アイコンを添える */
+  .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
+
+  .count{ margin:2px 0 4px; font-size:10.5px; color:var(--sub); }
+
+  .sumgrid{ display:grid; gap:5px; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); margin-bottom:4px; }
+  /* サマリ（至急/注意/未納品）はフィルタ行の右側の余白に横並び。3枚を必ず1行に */
+  .ctl .sumgrid{ flex:1 1 340px; margin:0; grid-template-columns:repeat(3, minmax(90px, 1fr)); }
+  /* ===== サマリ＝調達の警報盤（役割・重み・ハッとを持たせる） ===== */
+  .sumcard{
+    background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:3px 10px;
+    display:flex; align-items:center; gap:7px; position:relative;
+  }
+  .sumcard .ico{ font-size:12px; line-height:1; flex:0 0 auto; }
+  .sumcard .t{ font-size:10.5px; color:var(--sub); margin:0; font-weight:700; white-space:nowrap; }
+  .sumcard .v{ font-family:var(--mono); font-weight:800; font-size:16px; color:var(--ink); margin-left:auto; line-height:1; }
+  .sumcard .v small{ font-size:9.5px; font-weight:700; color:var(--sub); margin-left:1px; }
+  /* 至急>0：赤の警報（塗り・白文字） */
+  .sumcard.danger{ background:linear-gradient(180deg,#C7412F,var(--alert)); border-color:#8F2A1D; box-shadow:0 2px 10px rgba(190,60,44,.35); }
+  .sumcard.danger .ico, .sumcard.danger .t, .sumcard.danger .v, .sumcard.danger .v small{ color:#fff; }
+  .sumcard.danger::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:rgba(255,224,214,.75); opacity:0; }
+  /* 至急=0：落ち着いた緑（問題なし） */
+  .sumcard.clear{ background:#EAF4EC; border-color:#BFE0C7; }
+  .sumcard.clear .ico, .sumcard.clear .v{ color:var(--ok); }
+  /* 注意>0：琥珀 */
+  .sumcard.warn{ background:#FBF3E2; border-color:#E7C866; }
+  .sumcard.warn .ico, .sumcard.warn .v{ color:#8A6200; }
+  /* 注意=0：ミュート */
+  .sumcard.mute .ico{ color:var(--sub); }
+  /* 未納品：情報（紺の左バー） */
+  .sumcard.info{ padding-left:12px; }
+  .sumcard.info::before{ content:""; position:absolute; left:0; top:4px; bottom:4px; width:3px; border-radius:2px; background:var(--ink-2); }
+  /* 開いた瞬間の演出（脈動・スライドイン）。動きを抑える設定では静的に */
+  @media (prefers-reduced-motion:no-preference){
+    .sumgrid .sumcard{ animation:cardin .38s ease both; }
+    .sumgrid .sumcard:nth-child(2){ animation-delay:.06s; }
+    .sumgrid .sumcard:nth-child(3){ animation-delay:.12s; }
+    @keyframes cardin{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:none; } }
+    /* 至急対応：開いた後 約3.6秒 白フラッシュで点滅（4回）してから収まる */
+    .sumcard.danger::after{ animation:blinkfade .45s ease-in-out .3s 8 alternate both; }
+    @keyframes blinkfade{ from{ opacity:0; } to{ opacity:.75; } }
+  }
+
+  .atable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+           box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
+  .ahead, .arow{ display:grid; align-items:stretch; gap:8px; }
+  /* 列間の縦罫線（セルを縦いっぱいに伸ばして右側に線） */
+  .ahead > span, .arow > span{ border-right:1px solid var(--rule); padding-right:8px; }
+  .ahead > span:last-child, .arow > span:last-child{ border-right:none; padding-right:0; }
+  /* 工事を1つ選んだとき（工事列なし）と、すべての工事（横断・工事列あり）で列を切り替える */
+  /* 大画面で列が間延びしないよう最大幅を制限して中央寄せ（ヘッダー・行で同じ幅） */
+  .ahead, .arow{ max-width:1440px; margin-inline:auto; box-sizing:border-box; }
+  .m-one .ahead, .m-one .arow{ min-width:904px; grid-template-columns:44px 160px 1.15fr 76px 1.9fr 100px 100px 88px; }
+  .m-all .ahead, .m-all .arow{ max-width:1480px; min-width:1134px; grid-template-columns:44px 160px 1fr 0.9fr 76px 1.7fr 100px 100px 88px; }
+  .ahead{
+    position:sticky; top:0; z-index:5;
+    background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+    white-space:nowrap; align-items:stretch; padding:6px 12px;
+    border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0;
+  }
+  .arow{
+    padding:6px 12px; border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
+    font-size:15px; text-align:left; width:100%; font-family:var(--body); color:inherit;
+    text-decoration:none;
+  }
+  .arow:hover{ background:#F5F7F3; }
+  .arow.red{ background:#FBF1EF; }
+  .arow.red:hover{ background:#F8E4DF; }
+  .arow .nm{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-weight:700; }
+  .arow .no{ font-family:var(--mono); font-size:12px; color:var(--ink-2); display:block; }
+  .arow .rno, .ahead .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:center; }
+  .arow .sub{ font-size:12px; color:var(--sub); line-height:1.4; }
+  .arow .num{ font-family:var(--mono); text-align:center; white-space:nowrap; font-size:12.5px; }
+  .ahead .num{ text-align:center; }
+  /* ヘッダーは全列そろえて中央（見出し行の左寄りバラつきを解消） */
+  .ahead > span{ text-align:center; }
+  /* Excel風の並べ替え：タップできる列見出し */
+  .ahead .sh{ cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:center; gap:3px; }
+  .ahead .sh:hover{ color:var(--ink-2); }
+  .ahead .sh.on{ color:var(--ink); font-weight:800; }
+  .ahead .sh .ar{ font-style:normal; font-size:9px; line-height:1; color:var(--ink-2); }
+  .ahead .sh:focus-visible{ outline:2px solid var(--ink-2); outline-offset:1px; border-radius:3px; }
+  /* 状態列（最終列）は中身も中央 */
+  .arow > span:last-child{ text-align:center; }
+  /* アラート・工程は中身も中央にしてヘッダーとそろえる */
+  .arow .ctr{ text-align:center; }
+  .arow .ctr .altag{ text-align:left; }
+
+  .mlbl{ display:none; }
+  .cat{ font-size:10.5px; font-weight:700; padding:1px 5px; border-radius:var(--radius-sm); margin-right:5px; }
+  .cat.material{ background:#E3EBF3; color:var(--ink-2); }
+  .cat.labor{ background:#FBF1EF; color:#8C2A1D; }
+  .proc{ font-size:10px; font-weight:700; padding:1px 6px; border-radius:999px; margin-left:6px;
+         background:#EDEFEA; color:var(--sub); white-space:nowrap; }
+  .proc.hot{ background:#FBF0D4; color:#6B4E00; border:1px solid #E7C866; }  /* 受注生産・輸入＝要注意 */
+
+  .stag{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:var(--radius-sm); white-space:nowrap; color:var(--sub); background:#EDEFEA; }
+  .stag.est{ color:#8C2A1D; background:#FBF1EF; }
+  .stag.ord{ color:#6B4E00; background:#FBF0D4; }
+
+  .altag{ font-size:11px; font-weight:700; padding:3px 8px; border-radius:var(--radius-sm);
+          white-space:normal; line-height:1.35; display:inline-block; }
+  .altag.red{ color:#fff; background:var(--alert); }
+  .altag.amber{ color:#6B4E00; background:#FBF0D4; border:1px solid #E7C866; }
+  .altag.ok{ color:var(--ok); background:#EAF2ED; }
+  .altag .dl{ font-family:var(--mono); font-weight:500; display:block; font-size:10px; opacity:.9; }
+
+  /* その場編集パネル */
+  .epanel{ position:fixed; inset:0; z-index:60; background:rgba(15,20,30,.5); display:none; }
+  .epanel.open{ display:flex; align-items:center; justify-content:center; padding:14px; }
+  .epanel .ecard{ background:var(--card); border-radius:8px; width:min(94vw,470px); max-height:90vh;
+    overflow:auto; box-shadow:0 14px 44px rgba(0,0,0,.45); }
+  .epanel .ebody{ padding:14px 16px 18px; display:flex; flex-direction:column; gap:10px; }
+  .epanel .ename{ font-family:var(--disp); font-weight:700; font-size:15px; }
+  .epanel .erow{ display:flex; align-items:center; gap:10px; }
+  .epanel .erow > label{ flex:0 0 112px; font-size:13px; color:var(--sub); }
+  .epanel .erow select, .epanel .erow input{ flex:1 1 auto; min-height:38px; padding:4px 8px;
+    border:1px solid var(--rule); border-radius:var(--radius-sm); background:#fff; font-size:14px; font-family:var(--body); color:var(--ink); }
+  .epanel .erow > span{ flex:1 1 auto; display:inline-flex; align-items:center; gap:6px; }
+  .epanel .erow > span input{ flex:0 1 120px; }
+  .epanel .ebasis{ font-size:11.5px; color:var(--sub); line-height:1.5; background:#F1F3EF; border-radius:6px; padding:6px 10px; }
+  .epanel .efoot{ display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap; }
+
+  @media (max-width:860px){
+    /* 狭い画面ではカード表示になるため、通常のページスクロールに戻す */
+    body{ height:auto; overflow:visible; display:block; }
+    .wrap{ flex:none; height:auto; overflow:visible; display:block; }
+    #atable{ display:block; }
+    .atable{ flex:none; max-height:none; overflow:visible; }
+    .ahead{ display:none; }
+    .m-one .arow, .m-all .arow{ grid-template-columns:1fr; min-width:0; padding:11px 12px; gap:3px; }
+    .arow .num, .arow .rno, .arow > span:last-child, .arow .ctr{ text-align:left; }
+    .arow > span{ border-right:none; padding-right:0; }
+    .mlbl{ display:inline; color:var(--sub); font-weight:700; font-size:11px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1><span class="pgico" aria-hidden="true">🚚</span>材料到着スケジュール</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<style>
+  .ztab{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--card); border-bottom:1px solid var(--rule); padding:3px 10px; }
+  .ztab a{ font-family:var(--body); font-weight:800; font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:4px 14px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .ztab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .ztab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .ztab .zarr{ color:var(--sub); font-weight:800; font-size:13px; user-select:none; }
+  .ztab[hidden], .ztab a[hidden]{ display:none; }
+</style>
+<nav class="ztab" id="ztab" hidden>
+  <a data-k="estimate" href="genka.html">見積</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="budget" href="budget.html">予算</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="order" href="orders.html">発注</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="delivery" href="order-alerts.html">納期</a>
+</nav>
+<div class="wrap">
+  <p class="lead" id="lead" hidden>
+    <b>いま進めている／これから進める工事</b>のために、<b>まだ発注していない材料・間に合わない材料</b>を常に浮かび上がらせる管制塔です。工程開始日と<b>発注期限（納品予定日−リードタイム）</b>を突き合わせ、至急対応を上に並べます。行をクリックすると<b>発注状況（未発注／発注済み／納品済み／中止）・現地納品予定日・リードタイム・工程</b>をその場で更新でき（＝台帳に直接反映）、着工前に赤（間に合わない）をつぶせます。
+  </p>
+
+  <div class="ctl">
+    <span class="fl-lb">絞り込み</span>
+    <button class="fl-help" id="helpBtn" type="button">？使い方 ▼</button>
+    <select id="fproj"><option value="">すべての工事</option></select>
+    <select id="fcat">
+      <option value="">材工すべて</option>
+      <option value="material">材料のみ</option>
+      <option value="labor">外注・労務のみ</option>
+    </select>
+    <select id="fshow">
+      <option value="risk">要対応のみ</option>
+      <option value="all">未納品すべて</option>
+      <option value="unset">未設定のみ（要入力）</option>
+    </select>
+    <div class="sumgrid" id="sumgrid" hidden></div>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <p class="count" id="count"></p>
+  <div id="atable"></div>
+</div>
+
+<div class="epanel" id="epanel"><div class="ecard">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1>材料の予定を入力</h1>
+    <button class="btn ghost sm barbtn" id="eclose">閉じる</button>
+  </header>
+  <div class="ebody">
+    <div id="emsg" class="msg"></div>
+    <div class="ename" id="e_name"></div>
+    <div class="erow"><label for="e_status">発注状況</label>
+      <select id="e_status">
+        <option value="estimate">未発注（発注が必要）</option>
+        <option value="ordered">発注済み（納品待ち）</option>
+        <option value="delivered">納品済み（一覧から外れます）</option>
+        <option value="cancelled">中止・不要（材料なし等）</option>
+      </select></div>
+    <div class="erow"><label for="e_cat">費目</label>
+      <select id="e_cat"><option value="material">材料費</option><option value="labor">外注・労務費</option></select></div>
+    <div class="erow"><label for="e_phase">関わる工程</label><select id="e_phase"></select></div>
+    <div class="erow"><label for="e_sdd">現地納品予定日</label><input id="e_sdd" type="date"></div>
+    <div class="erow"><label for="e_lead">リードタイム</label>
+      <span><input id="e_lead" type="number" min="0" step="1" placeholder="0"><span id="e_leadhint" style="font-size:12px;color:var(--sub)">日</span></span></div>
+    <div class="ebasis" id="e_basis"></div>
+    <div class="efoot">
+      <a class="btn ghost sm" id="golink" href="#">この材料を材工発注で扱う →</a>
+      <span style="flex:1 1 auto"></span>
+      <button class="btn ghost sm" id="ecancel">やめる</button>
+      <button class="btn" id="esave">保存する</button>
+    </div>
+  </div>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("ztab"); if(!bar) return;
+  const allow = tierOf(a.me)<=2 ? ["delivery","order","budget","estimate"] : ["delivery"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="delivery") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const STATN = { estimate:'見積中', ordered:'発注済み' };
+  const STATCLS = { estimate:'est', ordered:'ord' };
+
+  // 並べ替え（Excel風：列見出しをタップで昇順/降順）。既定はアラート（至急順）。
+  let sortKey = 'alert', sortDir = 1;
+  try { const s = JSON.parse(localStorage.getItem('oa_sort') || 'null'); if (s && s.k){ sortKey = s.k; sortDir = (s.d === -1 ? -1 : 1); } } catch(e){}
+  const SKN = { alert:'アラート', project:'工事', phase:'工程', start:'着工', name:'材料', deliv:'納品予定', deadline:'発注期限', status:'状態' };
+  const WARN_DAYS = 7;   // 発注期限の何日前からアラート扱いにするか（工程表と合わせる）
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isMgr = (me.role === 'admin' || me.role === 'manager');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  // 使い方（説明）は既定で畳んで一覧を最大化。開閉は記憶する
+  const HELPKEY = 'oa_help_open';
+  function applyHelp(){
+    const open = localStorage.getItem(HELPKEY) === '1';
+    $('lead').hidden = !open;
+    $('helpBtn').textContent = open ? '？使い方 ▲' : '？使い方 ▼';
+  }
+  $('helpBtn').addEventListener('click', () => {
+    localStorage.setItem(HELPKEY, localStorage.getItem(HELPKEY) === '1' ? '0' : '1');
+    applyHelp();
+  });
+  applyHelp();
+
+  /* ================= 日付の道具（工程表と同じ計算） ================= */
+  function todayYMD(){
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  }
+  function addDaysYMD(ymd, n){
+    const d = new Date(ymd + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function fmtShort(ymd){
+    if (!ymd) return '';
+    const [y, m, d] = ymd.split('-');
+    return `${y.slice(2)}/${Number(m)}/${Number(d)}`;
+  }
+
+  const TODAY = todayYMD();
+  const WARN_LIMIT = addDaysYMD(TODAY, WARN_DAYS);
+
+  let projects = [], phases = [], items = [];
+
+  async function loadAll(){
+    // 金額の列は一切取得しない（発注・納品のタイミングだけを扱う）
+    const [pr, ph, bi] = await Promise.all([
+      sb.from('projects').select('id,project_no,name,status')
+        .eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('project_phases').select('id,project_id,name,start_date')
+        .eq('is_active', true).order('seq'),
+      sb.from('phase_budget_items')
+        .select('id,project_id,phase_id,category,item_name,quantity,unit,status,scheduled_delivery_date,delivered_on,lead_time_days,procurement_type,is_import')
+    ]);
+    if (pr.error){ showMsg($('msg'), '読み込めませんでした。' + pr.error.message, 'err'); return; }
+    if (bi.error){
+      showMsg($('msg'),
+        /relation .* does not exist|schema cache/i.test(bi.error.message || '')
+          ? 'データベースに実行予算の表がまだありません。Supabase の SQL Editor で phase3_budget.sql と phase5_order_deadline.sql を実行してください。'
+          : '材料の読み込みに失敗しました。' + bi.error.message, 'err');
+    }
+    projects = pr.data || [];
+    phases   = ph.data || [];
+
+    // 完了・中止の工事は対象外（動いている工事の未納品だけを見る）
+    const liveProjIds = new Set(projects
+      .filter(p => !['completed','invoiced','paid','cancelled'].includes(p.status))
+      .map(p => p.id));
+
+    // 未納品（見積中・発注済み）だけを対象にする
+    items = (bi.data || []).filter(x =>
+      liveProjIds.has(x.project_id) &&
+      (x.status === 'estimate' || x.status === 'ordered'));
+
+    // 工事の絞り込みには、動いている工事だけを出す
+    $('fproj').innerHTML = '<option value="">工事を選んでください</option><option value="__all__">すべての工事（横断）</option>' +
+      projects.filter(p => liveProjIds.has(p.id))
+        .map(p => `<option value="${p.id}">${esc(p.project_no)}　${esc(p.name)}</option>`).join('');
+
+    // URLに保存された工事を選び直す（別ページから戻ってきても選択が残るように）
+    const pParam = new URL(location.href).searchParams.get('p');
+    if (pParam){ $('fproj').value = pParam; }
+
+    render();
+  }
+
+  // 選んだ工事をURLに残す（戻ってきたときに同じ工事の状態へ復帰できるように）
+  function syncProjUrl(){
+    const u = new URL(location.href);
+    const v = $('fproj').value;
+    if (v) u.searchParams.set('p', v); else u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+  }
+
+  // 1件の遅れ判定（金額は一切見ない）。費目で「間に合わせる目標日」を切り替える：
+  //  材料＝現地納品予定日(scheduled_delivery_date)／工事(labor)＝対象工程の着工日(start)。
+  function classify(x, phase){
+    const start   = phase ? phase.start_date : null;
+    const isLabor = (x.category === 'labor');
+    const dd      = x.scheduled_delivery_date || null;
+    const target  = isLabor ? start : dd;   // 工事は着工日を目標に、材料は現地着を目標に
+    const lead    = (x.lead_time_days === null || x.lead_time_days === undefined || x.lead_time_days === '')
+                    ? null : Number(x.lead_time_days);
+    const deadline = (target && lead !== null) ? addDaysYMD(target, -lead) : null;
+    const est = (x.status === 'estimate');
+    // 受注生産・海外輸入は納期が読みにくいので、通常より早めに警告（材料のみ）
+    const buf = WARN_DAYS
+      + (!isLabor && x.is_import ? 14 : 0)
+      + (!isLabor && x.procurement_type === 'made_to_order' ? 7 : 0);
+    const warnLimit = addDaysYMD(TODAY, buf);
+
+    // 材料：現地着が着工日より後 → 発注済みでも間に合わない（工事にはこの概念が無い）
+    if (!isLabor && dd && start && dd > start)
+      return { level:'red', rank:0, text:'着工に間に合いません', deadline, dd, start, dlNote:false };
+    // 見積中で、発注期限を過ぎている
+    if (est && deadline && deadline < TODAY)
+      return { level:'red', rank:1, text:'発注期限を過ぎています', deadline, dd, start, dlNote:true };
+    // 見積中で、発注期限が近い（受注生産・輸入は早めに黄色）
+    if (est && deadline && deadline <= warnLimit)
+      return { level:'amber', rank:2, text: (buf > WARN_DAYS ? 'まもなく発注期限（早め手配）' : 'まもなく発注期限'), deadline, dd, start, dlNote:true };
+    // 目標日が未定 → 間に合うか判断できない
+    if (!target)
+      return { level:'amber', rank:3, text: (isLabor ? '着工日が未定' : '納品予定日が未定'), deadline, dd, start, dlNote:false };
+    // それ以外は余裕あり
+    return { level:'ok', rank:4, text: est ? '発注期限まで余裕あり' : (isLabor ? '着手待ち' : '納品待ち'), deadline, dd, start, dlNote:false };
+  }
+
+  function render(){
+    const fp = $('fproj').value, fc = $('fcat').value, fs = $('fshow').value;
+
+    // 工事を選ぶまでは何も出さない（他のページと同じ動き）
+    if (!fp){
+      $('sumgrid').hidden = true;
+      $('count').textContent = '';
+      $('atable').innerHTML = `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、発注・納品の遅れを検知して一覧します。全工事をまとめて見るときは「すべての工事（横断）」を選んでください。</div>`;
+      return;
+    }
+    const isAll = (fp === '__all__');
+    const inProj = x => (isAll || x.project_id === fp);
+    const pmap = Object.fromEntries(projects.map(p => [p.id, p]));
+    const phmap = Object.fromEntries(phases.map(p => [p.id, p]));
+
+    let rows = items
+      .filter(x => inProj(x) && (!fc || x.category === fc))
+      .map(x => ({ x, phase: x.phase_id ? phmap[x.phase_id] : null }))
+      .map(o => ({ ...o, a: classify(o.x, o.phase) }));
+
+    const redN = rows.filter(o => o.a.level === 'red').length;
+    const amberN = rows.filter(o => o.a.level === 'amber').length;
+
+    if (fs === 'risk') rows = rows.filter(o => o.a.level !== 'ok');
+    if (fs === 'unset') rows = rows.filter(o => {   // 現地納品予定日/リードタイム/工程 のどれかが未入力
+      const x = o.x;
+      const noPhase = !x.phase_id;
+      const noLead  = x.lead_time_days === null || x.lead_time_days === undefined || x.lead_time_days === '';
+      const noSdd   = x.category !== 'labor' && !x.scheduled_delivery_date;
+      return noPhase || noLead || noSdd;
+    });
+
+    // 並べ替え（Excel風）：選んだ列で昇順/降順。既定のアラートは 至急順→期限→納品。
+    const pjno = o => { const p = pmap[o.x.project_id]; return p ? String(p.project_no||'') : ''; };
+    const jc = (a,b) => String(a==null?'':a).localeCompare(String(b==null?'':b), 'ja', { numeric:true });
+    const sord = { estimate:0, ordered:1 };
+    const cmps = {
+      alert:    (a,b)=> (a.a.rank-b.a.rank) || jc(a.a.deadline||a.a.dd||'9999', b.a.deadline||b.a.dd||'9999'),
+      project:  (a,b)=> jc(pjno(a),pjno(b)) || ((a.phase?.seq??9999)-(b.phase?.seq??9999)),
+      phase:    (a,b)=> ((a.phase?.seq??9999)-(b.phase?.seq??9999)) || jc(a.phase?.name, b.phase?.name) || jc(a.x.item_name,b.x.item_name),
+      start:    (a,b)=> jc(a.phase?.start_date||'9999-99-99', b.phase?.start_date||'9999-99-99'),
+      name:     (a,b)=> jc(a.x.item_name, b.x.item_name),
+      deliv:    (a,b)=> jc(a.x.scheduled_delivery_date||'9999-99-99', b.x.scheduled_delivery_date||'9999-99-99'),
+      deadline: (a,b)=> jc(a.a.deadline||'9999-99-99', b.a.deadline||'9999-99-99'),
+      status:   (a,b)=> ((sord[a.x.status]??9)-(sord[b.x.status]??9)) || jc(a.x.item_name,b.x.item_name),
+    };
+    const cmp = cmps[sortKey] || cmps.alert;
+    rows.sort((a,b)=> cmp(a,b) * sortDir);
+
+    $('sumgrid').hidden = false;
+    const totalN = items.filter(inProj).filter(x => !fc || x.category === fc).length;
+    $('sumgrid').innerHTML = `
+      <div class="sumcard ${redN > 0 ? 'danger' : 'clear'}">
+        <span class="ico">${redN > 0 ? '⚠' : '✓'}</span><span class="t">至急対応</span>
+        <span class="v">${redN}<small>件</small></span></div>
+      <div class="sumcard ${amberN > 0 ? 'warn' : 'mute'}">
+        <span class="ico">▲</span><span class="t">注意</span>
+        <span class="v">${amberN}<small>件</small></span></div>
+      <div class="sumcard info">
+        <span class="ico">▦</span><span class="t">未納品 合計</span>
+        <span class="v">${totalN}<small>件</small></span></div>
+    `;
+
+    $('count').innerHTML = `${rows.length} 件を表示 ・ ↕ 並べ替え：<b style="color:var(--ink-2)">${SKN[sortKey]||'アラート'}（${sortDir===1?'昇順':'降順'}）</b> <span style="color:var(--sub)">— 列見出しをタップで変更</span>`;
+
+    if (!rows.length){
+      $('atable').innerHTML = `<div class="empty"><b>${fs === 'risk' ? '発注・納品の遅れの心配はありません' : '対象の材料がありません'}</b>${fs === 'risk' ? '発注期限が近い・過ぎている材料や、着工に間に合わない材料が出るとここに並びます。' : '絞り込みを変えてお試しください。'}</div>`;
+      return;
+    }
+
+    const arrow = k => sortKey===k ? (sortDir===1?'▲':'▼') : '';
+    const th = (k,label,cls='') => `<span class="sh${cls?' '+cls:''}${sortKey===k?' on':''}" data-sort="${k}" role="button" tabindex="0" aria-label="${label}で並べ替え">${label}<i class="ar">${arrow(k)}</i></span>`;
+    let h = `<div class="atable ${isAll ? 'm-all' : 'm-one'}"><div class="ahead">
+      <span class="rno">NO</span>${th('alert','アラート')}${isAll ? th('project','工事') : ''}${th('phase','工程')}${th('start','着工','num')}${th('name','材料')}
+      ${th('deliv','納品予定','num')}${th('deadline','発注期限','num')}${th('status','状態')}
+    </div>`;
+    rows.forEach(({ x, phase, a }, i) => {
+      const pj = pmap[x.project_id];
+      // 管理者は行クリックで「現地納品予定日・リードタイム・工程・費目」をその場で編集。
+      // 閲覧者は工程表を開くだけ。
+      const href = isMgr ? '#' : `schedule.html?p=${x.project_id}`;
+      const projCell = isAll
+        ? `<span class="nm"><span class="no">${pj ? esc(pj.project_no) : ''}</span>${pj ? esc(pj.name) : '（工事不明）'}</span>`
+        : '';
+      h += `<a class="arow ${a.level === 'red' ? 'red' : ''}" href="${href}"${isMgr ? ` data-eid="${x.id}"` : ''}>
+        <span class="rno"><b class="mlbl">No. </b>${i + 1}</span>
+        <span class="ctr"><span class="altag ${a.level}">${esc(a.text)}${a.dlNote && a.deadline ? `<span class="dl">発注期限 ${fmtShort(a.deadline)}</span>` : ''}</span></span>
+        ${projCell}
+        <span class="ctr"><span class="nm" style="font-size:12px">${phase ? esc(phase.name) : '工事全体'}</span></span>
+        <span class="num"><b class="mlbl">着工 </b>${phase && phase.start_date ? fmtShort(phase.start_date) : '—'}</span>
+        <span><span class="cat ${x.category}">${x.category === 'labor' ? '工' : '材'}</span>
+          <span class="nm" style="display:inline;font-size:12px">${esc(x.item_name)}</span>
+          ${(x.procurement_type || x.is_import) ? `<span class="proc${x.procurement_type === 'made_to_order' || x.is_import ? ' hot' : ''}">${x.procurement_type === 'made_to_order' ? '受注生産' : (x.procurement_type === 'stock' ? '在庫品' : '')}${x.is_import ? (x.procurement_type ? '・輸入' : '輸入') : ''}</span>` : ''}
+          <span class="sub">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</span></span>
+        <span class="num"><b class="mlbl">納品予定 </b>${x.scheduled_delivery_date ? fmtShort(x.scheduled_delivery_date) : '—'}</span>
+        <span class="num"><b class="mlbl">発注期限 </b>${a.deadline ? fmtShort(a.deadline) : '—'}</span>
+        <span><span class="stag ${STATCLS[x.status] || ''}">${STATN[x.status] || x.status}</span></span>
+      </a>`;
+    });
+    h += `</div>`;
+    $('atable').innerHTML = h;
+    // 列見出しのタップで並べ替え（同じ列を再タップで昇順⇄降順）
+    $('atable').querySelectorAll('.ahead .sh').forEach(el => {
+      const doSort = () => {
+        const k = el.dataset.sort;
+        if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+        try { localStorage.setItem('oa_sort', JSON.stringify({ k:sortKey, d:sortDir })); } catch(e){}
+        render();
+      };
+      el.addEventListener('click', doSort);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doSort(); } });
+    });
+    if (isMgr){
+      $('atable').querySelectorAll('.arow[data-eid]').forEach(a =>
+        a.addEventListener('click', e => { e.preventDefault(); openEdit(a.dataset.eid); }));
+    }
+  }
+
+  /* ===== その場編集：現地納品予定日・リードタイム・工程・費目を材料調達計画表で入力 ===== */
+  let editing = null;
+  function phaseOptions(projectId, sel){
+    // phases は seq 順で読み込み済み。案件で絞った並び＝工程表の左列NO（1始まり）と一致するので先頭に付ける
+    const list = phases.filter(p => p.project_id === projectId);
+    return '<option value="">（工事全体・未設定）</option>' +
+      list.map((p, i) => `<option value="${p.id}"${p.id === sel ? ' selected' : ''}>No.${i + 1}　${esc(p.name)}${p.start_date ? '（着工 ' + fmtShort(p.start_date) + '）' : ''}</option>`).join('');
+  }
+  function updateEditCat(){
+    const isLabor = $('e_cat').value === 'labor';
+    const sddRow = $('e_sdd').closest('.erow');
+    if (sddRow) sddRow.hidden = isLabor;
+    const lh = $('e_leadhint'); if (lh) lh.textContent = isLabor ? '日（契約〜着手の段取り）' : '日（発注〜現地納品）';
+    const bh = $('e_basis');
+    if (bh){
+      const p = phases.find(x => x.id === $('e_phase').value);
+      bh.textContent = isLabor
+        ? (p && p.start_date ? `工事：工程の着工日 ${fmtShort(p.start_date)} を基準に判定` : '工事：対象工程の着工日を基準に判定')
+        : '材料：現地納品予定日が工程の着工に間に合うかを判定';
+    }
+  }
+  function openEdit(id){
+    const x = items.find(m => m.id === id); if (!x) return;
+    editing = x;
+    $('e_name').textContent = x.item_name || '（名称未設定）';
+    $('e_status').value = x.status || 'estimate';
+    $('e_cat').value  = x.category || 'material';
+    $('e_phase').innerHTML = phaseOptions(x.project_id, x.phase_id || '');
+    $('e_sdd').value  = x.scheduled_delivery_date || '';
+    $('e_lead').value = (x.lead_time_days ?? '') === '' ? '' : x.lead_time_days;
+    showMsg($('emsg'), '');
+    updateEditCat();
+    $('epanel').classList.add('open');
+    $('golink').href = `schedule.html?p=${x.project_id}&bitem=${x.id}`;
+  }
+  function closeEdit(){ $('epanel').classList.remove('open'); editing = null; }
+  $('e_cat').addEventListener('change', updateEditCat);
+  $('e_phase').addEventListener('change', updateEditCat);
+  $('eclose').addEventListener('click', closeEdit);
+  $('ecancel').addEventListener('click', closeEdit);
+  $('esave').addEventListener('click', async () => {
+    if (!editing) return;
+    const isLabor = $('e_cat').value === 'labor';
+    const newStatus = $('e_status').value || 'estimate';
+    const patch = {
+      status: newStatus,   // 発注状況＝台帳(phase_budget_items)の単一の正。ここが管制塔の“未発注/発注済み”シグナルの根拠
+      category: $('e_cat').value,
+      phase_id: $('e_phase').value || null,
+      lead_time_days: $('e_lead').value === '' ? null : Number($('e_lead').value),
+      scheduled_delivery_date: isLabor ? null : ($('e_sdd').value || null)   // 工事に現地納品予定日は無い
+    };
+    $('esave').disabled = true; $('esave').textContent = '保存しています…';
+    const { error } = await sb.from('phase_budget_items').update(patch).eq('id', editing.id);
+    $('esave').disabled = false; $('esave').textContent = '保存する';
+    if (error){ showMsg($('emsg'), '保存できませんでした。' + error.message, 'err'); return; }
+    Object.assign(editing, patch);   // ローカルへ反映
+    // 納品済み・中止は「未納品の管制塔」から外れるので一覧から除く
+    if (newStatus !== 'estimate' && newStatus !== 'ordered'){
+      items = items.filter(m => m.id !== editing.id);
+    }
+    closeEdit();
+    render();
+    showMsg($('msg'), '保存しました。', 'ok');
+  });
+
+  $('fproj').addEventListener('change', () => { syncProjUrl(); render(); });
+  $('fcat').addEventListener('change', render);
+  $('fshow').addEventListener('change', render);
+
+  await loadAll();
+})();
+</script>
+</body>
+</html>

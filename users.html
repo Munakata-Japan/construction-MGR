@@ -1,18 +1,32 @@
 <!DOCTYPE html>
-<!-- BUILD: users (利用者) v20260724G -->
+<!-- BUILD: users (利用者) v20260907A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>利用者 ｜ 宗像総合管理システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <style>
-  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
-  .ctl select{ width:auto; min-width:150px; min-height:44px; flex:0 1 auto; }
-  .ctl input[type=text]{ width:auto; flex:1 1 180px; min-width:0; min-height:44px; }
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .ctl select{ width:auto; min-width:150px; min-height:38px; flex:0 1 auto; }
+  .ctl input[type=text]{ width:auto; flex:1 1 180px; min-width:0; min-height:38px; }
   .ctl .sp{ flex:1 1 0; }
 
   .kb{ font-size:11px; font-weight:700; padding:2px 7px; border-radius:2px;
@@ -90,9 +104,19 @@
   <span class="mark" aria-hidden="true"></span>
   <h1>利用者</h1>
   <div class="who" id="who"></div>
-  <button class="btn ghost sm barbtn" id="out">出る</button>
 </header>
 
+<style>
+  .xtab{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--card); border-bottom:1px solid var(--rule); padding:3px 10px; }
+  .xtab a{ font-family:var(--body); font-weight:800; font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:4px 14px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .xtab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .xtab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .xtab[hidden], .xtab a[hidden]{ display:none; }
+</style>
+<nav class="xtab" id="xtab" hidden>
+  <a data-k="partners" href="partners.html">取引先</a>
+  <a data-k="users" href="users.html">社員</a>
+</nav>
 <div class="wrap">
   <div id="msg" class="msg"></div>
 
@@ -110,7 +134,7 @@
       <option value="ex">社外</option>
     </select>
     <span class="sp"></span>
-    <button class="btn ghost sm" id="rkbtn" hidden>階層の管理</button>
+    <button class="btn sm" id="rkbtn" hidden>階層の管理</button>
   </div>
 
   <div id="rkbox" hidden>
@@ -156,18 +180,20 @@
       <div class="sh">その人</div>
       <span class="k">氏名<span class="req">*</span></span>
       <span class="dv r"><input id="f_name" type="text" placeholder="山田 太郎"></span>
-      <span class="k">社員番号</span>
-      <span class="dv"><input id="f_no" type="text"></span>
+      <span class="k intf">社員番号</span>
+      <span class="dv intf"><input id="f_no" type="text"></span>
 
       <span class="k">メール</span>
       <span class="dv r"><input id="f_mail" type="text" inputmode="email"></span>
       <span class="k">電話</span>
       <span class="dv"><input id="f_tel" type="text" inputmode="tel"></span>
 
-      <span class="k">入社日</span>
-      <span class="dv r"><input id="f_hired" type="date"></span>
+      <span class="k intf">入社日</span>
+      <span class="dv r intf"><input id="f_hired" type="date"></span>
       <span class="k">在籍</span>
       <span class="dv"><label class="chk"><input id="f_act" type="checkbox" checked>在籍中</label></span>
+
+      <div class="full intf"><label class="chk"><input id="f_dev" type="checkbox">開発者アカウント（利用者一覧では本名の代わりに「開発者」と表示し、最下部に固定します。デモで社員に本名を見せないため）</label></div>
 
       <div class="sh">社内・社外</div>
       <span class="k">区分</span>
@@ -181,8 +207,8 @@
         <option value="craftsman">職人</option>
         <option value="subcontractor">外注</option>
       </select></span>
-      <span class="k">所属部門</span>
-      <span class="dv"><select id="f_dept">
+      <span class="k intf">所属部門</span>
+      <span class="dv intf"><select id="f_dept">
         <option value="">（未設定）</option>
         <option value="site">現場</option>
         <option value="info">会社の情報部</option>
@@ -202,20 +228,20 @@
         <option value="manager">現場監督（工事と工程を扱える）</option>
         <option value="admin">経営者（すべて扱える）</option>
       </select></span>
-      <span class="k">上長</span>
-      <span class="dv"><select id="f_sup"></select></span>
+      <span class="k intf">上長</span>
+      <span class="dv intf"><select id="f_sup"></select></span>
 
-      <div class="sh">決裁権</div>
-      <span class="k">決裁の上限</span>
-      <span class="dv r">
+      <div class="sh intf">決裁権</div>
+      <span class="k intf">決裁の上限</span>
+      <span class="dv r intf">
         <label class="chk"><input id="f_unl" type="checkbox">上限なし</label>
         <span class="yen">¥</span><input id="f_lim" class="money" type="text" inputmode="numeric" placeholder="0" style="flex:1 1 110px"><span class="u2">税抜</span>
       </span>
-      <span class="k">日給・時給</span>
-      <span class="dv"><span class="yen">¥</span><input id="f_rate" class="money" type="text" inputmode="numeric" placeholder="0">
+      <span class="k intf">日給・時給</span>
+      <span class="dv intf"><span class="yen">¥</span><input id="f_rate" class="money" type="text" inputmode="numeric" placeholder="0">
         <select id="f_ratet" style="flex:0 0 88px"><option value="daily">日給</option><option value="hourly">時給</option></select></span>
 
-      <div class="full">
+      <div class="full intf">
         <p class="tip">
           <b>決裁の上限</b>は、この人が承認できる金額です。空または0なら決裁権はありません。<br>
           金額の制限を設けない場合は「上限なし」に印を付けてください。<br>
@@ -226,14 +252,25 @@
       <div class="sh">ログイン</div>
       <div class="full">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-          <input id="f_uid" type="text" placeholder="ログイン用のUID（Supabaseで作ったもの）"
-                 style="flex:1 1 320px;min-width:0;min-height:32px;padding:3px 8px;font-size:13px;font-family:var(--mono)">
-          <span id="uidst" style="font-size:12px;color:var(--sub)"></span>
+          <span id="uidst" style="font-size:13px;color:var(--sub)"></span>
+          <button class="btn ghost sm" id="inviteBtn" type="button" hidden>招待リンクを発行する</button>
+          <button class="btn ghost sm" id="inviteCancel" type="button" hidden>この招待を取り消す</button>
         </div>
-        <p class="tip">
-          ログインさせる場合は、先に Supabase の Authentication → Users でアカウントを作り、
-          そこに出る <b>UID</b> をここに貼ってください。<br>
-          ログインしない人（日報や勤怠の記録にだけ出てくる職人など）は、空のままで登録できます。
+        <div id="invitebox" hidden style="margin-bottom:8px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+            <button class="btn sm" id="inviteSend" type="button">📨 招待を送る</button>
+            <button class="btn ghost sm" id="inviteLine" type="button">LINEで送る</button>
+            <button class="btn ghost sm" id="inviteMail" type="button">メールで送る</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="inviteUrl" type="text" readonly
+                   style="flex:1 1 320px;min-width:0;min-height:32px;padding:3px 8px;font-size:12.5px;font-family:var(--mono)">
+            <button class="btn ghost sm" id="inviteCopy" type="button">コピー</button>
+          </div>
+          <p class="tip" style="margin-top:6px"><b>「招待を送る」</b>を押すと、LINE・メール・SMSなどにそのまま送れます（宛名・リンク付き）。相手はリンクを開いてメール・パスワードを決めるだけ（7日間有効）。届いたら本人のスマホで<b>「ホーム画面に追加」</b>すればアプリのように使えます。</p>
+        </div>
+        <p class="tip" id="inviteHint">
+          ログインしない人（日報や勤怠の記録にだけ出てくる職人など）は、招待リンクを発行しないままで登録できます。
         </p>
       </div>
 
@@ -258,6 +295,24 @@
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("xtab"); if(!bar) return;
+  const t = tierOf(a.me);
+  const allow = t===1 ? ["partners","users"] : ["partners"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="users") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
+<script>
 (async function(){
   const $ = id => document.getElementById(id);
 
@@ -267,13 +322,15 @@
   const isAdmin = (me.role === 'admin');
 
   paintBar(me, await loadOrgName(me.organization_id));
-  $('out').addEventListener('click', signOut);
   $('dock').hidden = !isAdmin;
   $('rkbtn').hidden = !isAdmin;
 
   const ROLE = { admin:'経営者', manager:'現場監督', member:'作業員' };
   const EMP  = { employee:'社員', craftsman:'職人', subcontractor:'外注' };
   const DEPT = { site:'現場', info:'情報部', exec:'経営', other:'その他' };
+
+  // 開発者アカウントは、一覧や選択肢では本名を伏せて「開発者」と表示する
+  const dispName = u => (u && u.is_developer) ? '開発者' : (u ? (u.name || '') : '');
 
   let users = [], ranks = [], partners = [], rates = {}, editing = null;
 
@@ -325,8 +382,10 @@
       ranks.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
     $('f_partner').innerHTML = '<option value="">（未設定）</option>' +
       partners.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    setEmptyNote($('f_partner'), partners.length === 0,
+      '取引先が登録されていません。先に取引先ページから登録してください。', 'partners.html', '取引先ページへ');
     $('f_sup').innerHTML = '<option value="">（未設定）</option>' +
-      users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
+      users.map(u => `<option value="${u.id}">${esc(dispName(u))}</option>`).join('');
   }
 
   /* ================= 一覧 ================= */
@@ -343,6 +402,8 @@
       if (!q) return true;
       return (u.name||'').toLowerCase().includes(q);
     }).sort((a,b) => {
+      // 開発者アカウントは常に一番下
+      if (!!a.is_developer !== !!b.is_developer) return a.is_developer ? 1 : -1;
       const ra = rmap[a.job_rank_id]?.rank_order ?? 999;
       const rb = rmap[b.job_rank_id]?.rank_order ?? 999;
       return ra - rb || (a.name||'').localeCompare(b.name||'', 'ja');
@@ -355,29 +416,35 @@
       return;
     }
 
-    $('list').innerHTML = rows.map(u => {
+    $('list').innerHTML = rows.map((u, i) => {
       const rk = rmap[u.job_rank_id];
       const kbs = [];
-      kbs.push(`<span class="kb ${u.role === 'admin' ? 'ad' : (u.role === 'manager' ? 'mg' : 'mb')}">${ROLE[u.role]}</span>`);
-      if (rk) kbs.push(`<span class="kb mb">${esc(rk.name)}</span>`);
+      // 開発者アカウントは役割（経営者など）の表示を出さない
+      if (!u.is_developer)
+        kbs.push(`<span class="kb ${u.role === 'admin' ? 'ad' : (u.role === 'manager' ? 'mg' : 'mb')}">${ROLE[u.role]}</span>`);
+      if (rk && !u.is_developer) kbs.push(`<span class="kb mb">${esc(rk.name)}</span>`);
       if (u.is_external) kbs.push(`<span class="kb ex">社外${pmap[u.partner_id] ? '・' + esc(pmap[u.partner_id]) : ''}</span>`);
       if (!u.auth_user_id) kbs.push('<span class="kb nl">ログインなし</span>');
       if (!u.is_active) kbs.push('<span class="kb nl">退職・停止</span>');
 
       const meta = [];
-      if (u.title) meta.push(esc(u.title));
-      if (DEPT[u.department]) meta.push(DEPT[u.department]);
-      if (EMP[u.employee_type]) meta.push(EMP[u.employee_type]);
-      if (u.email) meta.push(esc(u.email));
+      // 開発者アカウントは氏名「開発者」だけにする（役職・部門・社員/職人・メールは出さない）
+      if (!u.is_developer){
+        if (u.title) meta.push(esc(u.title));
+        if (DEPT[u.department]) meta.push(DEPT[u.department]);
+        if (EMP[u.employee_type]) meta.push(EMP[u.employee_type]);
+        if (u.email) meta.push(esc(u.email));
+      }
 
       const lim = u.approve_unlimited
         ? `<span class="lim">決裁 上限なし</span>`
         : (Number(u.approve_limit) > 0 ? `<span class="lim">決裁 ${fmtMoney(u.approve_limit)}</span>` : '');
 
       return `<button class="item" data-id="${u.id}" style="${u.is_active ? '' : 'opacity:.6'}">
+        <span class="rno">${i + 1}</span>
         <span class="flag ${u.role === 'admin' ? 'fl-cancelled' : (u.role === 'manager' ? 'fl-started' : 'fl-estimate')}"></span>
         <span class="body">
-          <span class="nm">${esc(u.name)}</span>
+          <span class="nm">${esc(dispName(u))}</span>
           <span class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</span>
           <span class="kbs">${kbs.join('')}</span>
         </span>
@@ -448,6 +515,7 @@
     $('f_tel').value   = g('tel','');
     $('f_hired').value = g('hired_on','') || '';
     $('f_act').checked = u ? !!u.is_active : true;
+    $('f_dev').checked = !!g('is_developer', false);
     $('f_ext').checked = !!g('is_external', false);
     $('f_partner').value = g('partner_id','') || '';
     $('f_emp').value   = g('employee_type','employee');
@@ -459,19 +527,37 @@
     $('f_unl').checked = !!g('approve_unlimited', false);
     setMoney($('f_lim'), g('approve_limit',''));
     $('f_lim').disabled = $('f_unl').checked;
-    $('f_uid').value   = g('auth_user_id','') || '';
     $('f_note').value  = g('note','');
 
     const rt = u ? rates[u.id] : null;
     setMoney($('f_rate'), rt ? rt.amount : '');
     $('f_ratet').value = rt ? rt.rate_type : 'daily';
 
-    $('uidst').textContent = (u && u.auth_user_id) ? 'ログインできます' : 'ログインなし';
+    $('invitebox').hidden = true;
+    $('inviteCancel').hidden = true;
+    if (u && u.auth_user_id){
+      $('uidst').textContent = 'ログインできます';
+      $('inviteBtn').hidden = true;
+      $('inviteHint').textContent = '';
+    } else if (u && u.invite_token){
+      $('uidst').textContent = '招待リンク発行済み・本人の登録待ち';
+      $('inviteBtn').hidden = !isAdmin;
+      $('inviteBtn').textContent = '招待リンクを再発行する';
+      $('inviteCancel').hidden = !isAdmin;
+      $('inviteHint').textContent = '';
+    } else {
+      $('uidst').textContent = 'ログインなし';
+      $('inviteBtn').hidden = !isAdmin || !u;   // 新規登録の保存前は発行できない
+      $('inviteBtn').textContent = '招待リンクを発行する';
+      $('inviteHint').textContent = u
+        ? 'ログインしない人（日報や勤怠の記録にだけ出てくる職人など）は、招待リンクを発行しないままで構いません。'
+        : '招待リンクは、この利用者を一度保存してから発行できます。';
+    }
 
     // 上長の候補から自分自身を外す
     $('f_sup').innerHTML = '<option value="">（未設定）</option>' +
       users.filter(x => !u || x.id !== u.id)
-           .map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+           .map(x => `<option value="${x.id}">${esc(dispName(x))}</option>`).join('');
     $('f_sup').value = g('supervisor_user_id','') || '';
 
     document.querySelectorAll('#panel input, #panel select, #panel textarea')
@@ -479,6 +565,7 @@
     if (isAdmin) $('f_lim').disabled = $('f_unl').checked;
     $('pdock').style.display = isAdmin ? '' : 'none';
     $('del').hidden = !(u && isAdmin && u.id !== me.id);
+    syncExt();
 
     $('panel').classList.add('open');
     const w = $('panel').querySelector('.wrap');
@@ -502,17 +589,112 @@
   $('close').addEventListener('click', tryClose);
   $('add').addEventListener('click', () => openPanel(null));
 
+  // 社外（協力会社など）を選んだら、社内向けの項目（社員番号・入社日・開発者・所属部門・上長・決裁権・日給時給）を隠す
+  function syncExt(){
+    const ext = $('f_ext').checked;
+    document.querySelectorAll('#panel .intf').forEach(el => { el.style.display = ext ? 'none' : ''; });
+  }
+  $('f_ext').addEventListener('change', syncExt);
+
+  /* ================= 招待リンク ================= */
+  $('inviteBtn').addEventListener('click', async () => {
+    if (!editing) return;
+    $('inviteBtn').disabled = true;
+    const token = crypto.randomUUID();
+    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await sb.from('app_users')
+      .update({ invite_token: token, invite_expires_at: expires })
+      .eq('id', editing.id)
+      .select('id');
+    $('inviteBtn').disabled = false;
+    if (error){
+      showMsg($('pmsg'), '招待リンクを発行できませんでした。' + error.message, 'err');
+      return;
+    }
+    if (!data || !data.length){
+      showMsg($('pmsg'), '招待リンクを発行できませんでした。この操作を行う権限がないようです。経営者権限のアカウントでログインし直してください。', 'err');
+      return;
+    }
+    editing.invite_token = token;
+    editing.invite_expires_at = expires;
+    const url = `${location.origin}${location.pathname.replace(/users\.html$/, 'signup.html')}?token=${token}`;
+    $('inviteUrl').value = url;
+    $('invitebox').hidden = false;
+    $('uidst').textContent = '招待リンク発行済み・本人の登録待ち';
+    $('inviteBtn').textContent = '招待リンクを再発行する';
+    $('inviteCancel').hidden = false;
+  });
+  $('inviteCancel').addEventListener('click', async () => {
+    if (!editing || !confirm('この招待を取り消します。発行済みのリンクは使えなくなります。よろしいですか。')) return;
+    $('inviteCancel').disabled = true;
+    const { data, error } = await sb.from('app_users')
+      .update({ invite_token: null, invite_expires_at: null })
+      .eq('id', editing.id)
+      .select('id');
+    $('inviteCancel').disabled = false;
+    if (error){
+      showMsg($('pmsg'), '招待を取り消せませんでした。' + error.message, 'err');
+      return;
+    }
+    if (!data || !data.length){
+      showMsg($('pmsg'), '招待を取り消せませんでした。この操作を行う権限がないようです。経営者権限のアカウントでログインし直してください。', 'err');
+      return;
+    }
+    editing.invite_token = null;
+    editing.invite_expires_at = null;
+    $('invitebox').hidden = true;
+    $('inviteCancel').hidden = true;
+    $('uidst').textContent = 'ログインなし';
+    $('inviteBtn').textContent = '招待リンクを発行する';
+    showMsg($('pmsg'), '招待を取り消しました。', 'ok');
+  });
+  $('inviteCopy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText($('inviteUrl').value);
+      showMsg($('pmsg'), 'リンクをコピーしました。', 'ok');
+    } catch (e){
+      $('inviteUrl').select();
+    }
+  });
+
+  /* --- 招待を送る（LINE・メール・SMS などへワンタップ） --- */
+  function inviteMsgText(){
+    const nm = ($('f_name').value || '').trim();
+    const who = nm ? nm + 'さん、' : '';
+    return who + '宗像総合現場管理システムのアカウントを用意しました。'
+      + '下のリンクを開き、メールとパスワードを決めるだけで使えます（7日以内）。'
+      + '\niPhoneはSafari、AndroidはChromeで開いてください。';
+  }
+  $('inviteSend').addEventListener('click', async () => {
+    const url = $('inviteUrl').value; if (!url) return;
+    const text = inviteMsgText();
+    if (navigator.share){
+      try { await navigator.share({ title: '現場管理システムのご招待', text, url }); } catch (e){}
+    } else {
+      try {
+        await navigator.clipboard.writeText(text + '\n' + url);
+        showMsg($('pmsg'), '招待メッセージをコピーしました。LINEやメールに貼り付けて送ってください。', 'ok');
+      } catch (e){ $('inviteUrl').select(); }
+    }
+  });
+  $('inviteLine').addEventListener('click', () => {
+    const url = $('inviteUrl').value; if (!url) return;
+    const t = encodeURIComponent(inviteMsgText() + '\n' + url);
+    window.open('https://line.me/R/msg/text/?' + t, '_blank');
+  });
+  $('inviteMail').addEventListener('click', () => {
+    const url = $('inviteUrl').value; if (!url) return;
+    const subject = encodeURIComponent('現場管理システムのご招待');
+    const body = encodeURIComponent(inviteMsgText() + '\n' + url);
+    location.href = 'mailto:?subject=' + subject + '&body=' + body;
+  });
+
   /* ================= 保存 ================= */
   $('save').addEventListener('click', async () => {
     showMsg($('pmsg'), '');
     const nm = $('f_name').value.trim();
     if (!nm){ showMsg($('pmsg'), '氏名を入れてください。', 'err'); $('f_name').focus(); return; }
 
-    const uid = $('f_uid').value.trim();
-    if (uid && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)){
-      showMsg($('pmsg'), 'UIDの形式が正しくありません。Supabase の Authentication → Users からそのまま写してください。', 'err');
-      return;
-    }
     if ($('f_ext').checked && !$('f_partner').value){
       showMsg($('pmsg'), '社外の人は所属先を選んでください。', 'err'); return;
     }
@@ -525,6 +707,7 @@
       tel             : $('f_tel').value.trim() || null,
       hired_on        : $('f_hired').value || null,
       is_active       : $('f_act').checked,
+      is_developer    : $('f_dev').checked,
       is_external     : $('f_ext').checked,
       partner_id      : $('f_partner').value || null,
       employee_type   : $('f_emp').value,
@@ -536,7 +719,6 @@
       approve_unlimited: $('f_unl').checked,
       approve_limit   : $('f_unl').checked ? null
                         : (digits($('f_lim')) === '' ? null : Number(digits($('f_lim')))),
-      auth_user_id    : uid || null,
       note            : $('f_note').value.trim() || null
     };
 
@@ -566,7 +748,7 @@
     $('save').disabled = false; $('save').textContent = '保存する';
     if (error){
       showMsg($('pmsg'),
-        error.code === '23505' ? 'そのUIDは既に別の利用者に使われています。'
+        error.code === '23505' ? '社員番号などが既に別の利用者に使われています。'
         : error.code === '42501' ? 'この操作を行う権限がありません。'
         : '保存できませんでした。' + error.message, 'err');
       return;
@@ -580,18 +762,19 @@
   /* ================= 削除 ================= */
   $('del').addEventListener('click', async () => {
     if (!editing) return;
-    if (!confirm(`「${editing.name}」を削除します。\n日報や工程の担当から外れます。取り消せません。\n\n退職の場合は「在籍中」の印を外すほうが記録が残ります。`)) return;
-    const { error } = await sb.from('app_users').delete().eq('id', editing.id);
-    if (error){
-      showMsg($('pmsg'), error.code === '23503'
-        ? 'この利用者は記録で使われているため削除できません。「在籍中」の印を外してください。'
-        : '削除できませんでした。' + error.message, 'err');
-      return;
-    }
+    if (!confirm(`「${editing.name}」を削除します。\n日報や工程の担当からは外れますが、記録自体は残ります。`)) return;
+    const id = editing.id, nm = editing.name;
+    const { data, error } = await sb.from('app_users').update({ is_active:false }).eq('id', id).select('id');
+    if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
+    if (!data || !data.length){ showMsg($('pmsg'), 'この操作を行う権限がないようです。経営者権限のアカウントでログインし直してください。', 'err'); return; }
     snapshot = formState();
     $('panel').classList.remove('open'); editing = null;
     await load();
-    showMsg($('msg'), '削除しました。', 'ok');
+    showUndo($('msg'), `「${nm}」を削除しました。`, async () => {
+      const { error:e2 } = await sb.from('app_users').update({ is_active:true }).eq('id', id);
+      if (e2) throw e2;
+      await load();
+    });
   });
 
   /* ================= 上限なしの印 ================= */

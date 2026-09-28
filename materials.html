@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<!-- BUILD: materials (→材工タブ連結へ統合・リダイレクト) v20260911C -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>材工 ｜ 宗像総合管理システム</title>
+<script>
+  // 材料ハブ（簡略版）は「材工タブ連結」に統合。入口＝材料到着へ。工事(?p)は引き継ぐ。
+  (function(){
+    var p = new URL(location.href).searchParams.get('p');
+    location.replace('order-alerts.html' + (p ? '?p=' + encodeURIComponent(p) : ''));
+  })();
+</script>
+</head>
+<body></body>
+</html>

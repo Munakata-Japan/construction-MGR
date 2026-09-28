@@ -1,18 +1,32 @@
 <!DOCTYPE html>
-<!-- BUILD: files (写真・書類) v20260724A -->
+<!-- BUILD: files (写真・書類) v20260906I -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>写真・書類 ｜ 宗像総合管理システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <style>
-  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
-  .ctl select{ width:auto; min-width:150px; max-width:340px; min-height:44px; flex:0 1 auto; }
-  .ctl input[type=text]{ width:auto; flex:1 1 180px; min-width:0; min-height:44px; }
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .ctl select{ width:auto; min-width:150px; max-width:340px; min-height:38px; flex:0 1 auto; }
+  .ctl input[type=text]{ width:auto; flex:1 1 180px; min-width:0; min-height:38px; }
 
   .usage{ font-family:var(--mono); font-size:11.5px; color:var(--sub); margin:0 0 12px; }
   .usage b{ color:var(--ink); font-weight:500; }
@@ -32,19 +46,48 @@
   }
   .card .ph img{ position:absolute; inset:0; width:100%; height:100%;
                  object-fit:cover; display:block; z-index:1; }
-  .card .ph .ic{ font-family:var(--disp); font-size:12px; color:var(--sub); }
   .card .cb{ padding:8px 10px; min-width:0; }
-  .card .c1{ font-family:var(--disp); font-weight:700; font-size:13px; line-height:1.4;
+  .card .c1{ display:block; max-width:100%; font-family:var(--disp); font-weight:700; font-size:13px; line-height:1.4;
              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .card .c2{ font-size:11px; color:var(--sub); font-family:var(--mono); line-height:1.5; }
+  .card .c2{ display:block; max-width:100%; font-size:11px; color:var(--sub); font-family:var(--mono); line-height:1.5;
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .pill{
     position:absolute; top:5px; left:5px; z-index:2; font-size:10px; font-weight:700;
     padding:2px 6px; border-radius:2px; background:rgba(22,50,79,.86); color:#fff;
   }
   .pill.int{ background:rgba(122,131,124,.9); }
+  .pill.cat{ left:auto; right:5px; max-width:80%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pill.cat.done{ background:rgba(35,133,84,.92); }
+  .pill.cat.none{ background:rgba(176,124,0,.94); }
+  .dtag{ font-size:11px; font-weight:700; padding:1px 7px; border-radius:2px; color:#fff; white-space:nowrap; }
+  .dtag.done{ background:var(--ok); }
+  .dtag.none{ background:#B07C00; }
+
+  .sech{ font-family:var(--disp); font-weight:700; font-size:12.5px; color:var(--sub);
+         margin:16px 0 8px; padding-left:9px; border-left:3px solid var(--safety); }
+  #photosec:first-of-type .sech{ margin-top:0; }
+  .drow .no{ font-family:var(--disp); font-weight:700; font-size:11px; letter-spacing:0; }
+  .drow .body{ display:flex; align-items:center; gap:12px; }
 
   .up{ background:var(--card); border:1px dashed var(--rule); border-radius:2px;
-       padding:14px; margin-bottom:14px; }
+       padding:14px; margin-bottom:14px; transition:background .12s ease, border-color .12s ease; }
+  .up.dragging{ border-color:var(--ink); border-style:solid; background:#EEF4FB; box-shadow:var(--shadow-2); }
+  .dropzone{ width:100%; margin-top:11px; padding:16px 14px; border:2px dashed var(--ink-2); border-radius:var(--radius);
+             background:#F1F7FC; color:var(--ink); font-family:var(--body); cursor:pointer;
+             display:flex; flex-direction:column; align-items:center; gap:3px; text-align:center; line-height:1.5; }
+  .dropzone:hover{ background:#E6F0FA; border-color:var(--ink); }
+  .dropzone:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
+  .dropzone .dzt{ font-family:var(--disp); font-weight:700; font-size:14.5px; }
+  .dropzone .dzt b{ color:var(--ink-2); }
+  .dropzone .dzs{ font-size:12px; color:var(--sub); }
+  .up.dragging .dropzone{ border-color:var(--ink); border-style:solid; background:#DBE7F5; }
+  /* ページ全体がドロップ受け入れ中であることの帯 */
+  .dropveil{ position:fixed; inset:0; z-index:70; background:rgba(19,56,93,.10);
+             border:3px dashed var(--ink); display:none; align-items:center; justify-content:center;
+             pointer-events:none; }
+  .dropveil.on{ display:flex; }
+  .dropveil span{ background:var(--ink); color:#fff; font-family:var(--disp); font-weight:700;
+                  font-size:16px; padding:12px 22px; border-radius:var(--radius); box-shadow:var(--shadow-3); }
   .pick2{ display:flex; gap:8px; flex-wrap:wrap; }
   .pick2 .btn{ flex:1 1 150px; }
   .opt2{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
@@ -68,7 +111,7 @@
   .prog{ font-size:13px; color:var(--sub); margin-top:8px; line-height:1.7; }
   .geo{ font-size:12px; color:var(--sub); margin-top:9px; line-height:1.6;
         padding-left:10px; border-left:3px solid var(--rule); }
-  .geo.ok{ border-left-color:var(--ok); color:#1D4F38; }
+  .geo.ok{ border-left-color:var(--ok); color:#1C5E3D; }
   .geo.ng{ border-left-color:var(--safety); color:#7A5A00; }
   .geobox{ font-size:12.5px; line-height:1.7; }
   .geobox .src{ font-family:var(--mono); font-size:11px; color:var(--sub); }
@@ -77,7 +120,21 @@
   .big{ width:100%; background:#1B1B1A; display:flex; align-items:center;
         justify-content:center; min-height:200px; max-height:52vh; }
   .big img{ max-width:100%; max-height:52vh; object-fit:contain; display:block; }
-  .big iframe{ width:100%; height:52vh; border:0; display:block; background:#fff; }
+  .big.dxf{ background:#fff; }
+  .big svg{ width:100%; height:52vh; }
+  .big .dxferr{ color:#DDD; font-size:12.5px; padding:20px; text-align:center; }
+  .big.pdf{ background:#fff; height:70vh; max-height:70vh; overflow:auto; display:block;
+            align-items:stretch; justify-content:stretch; }
+  .big iframe{ width:100%; height:100%; border:0; display:block; }
+  .big .pdfbox{ padding:10px; }
+  .big .pdfbox canvas{ width:100%; height:auto; display:block; margin:0 auto 8px; box-shadow:var(--shadow-1); }
+  .big .pdfmore{ text-align:center; color:var(--sub); font-size:12px; padding:8px; }
+  .big .pdfload{ color:#333; padding:22px; text-align:center; }
+  .big.office{ background:#fff; height:70vh; max-height:70vh; align-items:stretch; justify-content:stretch; }
+  .big .officebox{ width:100%; height:100%; overflow:auto; padding:14px 18px; box-sizing:border-box;
+                    font-family:var(--body); font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .big .officebox table{ border-collapse:collapse; font-size:12.5px; }
+  .big .officebox table td, .big .officebox table th{ border:1px solid var(--rule); padding:3px 7px; }
 </style>
 </head>
 <body>
@@ -86,9 +143,19 @@
   <span class="mark" aria-hidden="true"></span>
   <h1>写真・書類</h1>
   <div class="who" id="who"></div>
-  <button class="btn ghost sm barbtn" id="out">出る</button>
 </header>
 
+<style>
+  .gtab{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--card); border-bottom:1px solid var(--rule); padding:3px 10px; }
+  .gtab a{ font-family:var(--body); font-weight:800; font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:4px 14px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .gtab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .gtab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .gtab[hidden], .gtab a[hidden]{ display:none; }
+</style>
+<nav class="gtab" id="gtab" hidden>
+  <a data-k="daily" href="reports.html">日報</a>
+  <a data-k="photo" href="files.html">写真・書類</a>
+</nav>
 <div class="wrap">
   <div class="ctl">
     <select id="proj"><option value="">工事を選んでください</option></select>
@@ -100,8 +167,15 @@
       <option value="other">その他</option>
     </select>
     <select id="fphase"><option value="">すべての工程</option></select>
+    <select id="fassignee"><option value="">すべての担当者</option></select>
+    <select id="fcategory"><option value="">すべての図書分類</option></select>
+    <select id="fsort">
+      <option value="date">取り込み日順（新しい順）</option>
+      <option value="name">名前順</option>
+    </select>
     <input id="q" type="text" placeholder="題名・撮影箇所・測点で絞り込み">
   </div>
+  <p id="pmgr" hidden style="font-size:12.5px;color:var(--sub);margin:2px 0 8px"></p>
 
   <p class="usage" id="usage"></p>
   <div id="msg" class="msg"></div>
@@ -111,8 +185,12 @@
       <button class="btn" id="cambtn" type="button">カメラで撮る</button>
       <button class="btn ghost" id="filebtn" type="button">保存済みから選ぶ</button>
       <input id="cam"  type="file" accept="image/*" capture="environment" hidden>
-      <input id="file" type="file" accept="image/*,.pdf" multiple hidden>
+      <input id="file" type="file" accept="image/*,.pdf,.dwg,.dxf,.jww,.jwc,.sfc,.sxf,.p21" multiple hidden>
     </div>
+    <button type="button" class="dropzone" id="dropzone">
+      <span class="dzt">ここに写真・PDFを <b>ドラッグ＆ドロップ</b></span>
+      <span class="dzs">またはクリックしてファイルを選ぶ</span>
+    </button>
 
     <div id="picked" class="picked"></div>
 
@@ -122,6 +200,13 @@
         <option value="internal">社内の記録（軽くする）</option>
       </select>
       <select id="u_phase"></select>
+    </div>
+    <div class="opt2">
+      <input id="u_assignee" type="text" list="assigneelist" placeholder="担当者（現場で撮影・作業した人・省略可）">
+      <select id="u_report"><option value="">日報にひもづけない</option></select>
+    </div>
+    <div class="opt2">
+      <select id="u_category"><option value="">竣工図書の分類（省略可）</option></select>
     </div>
     <div class="opt2">
       <input id="u_title" type="text" placeholder="題名（まとめて付ける・省略可）">
@@ -135,7 +220,15 @@
   </div>
 
   <p class="count" id="count"></p>
-  <div class="grid" id="grid"></div>
+  <div id="photosec" hidden>
+    <p class="sech">写真</p>
+    <div class="grid" id="grid"></div>
+  </div>
+  <div id="docsec" hidden>
+    <p class="sech">書類</p>
+    <div class="list" id="doclist"></div>
+  </div>
+  <div id="emptymsg"></div>
 </div>
 
 <div class="dock" id="dock" hidden>
@@ -157,6 +250,21 @@
 
     <div class="sheet">
       <div class="head">この資料について</div>
+      <div class="row">
+        <label for="f_assignee">担当者</label>
+        <div class="fld">
+          <input id="f_assignee" type="text" list="assigneelist" placeholder="現場で撮影・作業した人の氏名">
+          <datalist id="assigneelist"></datalist>
+        </div>
+      </div>
+      <div class="row">
+        <label for="f_report">日報にひもづけ</label>
+        <div class="fld"><select id="f_report"><option value="">ひもづけない</option></select></div>
+      </div>
+      <div class="row">
+        <label>取り込んだ人</label>
+        <div class="fld"><span id="p_uploader" style="font-size:13.5px;color:var(--sub)"></span></div>
+      </div>
       <div class="row">
         <label for="f_title">題名</label>
         <div class="fld"><input id="f_title" type="text" placeholder="南側盛土 施工状況 など"></div>
@@ -182,6 +290,10 @@
       <div class="row">
         <label for="f_phase">工程</label>
         <div class="fld"><select id="f_phase"></select></div>
+      </div>
+      <div class="row">
+        <label for="f_category">図書分類</label>
+        <div class="fld"><select id="f_category"><option value="">（未分類）</option></select></div>
       </div>
       <div class="row">
         <label for="f_tags">タグ</label>
@@ -215,9 +327,29 @@
   </div>
 </div>
 
+<div class="dropveil" id="dropveil"><span>ここにドロップして取り込む</span></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("gtab"); if(!bar) return;
+  const allow = ["daily","photo"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="photo") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
 <script>
 (async function(){
   const $ = id => document.getElementById(id);
@@ -231,25 +363,61 @@
   const isMgr = (me.role === 'admin' || me.role === 'manager');
 
   paintBar(me, await loadOrgName(me.organization_id));
-  $('out').addEventListener('click', signOut);
 
-  let projects = [], phases = [], bbFields = [], files = [], editing = null;
+  let projects = [], phases = [], bbFields = [], files = [], users = [], reports = [], editing = null;
   let projId = null, urlCache = {};
+
+  /* 日報の担当者名（外注先は会社名＋記入者、社員は氏名） */
+  function repName(r){
+    if (!r) return '';
+    if (r.reporter_type === 'partner')
+      return [r.partner_company, r.partner_name].filter(Boolean).join(' ');
+    const u = users.find(x => x.id === r.reporter_user_id);
+    return u ? u.name : '';
+  }
+  function repLabel(r){
+    const nm = repName(r);
+    return `${fmtDate(r.report_date)}　${nm || '担当不明'}`;
+  }
+
+  /* その工事の作業日報を読み込み、取り込み欄の「日報にひもづけ」を作る */
+  async function loadReports(){
+    if (!projId){ reports = []; }
+    else {
+      const { data } = await sb.from('daily_reports')
+        .select('id,report_date,reporter_type,reporter_user_id,partner_company,partner_name')
+        .eq('project_id', projId).eq('is_active', true)
+        .order('report_date', { ascending:false }).limit(200);
+      reports = data || [];
+    }
+    const opt = reports.map(r => `<option value="${r.id}">${esc(repLabel(r))}</option>`).join('');
+    $('u_report').innerHTML = '<option value="">日報にひもづけない</option>' + opt;
+  }
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
-    const [pr, bb] = await Promise.all([
-      sb.from('projects').select('id,project_no,name').eq('is_active', true)
+    const [pr, bb, u] = await Promise.all([
+      sb.from('projects').select('id,project_no,name,manager_user_id,manager_name').eq('is_active', true)
         .order('project_no', { ascending:false }),
-      sb.from('blackboard_fields').select('*').eq('is_active', true).order('sort_order')
+      sb.from('blackboard_fields').select('*').eq('is_active', true).order('sort_order'),
+      sb.from('app_users').select('id,name').eq('is_active', true)
     ]);
     if (pr.error || bb.error){
       showMsg($('msg'), '読み込めませんでした。' + ((pr.error||bb.error).message||''), 'err');
       return;
     }
-    projects = pr.data || []; bbFields = bb.data || [];
+    projects = pr.data || []; bbFields = bb.data || []; users = u.data || [];
     $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
       projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+    setEmptyNote($('proj'), projects.length === 0,
+      '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
+    // 担当者の候補（社員の氏名）。手入力もできる
+    $('assigneelist').innerHTML = users.map(x => `<option value="${esc(x.name)}">`).join('');
+    // 竣工図書の章立て（絞り込み・取り込み・詳細で共通に使う）
+    $('fcategory').innerHTML = '<option value="">すべての図書分類</option>' +
+      '<option value="__none__">未分類のみ</option>' + chapterOptions();
+    $('u_category').innerHTML = '<option value="">竣工図書の分類（省略可）</option>' + chapterOptions();
+    $('f_category').innerHTML = '<option value="">（未分類）</option>' + chapterOptions();
   }
 
   async function loadPhases(){
@@ -262,7 +430,11 @@
     const opt = phases.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
     $('fphase').innerHTML  = '<option value="">すべての工程</option>' + opt;
     $('f_phase').innerHTML = '<option value="">（未設定）</option>' + opt;
+    setEmptyNote($('f_phase'), phases.length === 0,
+      'この工事の工程がまだありません。先に工程表で工程を作成してください。', `schedule.html?p=${projId}`, '工程表へ');
     $('u_phase').innerHTML = '<option value="">工程を選ばない</option>' + opt;
+    setEmptyNote($('u_phase'), phases.length === 0,
+      'この工事の工程がまだありません。先に工程表で工程を作成してください。', `schedule.html?p=${projId}`, '工程表へ');
   }
 
   function paintTagHelp(){
@@ -298,9 +470,22 @@
       .order('taken_on', { ascending:false }).order('created_at', { ascending:false });
     if (error){ showMsg($('msg'), '読み込めませんでした。' + error.message, 'err'); return; }
     files = data || [];
+    paintAssigneeFilter();
     render();
     paintTagHelp();
     paintUsage();
+  }
+
+  /* 担当者の絞り込み肢を、実際に付いている担当者から作る（選択は保つ） */
+  function paintAssigneeFilter(){
+    const cur = $('fassignee').value;
+    const names = [...new Set(files.map(f => f.assignee_name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ja'));
+    const hasNone = files.some(f => !f.assignee_name);
+    $('fassignee').innerHTML = '<option value="">すべての担当者</option>' +
+      names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('') +
+      (hasNone ? '<option value="（担当なし）">（担当なし）</option>' : '');
+    $('fassignee').value = cur;
+    if ($('fassignee').value !== cur) $('fassignee').value = '';
   }
 
   let usedPct = 0;
@@ -329,39 +514,298 @@
     return data?.signedUrl || null;
   }
 
+  /* ---- DXF/DWG図面をその場でSVGにして見せる（LINE/CIRCLE/ARC/LWPOLYLINE/TEXT/簡易的なDIMENSIONのみ対応） ---- */
+  function dxfEsc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+  // dxf-parser（DXF）は vertices:[開始,終了] を使い、libredwg-web（DWG）は
+  // startPoint/endPoint を使う。どちらでも読めるようにする
+  function entitiesToSvg(ents){
+    const allX = [], allY = [];
+    const bump = (x,y) => { allX.push(x); allY.push(y); };
+    const parts = [];
+
+    for (const e of ents){
+      switch (e.type){
+        case 'LINE': {
+          const a = (e.vertices && e.vertices[0]) || e.startPoint;
+          const b = (e.vertices && e.vertices[1]) || e.endPoint;
+          if (!a || !b) break;
+          bump(a.x,a.y); bump(b.x,b.y);
+          parts.push(`<line x1="${a.x}" y1="${-a.y}" x2="${b.x}" y2="${-b.y}"/>`);
+          break;
+        }
+        case 'POINT': {
+          const p = e.position; if (!p) break;
+          bump(p.x,p.y);
+          parts.push(`<circle cx="${p.x}" cy="${-p.y}" r="0.3" fill="currentColor" stroke="none"/>`);
+          break;
+        }
+        case 'CIRCLE': {
+          const c = e.center; if (!c) break;
+          bump(c.x-e.radius,c.y-e.radius); bump(c.x+e.radius,c.y+e.radius);
+          parts.push(`<circle cx="${c.x}" cy="${-c.y}" r="${e.radius}"/>`);
+          break;
+        }
+        case 'ARC': {
+          const c = e.center; if (!c) break;
+          bump(c.x-e.radius,c.y-e.radius); bump(c.x+e.radius,c.y+e.radius);
+          const a0 = e.startAngle, a1 = e.endAngle;
+          const x0 = c.x + e.radius*Math.cos(a0), y0 = c.y + e.radius*Math.sin(a0);
+          const x1 = c.x + e.radius*Math.cos(a1), y1 = c.y + e.radius*Math.sin(a1);
+          let sweep = a1 - a0; if (sweep < 0) sweep += Math.PI*2;
+          const large = sweep > Math.PI ? 1 : 0;
+          parts.push(`<path d="M ${x0} ${-y0} A ${e.radius} ${e.radius} 0 ${large} 0 ${x1} ${-y1}"/>`);
+          break;
+        }
+        case 'LWPOLYLINE': case 'POLYLINE': {
+          const pts = (e.vertices || []).map(v => [v.x, v.y]);
+          if (!pts.length) break;
+          pts.forEach(([x,y]) => bump(x,y));
+          const d = pts.map(([x,y],i) => `${i===0?'M':'L'} ${x} ${-y}`).join(' ') + (e.shape ? ' Z' : '');
+          parts.push(`<path d="${d}"/>`);
+          break;
+        }
+        case 'TEXT': case 'MTEXT': {
+          const p = e.startPoint || e.position; if (!p) break;
+          bump(p.x,p.y);
+          const h = e.textHeight || e.height || 2.5;
+          const txt = dxfEsc((e.text||'').replace(/[{}\\][^;]*;?/g,''));
+          parts.push(`<text x="${p.x}" y="${-p.y}" font-size="${h}" transform="rotate(${-(e.rotation||0)} ${p.x} ${-p.y})">${txt}</text>`);
+          break;
+        }
+        case 'DIMENSION': {
+          if (e.linearOrAngularPoint1 && e.linearOrAngularPoint2){
+            const p1 = e.linearOrAngularPoint1, p2 = e.linearOrAngularPoint2;
+            bump(p1.x,p1.y); bump(p2.x,p2.y);
+            parts.push(`<line x1="${p1.x}" y1="${-p1.y}" x2="${p2.x}" y2="${-p2.y}" stroke-dasharray="1,1"/>`);
+          }
+          if (e.middleOfText){
+            bump(e.middleOfText.x, e.middleOfText.y);
+            parts.push(`<text x="${e.middleOfText.x}" y="${-e.middleOfText.y}" font-size="2.5">${dxfEsc(e.text||'')}</text>`);
+          }
+          break;
+        }
+        default: break; // INSERT・SPLINE・ELLIPSE・3DFACE などは今回は対象外
+      }
+    }
+
+    if (!allX.length) return null;
+    // 迷子の参照点など外れ値に全体表示が引っ張られないよう、上下1%を切って範囲を決める
+    const pct = (arr, p) => { const s = [...arr].sort((a,b)=>a-b); return s[Math.max(0, Math.min(s.length-1, Math.floor(s.length*p)))]; };
+    const minX = pct(allX,0.01), maxX = pct(allX,0.99);
+    const minY = pct(allY,0.01), maxY = pct(allY,0.99);
+    const w = maxX-minX, h = maxY-minY;
+    const pad = Math.max(w,h) * 0.05 || 10;
+    const vb = `${minX-pad} ${-maxY-pad} ${w+pad*2} ${h+pad*2}`;
+    const sw = Math.max(w,h) / 800;
+    return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="${minX-pad}" y="${-maxY-pad}" width="${w+pad*2}" height="${h+pad*2}" fill="#fff"/>
+      <g fill="none" stroke="#13385D" stroke-width="${sw}" color="#13385D" font-family="sans-serif">
+        ${parts.join('')}
+      </g>
+    </svg>`;
+  }
+
+  async function renderDxf(path){
+    const u = await signedUrl(path);
+    if (!u) return '<div class="dxferr">図面を読み込めませんでした。</div>';
+    try {
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const text = new TextDecoder('shift-jis').decode(buf);
+      const dxf = new DxfParser().parseSync(text);
+      const svg = entitiesToSvg(dxf.entities || []);
+      return svg || '<div class="dxferr">この図面には表示できる図形（線・円・文字など）が見つかりませんでした。</div>';
+    } catch (err){
+      return `<div class="dxferr">この図面は表示できませんでした。${dxfEsc(err.message||'')}</div>`;
+    }
+  }
+
+  // DWGは wasm を使うため、初回に開いたときだけ読み込む
+  let libredwgPromise = null;
+  function getLibreDwg(){
+    if (!libredwgPromise){
+      libredwgPromise = import('https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.7.10/+esm')
+        .then(mod => mod.LibreDwg.create().then(lw => ({ lw, Dwg_File_Type: mod.Dwg_File_Type })));
+    }
+    return libredwgPromise;
+  }
+
+  async function renderDwg(path){
+    const u = await signedUrl(path);
+    if (!u) return '<div class="dxferr">図面を読み込めませんでした。</div>';
+    try {
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const { lw, Dwg_File_Type } = await getLibreDwg();
+      const dwg = lw.dwg_read_data(new Uint8Array(buf), Dwg_File_Type.DWG);
+      if (dwg.error) return `<div class="dxferr">この図面は読み込めませんでした。（エラーコード ${dwg.error}）</div>`;
+      const db = lw.convert(dwg);
+      lw.dwg_free(db);
+      const svg = entitiesToSvg(db.entities || []);
+      return svg || '<div class="dxferr">この図面には表示できる図形（線・円・文字など）が見つかりませんでした。</div>';
+    } catch (err){
+      return `<div class="dxferr">この図面は表示できませんでした。${dxfEsc(err.message||'')}</div>`;
+    }
+  }
+
+  // Excel・Wordのライブラリも、実際に開くまで読み込まない（サイズが大きいため）
+  const scriptPromises = {};
+  function loadScript(src){
+    if (!scriptPromises[src]){
+      scriptPromises[src] = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+    return scriptPromises[src];
+  }
+
+  // PDFは iframe だとブラウザ設定・配信ヘッダーで表示できない（真っ黒）ことがあるため、
+  // pdf.js で各ページを画像として確実に描画する（サムネイルと同じ仕組み）。
+  async function renderPdf(path){
+    const u = await signedUrl(path);
+    if (!u) return '<div class="dxferr">読み込めませんでした。</div>';
+    try {
+      const lib = await loadPdfLib();
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const doc = await lib.getDocument({ data: buf }).promise;
+      const N = Math.min(doc.numPages, 12);
+      const wrap = document.createElement('div'); wrap.className = 'pdfbox';
+      for (let i = 1; i <= N; i++){
+        const page = await doc.getPage(i);
+        const vp0 = page.getViewport({ scale: 1 });
+        const scale = Math.min(2, 1100 / vp0.width);
+        const vp = page.getViewport({ scale });
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+        const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        wrap.appendChild(cv);
+      }
+      if (doc.numPages > N){
+        const m = document.createElement('div'); m.className = 'pdfmore';
+        m.textContent = `… 残り ${doc.numPages - N} ページは「原本を開く」でご覧ください`;
+        wrap.appendChild(m);
+      }
+      return wrap;
+    } catch (e){
+      return `<div class="dxferr">この書類は表示できませんでした。${dxfEsc(e.message || '')}</div>`;
+    }
+  }
+
+  async function renderXlsx(path){
+    const u = await signedUrl(path);
+    if (!u) return '<div class="dxferr">読み込めませんでした。</div>';
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const wb = XLSX.read(buf, { type: 'array' });
+      const tabs = wb.SheetNames.map((name, i) =>
+        `<button class="btn ghost sm xsheet" data-i="${i}" style="margin:0 4px 8px 0">${dxfEsc(name)}</button>`).join('');
+      const sheets = wb.SheetNames.map((name, i) =>
+        `<div class="xsheetbody" data-i="${i}"${i>0?' hidden':''}>${XLSX.utils.sheet_to_html(wb.Sheets[name], { header:'', footer:'' })}</div>`).join('');
+      return `<div class="officebox"><div>${tabs}</div>${sheets}</div>`;
+    } catch (err){
+      return `<div class="dxferr">このファイルは表示できませんでした。${dxfEsc(err.message||'')}</div>`;
+    }
+  }
+
+  async function renderDocx(path){
+    const u = await signedUrl(path);
+    if (!u) return '<div class="dxferr">読み込めませんでした。</div>';
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const result = await mammoth.convertToHtml({ arrayBuffer: buf });
+      return `<div class="officebox">${result.value}</div>`;
+    } catch (err){
+      return `<div class="dxferr">このファイルは表示できませんでした。${dxfEsc(err.message||'')}</div>`;
+    }
+  }
+
   function render(){
     const kd = $('fkind').value, ph = $('fphase').value;
     const q  = $('q').value.trim().toLowerCase();
+    const asg = $('fassignee').value;
+    const cat = $('fcategory').value;
 
-    const rows = files.filter(f => {
+    let rows = files.filter(f => {
       if (kd && f.file_kind !== kd) return false;
       if (ph && f.phase_id !== ph) return false;
+      if (asg && (f.assignee_name || '（担当なし）') !== asg) return false;
+      if (cat === '__none__'){ if (f.doc_category) return false; }
+      else if (cat && (f.doc_category || '') !== cat) return false;
       if (!q) return true;
-      return [f.title, f.bb_location, f.bb_station, f.original_name, f.description]
+      return [f.title, f.bb_location, f.bb_station, f.original_name, f.description, f.assignee_name]
         .some(v => (v || '').toLowerCase().includes(q));
     });
 
+    // 並び替え（取り込み日順＝新しい順／名前順）。写真・書類の両方に効かせる
+    const nameOf = f => (f.title || f.original_name || '');
+    const dateOf = f => (f.taken_on || (f.created_at || '').slice(0, 10) || '');
+    if ($('fsort').value === 'name'){
+      rows = [...rows].sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'ja'));
+    } else {
+      rows = [...rows].sort((a, b) => {
+        const da = dateOf(a), db = dateOf(b);
+        return da < db ? 1 : da > db ? -1 : 0;
+      });
+    }
+
     $('count').textContent = projId ? `${rows.length} 件 ／ 全 ${files.length} 件` : '';
 
+    $('photosec').hidden = true; $('docsec').hidden = true;
+    $('grid').innerHTML = ''; $('doclist').innerHTML = ''; $('emptymsg').innerHTML = '';
+
     if (!projId){
-      $('grid').innerHTML = `<div class="empty" style="grid-column:1/-1"><b>工事を選んでください</b>上の欄から工事を選ぶと、その資料が出ます。</div>`;
+      $('emptymsg').innerHTML = `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、その資料が出ます。</div>`;
       return;
     }
     if (!rows.length){
-      $('grid').innerHTML = `<div class="empty" style="grid-column:1/-1"><b>${files.length ? '該当する資料がありません' : 'まだ資料がありません'}</b>${files.length ? '絞り込みの条件を変えてください。' : '下の「写真・書類を追加する」から取り込んでください。'}</div>`;
+      $('emptymsg').innerHTML = `<div class="empty"><b>${files.length ? '該当する資料がありません' : 'まだ資料がありません'}</b>${files.length ? '絞り込みの条件を変えてください。' : '下の「写真・書類を追加する」から取り込んでください。'}</div>`;
       return;
     }
 
-    $('grid').innerHTML = rows.map(f => {
+    const isPhoto = f => f.file_kind === 'photo' || (f.mime_type || '').startsWith('image/');
+    const photos = rows.filter(isPhoto);
+    const docs   = rows.filter(f => !isPhoto(f));
+
+    $('photosec').hidden = !photos.length;
+    $('docsec').hidden   = !docs.length;
+
+    $('grid').innerHTML = photos.map(f => {
       const pm = phases.find(p => p.id === f.phase_id);
+      const um = users.find(u => u.id === f.uploaded_by);
+      const who = f.assignee_name ? '担当 ' + esc(f.assignee_name) : (um ? '取込 ' + esc(um.name) : '');
       return `<button class="card" data-id="${f.id}">
         <span class="ph" data-p="${esc(f.thumb_path || f.storage_path || '')}" data-m="${esc(f.mime_type||'')}" data-th="${f.thumb_path ? 1 : 0}">
           <span class="pill${f.purpose === 'internal' ? ' int' : ''}">${f.purpose === 'submit' ? '提出用' : '社内'}</span>
-          <span class="ic">${KIND[f.file_kind] || ''}</span>
+          <span class="pill cat ${f.doc_category ? 'done' : 'none'}">${f.doc_category ? esc(chapterLabel(f.doc_category)) : '未分類'}</span>
         </span>
         <span class="cb">
           <span class="c1">${esc(f.title || f.original_name || '（無題）')}</span>
-          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}</span>
+          <span class="c2">${f.taken_on ? fmtDate(f.taken_on) : ''}${pm ? ' ・ ' + esc(pm.name) : ''}${who ? ' ・ ' + who : ''}</span>
+        </span></button>`;
+    }).join('');
+
+    $('doclist').innerHTML = docs.map((f, i) => {
+      const pm = phases.find(p => p.id === f.phase_id);
+      const um = users.find(u => u.id === f.uploaded_by);
+      const ext = /\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1]?.toUpperCase() || KIND[f.file_kind] || '';
+      const who = f.assignee_name ? '担当 ' + f.assignee_name : (um ? '取込 ' + um.name : '');
+      const meta = [f.taken_on ? fmtDate(f.taken_on) : '', pm ? pm.name : '', who,
+                    f.purpose === 'internal' ? '社内' : '提出用']
+        .filter(Boolean).map(esc);
+      const catTag = `<span class="dtag ${f.doc_category ? 'done' : 'none'}">${f.doc_category ? esc(chapterLabel(f.doc_category)) : '未分類'}</span>`;
+      return `<button class="item drow" data-id="${f.id}">
+        <span class="rno">${i + 1}</span>
+        <span class="flag"></span>
+        <span class="body">
+          <span class="no">${esc(ext)}</span>
+          <span style="min-width:0;flex:1 1 auto">
+            <span class="nm" style="font-size:13.5px;margin:0">${esc(f.title || f.original_name || '（無題）')}</span>
+            <span class="meta">${catTag}${meta.map(m => `<span>${m}</span>`).join('')}</span>
+          </span>
         </span></button>`;
     }).join('');
 
@@ -374,8 +818,18 @@
           `<img src="${u}" alt="" loading="lazy">`); });
       }
     });
+    $('doclist').querySelectorAll('.drow').forEach(c => {
+      c.addEventListener('click', () => openPanel(files.find(x => x.id === c.dataset.id)));
+    });
   }
 
+  function updateProjMgr(){
+    const p = projects.find(x => x.id === projId);
+    let name = p ? (p.manager_name || '') : '';
+    if (!name && p && p.manager_user_id){ const u = users.find(x => x.id === p.manager_user_id); name = u ? u.name : ''; }
+    $('pmgr').hidden = !name;
+    $('pmgr').textContent = name ? `現場責任者：${name}` : '';
+  }
   $('proj').addEventListener('change', async () => {
     projId = $('proj').value || null;
     const u = new URL(location.href);
@@ -383,11 +837,22 @@
     history.replaceState(null, '', u);
     $('dock').hidden = !projId;
     $('up').hidden = true;
+    updateProjMgr();
     await loadPhases();
+    await loadReports();
     await loadFiles();
+  });
+
+  // 取り込み欄：日報を選ぶと、その日報の担当者を自動で入れる（未入力のときだけ）
+  $('u_report').addEventListener('change', () => {
+    const r = reports.find(x => x.id === $('u_report').value);
+    if (r && !$('u_assignee').value.trim()) $('u_assignee').value = repName(r);
   });
   $('fkind').addEventListener('change', render);
   $('fphase').addEventListener('change', render);
+  $('fassignee').addEventListener('change', render);
+  $('fcategory').addEventListener('change', render);
+  $('fsort').addEventListener('change', render);
   $('q').addEventListener('input', render);
 
   /* ================= 取り込み ================= */
@@ -412,7 +877,10 @@
 
   $('add').addEventListener('click', () => {
     $('up').hidden = !$('up').hidden;
-    if (!$('up').hidden) askPosition();
+    if (!$('up').hidden){
+      askPosition();
+      $('up').scrollIntoView({ behavior:'smooth', block:'start' });
+    }
   });
 
   // 選んだファイルを溜める（撮影と選択の両方から足せる）
@@ -438,15 +906,65 @@
 
   $('cambtn').addEventListener('click', () => $('cam').click());
   $('filebtn').addEventListener('click', () => $('file').click());
+  $('dropzone').addEventListener('click', () => $('file').click());
 
-  function accept(e){
-    picked = picked.concat([...e.target.files]);
-    e.target.value = '';
-    paintPicked();
+  // 取り込めるのは写真（画像）・PDF・図面（CAD）
+  function isAcceptable(f){
+    return (f.type && (f.type.startsWith('image/') || f.type === 'application/pdf'))
+        || /\.(jpe?g|png|gif|webp|heic|heif|pdf|dwg|dxf|jww|jwc|sfc|sxf|p21)$/i.test(f.name || '');
   }
+  // 入力・ドラッグ＆ドロップ共通の受け取り
+  function acceptFiles(fileList){
+    const all = [...fileList];
+    const arr = all.filter(isAcceptable);
+    if (!arr.length){
+      if (all.length) showMsg($('msg'), '取り込めるのは写真・PDF・図面（DWG/DXF/JWW/SFC）です。', 'err');
+      return;
+    }
+    if ($('up').hidden){ $('up').hidden = false; askPosition(); }
+    picked = picked.concat(arr);
+    paintPicked();
+    $('up').scrollIntoView({ behavior:'smooth', block:'start' });
+    const skipped = all.length - arr.length;
+    if (skipped) showMsg($('msg'), `${skipped}件は写真・PDF・図面(CAD)以外のため除きました。`, 'err');
+  }
+  function accept(e){ acceptFiles(e.target.files); e.target.value = ''; }
   $('u_tags').addEventListener('input', syncChips);
   $('cam').addEventListener('change', accept);
   $('file').addEventListener('change', accept);
+
+  /* ---- ドラッグ＆ドロップで取り込む（枠内でも、ページ上のどこでも受け付ける） ---- */
+  (function wireDnd(){
+    const veil = $('dropveil'), up = $('up');
+    let depth = 0;
+    const hasFiles = e => !!e.dataTransfer && Array.prototype.includes.call(e.dataTransfer.types || [], 'Files');
+    const blocked = () => $('panel').classList.contains('open');   // 詳細を開いている間は無効
+    document.addEventListener('dragenter', e => {
+      if (!hasFiles(e) || blocked()) return;
+      depth++; veil.classList.add('on');
+    });
+    document.addEventListener('dragover', e => {
+      if (!hasFiles(e) || blocked()) return;
+      e.preventDefault();
+      try { e.dataTransfer.dropEffect = 'copy'; } catch (_){}
+      up.classList.toggle('dragging', !up.hidden && up.contains(e.target));
+    });
+    document.addEventListener('dragleave', e => {
+      if (!hasFiles(e)) return;
+      depth = Math.max(0, depth - 1);
+      if (depth === 0){ veil.classList.remove('on'); up.classList.remove('dragging'); }
+    });
+    document.addEventListener('drop', e => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = 0; veil.classList.remove('on'); up.classList.remove('dragging');
+      if (blocked()) return;
+      if (!projId){ showMsg($('msg'), '先に工事を選んでください。', 'err'); return; }
+      if (e.dataTransfer.files && e.dataTransfer.files.length) acceptFiles(e.dataTransfer.files);
+    });
+    // ウィンドウ外へドラッグしたまま戻らないケースの保険
+    window.addEventListener('dragend', () => { depth = 0; veil.classList.remove('on'); up.classList.remove('dragging'); });
+  })();
 
   function safeName(n){
     return n.replace(/[^\w.\-]/g, '_').slice(-80);
@@ -467,6 +985,13 @@
     const phase   = $('u_phase').value || null;
     const utitle  = $('u_title').value.trim() || null;
     const utags   = $('u_tags').value.split(/[、,]/).map(x => x.trim()).filter(Boolean);
+    const ureport = $('u_report').value || null;
+    // 図書分類は選んだときだけ送る（列が未作成（phase14未実行）でも取り込みが壊れないよう、
+    // undefined にして JSON から自動的に外す）
+    const ucat    = $('u_category').value || undefined;
+    // 担当者：入力があればそれ。無ければ選んだ日報の担当者を使う
+    const rsel    = reports.find(x => x.id === ureport);
+    const uassign = $('u_assignee').value.trim() || (rsel ? repName(rsel) : '') || null;
     $('u_go').disabled = true;
     let ok = 0, ng = 0, geoOk = 0;
 
@@ -478,21 +1003,20 @@
       const nm    = safeName(f.name);
 
       try {
-        let origBlob = f, w = null, h = null;
-
-        // 写真は用途に応じた大きさに落として保存する
-        //   提出用 : 長辺2000px（A4半分に約242dpi＝きれいに印刷できる）
-        //   社内用 : 長辺1200px
-        if (f.type.startsWith('image/')){
-          const edge = (purpose === 'submit') ? 2000 : 1200;
-          const q    = (purpose === 'submit') ? 0.85 : 0.75;
-          const r = await shrinkImage(f, edge, q);
-          if (r){ origBlob = r.blob; w = r.w; h = r.h; }
+        // 取り込み時に軽くする：写真は縮小（提出用1600px/社内1200px）、
+        //   PDF（大きめ）は各ページを提出品質のJPEGで作り直して圧縮（開きが速くなる）。
+        if (f.type.startsWith('image/') || /\.pdf$/i.test(f.name || '')){
+          $('prog').textContent = `${i+1} / ${list.length} 件目を軽くしています…（${f.name}）`;
         }
+        const prep = await prepUpload(f, {
+          edge:    (purpose === 'submit') ? 1600 : 1200,
+          quality: (purpose === 'submit') ? 0.80 : 0.75
+        });
+        let origBlob = prep.blob, w = prep.width, h = prep.height;
 
         const origPath = `${base}/orig/${stamp}_${nm}`;
         const up1 = await sb.storage.from(BUCKET)
-          .upload(origPath, origBlob, { contentType: f.type || 'application/octet-stream' });
+          .upload(origPath, origBlob, { contentType: origBlob.type || mimeOf(f) });
         if (up1.error) throw up1.error;
 
         // 表示用の絵（画像は縮小、PDFは1ページ目）
@@ -514,6 +1038,8 @@
           file_kind      : f.type.startsWith('image/') ? 'photo'
                           : (f.type === 'application/pdf' ? 'document' : 'other'),
           purpose        : purpose,
+          // storage_provider は DB の既定値 'supabase' に任せる（列が未作成でも壊れないよう、
+          // クライアントからは送らない。将来R2/B2へ移すときは新規保存分だけ値を切り替える）
           storage_path   : origPath,
           thumb_path     : thumbPath,
           original_name  : f.name,
@@ -521,8 +1047,11 @@
           byte_size      : origBlob.size,
           width_px       : w, height_px: h,
           phase_id       : phase,
+          doc_category   : ucat,
           title          : list.length > 1 && utitle ? `${utitle}（${i+1}）` : utitle,
           tags           : utags,
+          assignee_name  : uassign,
+          daily_report_id: ureport,
           taken_on       : (geo.at ? geo.at.slice(0,10)
                             : new Date(f.lastModified || Date.now()).toISOString().slice(0,10)),
           captured_at    : geo.at ? new Date(geo.at).toISOString() : null,
@@ -544,12 +1073,15 @@
     picked = [];
     paintPicked();
     $('u_title').value = '';
+    $('u_assignee').value = ''; $('u_report').value = '';
     $('prog').textContent = '';
     showMsg($('msg'),
       `${ok}件を取り込みました。${ng ? `${ng}件は失敗しました。` : ''}` +
       (geoOk ? `　うち ${geoOk}件に撮影位置を記録しました。` : '　撮影位置は記録できませんでした。'),
       ng ? 'err' : 'ok');
     await loadFiles();
+    // 取り込み時に図書分類を選んでいたら、その章にファイル名タグ・No.を付ける
+    if (ucat){ try { await applyChapterNames(files, ucat); } catch (_){} render(); }
   });
 
   /* ================= 詳細 ================= */
@@ -573,23 +1105,65 @@
 
     const canEd = isMgr || f.uploaded_by === me.id;
     $('ptitle').textContent = KIND[f.file_kind] || '資料';
+    const uploader = users.find(u => u.id === f.uploaded_by);
+    $('p_uploader').textContent = uploader ? uploader.name : '（不明）';
+    $('f_assignee').value = f.assignee_name || '';
+    // 日報リンク：この工事の日報から選べるようにする（開いている工事の分を使う）
+    $('f_report').innerHTML = '<option value="">ひもづけない</option>' +
+      reports.map(r => `<option value="${r.id}">${esc(repLabel(r))}</option>`).join('');
+    $('f_report').value  = f.daily_report_id || '';
     $('f_title').value   = f.title || '';
     $('f_kind').value    = f.file_kind;
     $('f_purpose').value = f.purpose;
     $('f_taken').value   = f.taken_on || '';
     $('f_phase').value   = f.phase_id || '';
+    $('f_category').value = f.doc_category || '';
     $('f_tags').value    = (f.tags || []).join('、');
     $('f_desc').value    = f.description || '';
     $('bbrows').innerHTML = bbHtml(f);
 
-    // プレビュー（画像・PDF）
-    $('big').hidden = true; $('big').innerHTML = '';
+    // 大きい画像・DXF/DWG図面・PDF・Excel・Word
+    $('big').hidden = true; $('big').innerHTML = ''; $('big').classList.remove('dxf', 'pdf', 'office');
     if ((f.mime_type || '').startsWith('image/')){
       const u = await signedUrl(f.storage_path);
       if (u){ $('big').innerHTML = `<img src="${u}" alt="">`; $('big').hidden = false; }
-    } else if (f.mime_type === 'application/pdf'){
-      const u = await signedUrl(f.storage_path);
-      if (u){ $('big').innerHTML = `<iframe src="${u}" title="プレビュー"></iframe>`; $('big').hidden = false; }
+    } else if (/\.dxf$/i.test(f.original_name || '')){
+      $('big').classList.add('dxf');
+      $('big').innerHTML = '<div class="dxferr">図面を読み込んでいます…</div>';
+      $('big').hidden = false;
+      renderDxf(f.storage_path).then(html => { if (editing === f) $('big').innerHTML = html; });
+    } else if (/\.dwg$/i.test(f.original_name || '')){
+      $('big').classList.add('dxf');
+      $('big').innerHTML = '<div class="dxferr">図面を読み込んでいます…</div>';
+      $('big').hidden = false;
+      renderDwg(f.storage_path).then(html => { if (editing === f) $('big').innerHTML = html; });
+    } else if (f.mime_type === 'application/pdf' || /\.pdf$/i.test(f.original_name || '')){
+      $('big').classList.add('pdf');
+      $('big').innerHTML = '<div class="pdfload">書類を読み込んでいます…</div>';
+      $('big').hidden = false;
+      renderPdf(f.storage_path).then(node => {
+        if (editing !== f) return;
+        $('big').innerHTML = '';
+        if (typeof node === 'string') $('big').innerHTML = node;
+        else $('big').appendChild(node);
+      });
+    } else if (/\.xlsx?$/i.test(f.original_name || '')){
+      $('big').classList.add('office');
+      $('big').innerHTML = '<div class="officebox">読み込んでいます…</div>';
+      $('big').hidden = false;
+      renderXlsx(f.storage_path).then(html => {
+        if (editing !== f) return;
+        $('big').innerHTML = html;
+        const box = $('big');
+        box.querySelectorAll('.xsheet').forEach(btn => btn.addEventListener('click', () => {
+          box.querySelectorAll('.xsheetbody').forEach(b => b.hidden = (b.dataset.i !== btn.dataset.i));
+        }));
+      });
+    } else if (/\.docx$/i.test(f.original_name || '')){
+      $('big').classList.add('office');
+      $('big').innerHTML = '<div class="officebox">読み込んでいます…</div>';
+      $('big').hidden = false;
+      renderDocx(f.storage_path).then(html => { if (editing === f) $('big').innerHTML = html; });
     }
 
     const mb = (Number(f.byte_size)||0) / 1024 / 1024;
@@ -624,6 +1198,12 @@
   $('close').addEventListener('click', closePanel);
   $('cancel').addEventListener('click', closePanel);
 
+  // 編集：日報を選ぶと、その日報の担当者を自動で入れる（未入力のときだけ）
+  $('f_report').addEventListener('change', () => {
+    const r = reports.find(x => x.id === $('f_report').value);
+    if (r && !$('f_assignee').value.trim()) $('f_assignee').value = repName(r);
+  });
+
   $('dl').addEventListener('click', async () => {
     if (!editing) return;
     const u = await signedUrl(editing.storage_path);
@@ -642,6 +1222,8 @@
       purpose    : $('f_purpose').value,
       taken_on   : $('f_taken').value || null,
       phase_id   : $('f_phase').value || null,
+      assignee_name  : $('f_assignee').value.trim() || null,
+      daily_report_id: $('f_report').value || null,
       description: $('f_desc').value.trim() || null,
       tags       : $('f_tags').value.split(/[、,]/).map(s => s.trim()).filter(Boolean),
       bb_extra   : {}
@@ -651,33 +1233,65 @@
       if (el.dataset.col) body[el.dataset.col] = v || null;
       else if (v) body.bb_extra[el.dataset.key] = v;
     });
+    // 図書分類：選んでいるか、既に分類が付いている資料のときだけ送る
+    // （列が未作成（phase14未実行）のときに保存全体が失敗しないようにする）
+    const oldCat = editing.doc_category || '';
+    let newCat = oldCat;
+    if ($('f_category').value || editing.doc_category){
+      newCat = $('f_category').value || '';
+      body.doc_category = newCat || null;
+    }
+    const catChanged = (newCat !== oldCat);
+    if (catChanged && newCat) body.sort_order = 1000000;   // いったん末尾へ→applyChapterNamesで採番＆改名
 
     $('save').disabled = true; $('save').textContent = '保存しています…';
     const { error } = await sb.from('project_files').update(body).eq('id', editing.id);
     $('save').disabled = false; $('save').textContent = '保存する';
 
     if (error){ showMsg($('pmsg'), '保存できませんでした。' + error.message, 'err'); return; }
-    closePanel(); await loadFiles();
-    showMsg($('msg'), '保存しました。', 'ok');
+    // ローカルを更新して即反映（全件の再取得＝loadFiles はしない）
+    const lf = files.find(x => x.id === editing.id);
+    if (lf) Object.assign(lf, body);
+    paintAssigneeFilter();
+    render();
+    closePanel();
+    showMsg($('msg'),
+      (catChanged && newCat) ? `「${chapterLabel(newCat)}」へ分類し、ファイル名にタグを付けました。`
+      : (catChanged && !newCat) ? '未分類に戻し、ファイル名のタグを外しました。'
+      : '保存しました。', 'ok');
+    // 分類が変わったときだけ、その章（と元の章）を裏で採番・ファイル名タグ付け直し
+    if (catChanged){
+      try {
+        await applyChapterNames(files, newCat);
+        if (oldCat !== newCat) await applyChapterNames(files, oldCat);
+        render();
+      } catch (_){}
+    }
   });
 
   /* ================= 削除 ================= */
   $('del').addEventListener('click', async () => {
     if (!editing) return;
-    if (!confirm('この資料を削除します。原本も消えます。取り消せません。')) return;
-    const paths = [editing.storage_path, editing.thumb_path].filter(Boolean);
-    await sb.storage.from(BUCKET).remove(paths);
-    const { error } = await sb.from('project_files').delete().eq('id', editing.id);
+    if (!confirm('この資料を削除します。')) return;
+    // 原本（ファイル）は消さずに一覧から隠すだけにする。→「元に戻す」で復元できる
+    const id = editing.id;
+    const { error } = await sb.from('project_files').update({ is_active:false }).eq('id', id);
     if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
     closePanel(); await loadFiles();
-    showMsg($('msg'), '削除しました。', 'ok');
+    showUndo($('msg'), '資料を削除しました。', async () => {
+      const { error:e2 } = await sb.from('project_files').update({ is_active:true }).eq('id', id);
+      if (e2) throw e2;
+      await loadFiles();
+    });
   });
 
   /* ================= 起動 ================= */
   await loadRefs();
   const q = new URL(location.href).searchParams.get('p');
   if (q && projects.some(x => x.id === q)){ projId = q; $('proj').value = q; $('dock').hidden = false; }
+  updateProjMgr();
   await loadPhases();
+  await loadReports();
   await loadFiles();
 })();
 </script>

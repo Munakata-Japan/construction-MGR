@@ -1,7 +1,18 @@
 /* ============================================================
    宗像総合管理システム  共通処理
-   BUILD: common.js v20260724A
+   BUILD: common.js v20260906B
    ============================================================ */
+
+/* ---------- 最新版をすぐ反映する（Service Worker・ネットワーク優先） ----------
+   GitHub Pages はHTMLに no-cache ヘッダーを付けられず、変更後に
+   ハード再読み込みが要りがちだった。ネットワーク優先のSWを常駐させ、
+   オンライン時は常に最新を取りに行くようにする（普通のリロードで反映）。
+------------------------------------------------------------------ */
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
 
 const STATUS = {
   estimate : '見積',
@@ -14,6 +25,93 @@ const STATUS = {
 };
 
 const ROLE_LABEL = { admin:'管理者', manager:'現場監督', member:'作業員' };
+
+/* ================= 権限5区分（①〜⑤） =================
+   既存の role＋is_external＋employee_type から導出する。DB変更は不要。
+   ① 経営者 / ② 現場監督 / ③ 一般社員 / ④ 外注社員 / ⑤ 協力業者（社外） */
+const TIERS = [
+  { n:1, key:'exec',    label:'経営者',   side:'in' },
+  { n:2, key:'manager', label:'現場監督', side:'in' },
+  { n:3, key:'staff',   label:'一般社員', side:'in' },
+  { n:4, key:'outsrc',  label:'外注社員', side:'in' },
+  { n:5, key:'partner', label:'協力業者', side:'ex' },
+];
+function tierOf(u){
+  if (!u) return 3;
+  if (u.is_external) return 5;                       // 協力業者（社外）
+  if (u.role === 'admin')   return 1;                // 経営者
+  if (u.role === 'manager') return 2;                // 現場監督
+  if (u.employee_type === 'subcontractor') return 4; // 外注社員
+  return 3;                                          // 一般社員
+}
+function tierLabel(n){ const t = TIERS.find(x => x.n === n); return t ? t.label : ''; }
+
+/* ---------- 竣工図書の章立て（民間工事の標準）----------
+   写真・書類（project_files.doc_category）を、この章に振り分けて
+   竣工図書として積み上げる。files.html で分類・handover.html で整理／印刷。
+   会社・発注者ごとの追加は、この配列に足すだけで両画面へ反映される。
+------------------------------------------------------------ */
+const HANDOVER_CHAPTERS = [
+  { key:'gaiyou',   label:'工事概要' },
+  { key:'plan',     label:'施工計画書' },
+  { key:'permit',   label:'届出・許認可' },
+  { key:'safety',   label:'安全衛生書類' },
+  { key:'quality',  label:'品質・出来形記録' },
+  { key:'photo',    label:'工事写真帳' },
+  { key:'drawing',  label:'竣工図' },
+  { key:'inspect',  label:'検査記録' },
+  { key:'warranty', label:'保証書・その他' }
+];
+function chapterLabel(key){
+  const c = HANDOVER_CHAPTERS.find(x => x.key === key);
+  return c ? c.label : '';
+}
+function chapterOptions(sel){
+  return HANDOVER_CHAPTERS
+    .map(c => `<option value="${c.key}"${c.key === sel ? ' selected' : ''}>${esc(c.label)}</option>`)
+    .join('');
+}
+
+/* ---------- 竣工図書：資料名の自動タグ（章名・No.・撮影日）----------
+   章に分類されると、元のファイル名の拡張子の前へ （章名・No.X・撮影日）を付け、
+   後から検索できるようにする。章の移動・並べ替えのたびに古いタグを外して付け直す。
+   DB列は増やさず、タグは元ファイル名から機械的に外して基準名を復元する
+   （タグには必ず "No.数字" が入るので、既存の "(1)" 等とは取り違えない）。
+------------------------------------------------------------------ */
+function docNameParts(name){
+  const m = /^(.*?)(\.[^.\/\\]+)?$/.exec(name || '');
+  return { stem: m[1] || '', ext: m[2] || '' };
+}
+function stripDocTag(name){
+  if (!name) return name || '';
+  const { stem, ext } = docNameParts(name);
+  return stem.replace(/（[^（）]*No\.\d+[^（）]*）\s*$/, '') + ext;
+}
+function buildDocName(baseFileName, chapterKey, no, takenOn){
+  if (!chapterKey) return baseFileName;                 // 未分類は素のファイル名に戻す
+  const { stem, ext } = docNameParts(baseFileName);
+  const tag = [chapterLabel(chapterKey), 'No.' + no, takenOn || ''].filter(Boolean).join('・');
+  return `${stem}（${tag}）${ext}`;
+}
+/* 指定した章の中を並び順で採番し、original_name のタグと sort_order を付け直してDB保存する。
+   files はページが保持する project_files 配列（その場で書き換える）。戻り値＝更新件数。 */
+async function applyChapterNames(files, chapterKey){
+  const bySort = (a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) ||
+                           ((a.taken_on || '') < (b.taken_on || '') ? 1 : -1);
+  const arr = files.filter(x => (x.doc_category || '') === chapterKey).sort(bySort);
+  const ups = [];
+  arr.forEach((x, i) => {
+    const no = i + 1, so = (i + 1) * 10;
+    const base = stripDocTag(x.original_name || '');
+    const nm = chapterKey ? buildDocName(base, chapterKey, no, x.taken_on) : base;
+    const patch = {};
+    if (chapterKey && (x.sort_order || 0) !== so) patch.sort_order = so;   // 採番は章内のみ（未分類は並び替えない）
+    if ((x.original_name || '') !== nm) patch.original_name = nm;          // 未分類は古いタグを外すだけ
+    if (Object.keys(patch).length){ ups.push({ id: x.id, patch }); Object.assign(x, patch); }
+  });
+  if (ups.length) await Promise.all(ups.map(u => sb.from('project_files').update(u.patch).eq('id', u.id)));
+  return ups.length;
+}
 
 /* ---------- 表示の整形 ---------- */
 function fmtMoney(v){
@@ -41,7 +139,60 @@ function showMsg(el, text, kind){
   if (!el) return;
   el.className = 'msg ' + (kind || '');
   el.textContent = text || '';
-  if (text) el.scrollIntoView({ block:'nearest' });
+  // 前回の自動消去タイマーを止める（要素ごとに1本だけ持つ）
+  if (el._msgTimer){ clearTimeout(el._msgTimer); el._msgTimer = null; }
+  if (text){
+    el.scrollIntoView({ block:'nearest' });
+    // 通知は一定時間で自動的に消す（古いエラー帯や案内が画面に残り続けないように）
+    el._msgTimer = setTimeout(() => { el.textContent = ''; el.className = 'msg'; el._msgTimer = null; },
+      kind === 'err' ? 9000 : 5000);
+  }
+}
+
+/* ---------- 削除の取り消し（元に戻す） ----------
+   削除した直後に「元に戻す」ボタン付きの通知を出す。
+   undoFn は、控えておいた内容を入れ直す非同期関数。
+   これで、削除ボタンのある画面はどこでも復元できる。
+------------------------------------------------ */
+function showUndo(el, text, undoFn){
+  if (!el){ return; }
+  el.className = 'msg ok';
+  el.innerHTML = `<span>${esc(text)}</span>` +
+    `<button type="button" class="undobtn" style="margin-left:12px;font-weight:700;` +
+    `text-decoration:underline;background:none;border:none;color:var(--ink-2);cursor:pointer;font-size:13px">` +
+    `元に戻す</button>`;
+  const btn = el.querySelector('.undobtn');
+  let used = false;
+  btn.addEventListener('click', async () => {
+    if (used) return;
+    used = true; btn.disabled = true; btn.textContent = '元に戻しています…';
+    try {
+      await undoFn();
+      el.className = 'msg ok'; el.textContent = '元に戻しました。';
+    } catch (e){
+      el.className = 'msg err'; el.textContent = '元に戻せませんでした。' + (e.message || '');
+    }
+  });
+  el.scrollIntoView({ block:'nearest' });
+}
+
+/* ---------- 事前登録が必要なドロップダウンの空欄アナウンス ----------
+   取引先・工程・利用者などのマスタが1件も無いまま選択肢が空の
+   セレクトを黙って出すと、登録し忘れなのか本当に無いのか分からない。
+   セレクトの直後に注意書きを出し、必要ならページへの導線も添える。
+------------------------------------------------------------------ */
+function setEmptyNote(selectEl, isEmpty, text, href, linkLabel){
+  if (!selectEl) return;
+  let note = selectEl.nextElementSibling;
+  if (!note || !note.classList || !note.classList.contains('emptynote')){
+    note = document.createElement('div');
+    note.className = 'emptynote';
+    selectEl.insertAdjacentElement('afterend', note);
+  }
+  note.innerHTML = href
+    ? `${esc(text)}　<a href="${esc(href)}">${esc(linkLabel || 'こちらから登録')}</a>`
+    : esc(text);
+  note.hidden = !isEmpty;
 }
 
 /* ---------- ログイン確認 ----------
@@ -51,13 +202,14 @@ function showMsg(el, text, kind){
 async function requireAuth(){
   const { data:{ session } } = await sb.auth.getSession();
   if (!session){
-    location.replace('index.html');
+    const back = location.pathname.split('/').pop() + location.search;
+    location.replace('index.html?next=' + encodeURIComponent(back));
     return null;
   }
 
-  const { data:me, error } = await sb
+  let { data:me, error } = await sb
     .from('app_users')
-    .select('id, name, role, organization_id, employee_type, department')
+    .select('id, name, role, organization_id, employee_type, department, is_external')
     .eq('auth_user_id', session.user.id)
     .maybeSingle();
 
@@ -65,13 +217,52 @@ async function requireAuth(){
     alert('利用者情報を読み込めませんでした。\n' + error.message);
     return null;
   }
+
+  // メール確認が必要な設定のときは、招待からの登録直後はまだ紐づいていない。
+  // 確認後の初回ログインでここに来るので、覚えておいた招待トークンで紐づけ直す。
+  if (!me){
+    let pending = null;
+    try { pending = localStorage.getItem('pending_invite_token'); } catch (e) {}
+    if (pending){
+      const { data: ok } = await sb.rpc('claim_invite', { p_token: pending });
+      try { localStorage.removeItem('pending_invite_token'); } catch (e) {}
+      if (ok){
+        ({ data:me, error } = await sb
+          .from('app_users')
+          .select('id, name, role, organization_id, employee_type, department, is_external')
+          .eq('auth_user_id', session.user.id)
+          .maybeSingle());
+      }
+    }
+  }
+
   if (!me){
     alert('このアカウントはまだ会社に登録されていません。\n管理者に利用者の追加を依頼してください。');
     await sb.auth.signOut();
     location.replace('index.html');
     return null;
   }
+  startPresence();
   return { session, me };
+}
+
+/* ---------- ログイン中の人数のための在席打刻 ----------
+   画面を開いて操作している間だけ、一定間隔で本人の最終アクセス
+   時刻を記録する。画面を見ていない間（タブが背面・スマホ画面オフ）は
+   打刻を止めるので、操作をやめて数分たつと自動的に「ログイン中」から外れる。
+------------------------------------------------------------------ */
+let _presenceTimer = null;
+function startPresence(){
+  const beat = () => {
+    if (document.visibilityState === 'hidden') return;
+    sb.rpc('touch_presence').then(() => {}, () => {});
+  };
+  beat();
+  if (_presenceTimer) clearInterval(_presenceTimer);
+  _presenceTimer = setInterval(beat, 60000);   // 1分ごと
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') beat();
+  });
 }
 
 /* ---------- 見出し帯に利用者を表示 ---------- */
@@ -162,6 +353,84 @@ async function makeThumb(file, maxEdge, quality){
   }
   if (file.type === 'application/pdf') return await pdfThumb(file, maxEdge);
   return null;
+}
+
+/* ---------- 取り込み時の圧縮（PDF）とMIME判定 ----------
+   PDF（特にスキャン・画像主体）は原本のままだと重く、開くのに時間がかかる。
+   取り込み時に各ページを提出品質(既定150dpi・JPEG)で作り直して小さくする。
+   テキスト/ベクタ主体で縮まないPDFは劣化を避けるため原本を使う（呼び出し側で判定）。
+------------------------------------------------------------------ */
+let _jspdfReady = null;
+function loadJsPdf(){
+  if (_jspdfReady) return _jspdfReady;
+  _jspdfReady = new Promise((res, rej) => {
+    if (window.jspdf && window.jspdf.jsPDF) return res(window.jspdf.jsPDF);
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload = () => (window.jspdf && window.jspdf.jsPDF) ? res(window.jspdf.jsPDF) : rej(new Error('jsPDFの読み込みに失敗しました'));
+    s.onerror = () => rej(new Error('jsPDFの読み込みに失敗しました'));
+    document.head.appendChild(s);
+  });
+  return _jspdfReady;
+}
+
+/* 拡張子・種類からMIMEを決める（アップロードのcontent-type用。PDFを application/pdf で
+   保存しておくと、開いたとき即ストリーム表示できる＝真っ黒/待ちを防ぐ）。 */
+function mimeOf(file){
+  if (file.type) return file.type;
+  const n = (file.name || '').toLowerCase();
+  if (/\.pdf$/.test(n)) return 'application/pdf';
+  if (/\.jpe?g$/.test(n)) return 'image/jpeg';
+  if (/\.png$/.test(n))  return 'image/png';
+  if (/\.gif$/.test(n))  return 'image/gif';
+  if (/\.webp$/.test(n)) return 'image/webp';
+  return 'application/octet-stream';
+}
+
+/* PDFを提出品質に圧縮。成功で Blob、失敗や対象外は null（原本を使う）。 */
+async function compressPdf(file, dpi, quality){
+  dpi = dpi || 150; quality = quality || 0.72;
+  try {
+    const lib = await loadPdfLib();
+    const jsPDF = await loadJsPdf();
+    const buf = await file.arrayBuffer();
+    const doc = await lib.getDocument({ data: buf }).promise;
+    let out = null;
+    for (let i = 1; i <= doc.numPages; i++){
+      const page = await doc.getPage(i);
+      const vp = page.getViewport({ scale: dpi / 72 });
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round(vp.width));
+      cv.height = Math.max(1, Math.round(vp.height));
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      const img = cv.toDataURL('image/jpeg', quality);
+      const wPt = cv.width * 72 / dpi, hPt = cv.height * 72 / dpi;
+      if (!out) out = new jsPDF({ unit: 'pt', format: [wPt, hPt], compress: true });
+      else out.addPage([wPt, hPt]);
+      out.addImage(img, 'JPEG', 0, 0, wPt, hPt);
+      cv.width = cv.height = 0;
+    }
+    return out ? out.output('blob') : null;
+  } catch (e){ console.error('compressPdf failed', e); return null; }
+}
+
+/* 取り込むファイルを保存用に整える。画像は縮小、PDF（大きめ）は圧縮を試し、
+   縮んだときだけ採用する。戻り値 { blob, width, height }。 */
+async function prepUpload(file, opts){
+  opts = opts || {};
+  const edge = opts.edge || 1600, q = opts.quality || 0.80;
+  if (file.type && file.type.startsWith('image/')){
+    const r = await shrinkImage(file, edge, q);
+    return r ? { blob: r.blob, width: r.w, height: r.h } : { blob: file, width: null, height: null };
+  }
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+  if (isPdf && file.size > 1200000){
+    const c = await compressPdf(file, opts.pdfDpi || 150, opts.pdfQuality || 0.72);
+    if (c && c.size < file.size * 0.85) return { blob: c, width: null, height: null };
+  }
+  return { blob: file, width: null, height: null };
 }
 
 /* ---------- 写真に記録された位置と撮影日時 ---------- */
@@ -311,6 +580,8 @@ async function resolveGeo(file, devicePos){
 
 /* ---------- ログアウト ---------- */
 async function signOut(){
+  // 「出る」は誤タップでシステムからログアウトしてしまうため、必ず確認する
+  if (!confirm('システムからログアウトします。よろしいですか。\n（作業を続けるときは「メニュー」からお戻りください）')) return;
   await sb.auth.signOut();
   location.replace('index.html');
 }
@@ -322,7 +593,21 @@ async function signOut(){
 ------------------------------------------ */
 (function insertBack(){
   const here = location.pathname.split('/').pop() || 'index.html';
-  if (/^(index|mode-select|report-entry)\.html$/.test(here)) return;
+  if (/^(index|mode-select|report-entry|signup)\.html$/.test(here)) return;
+
+  // 作業のために別ページから来たか（メニュー・ログイン・直接アクセスは除く）。
+  // 来ていれば「戻る」で元居たページへ、そうでなければ「メニュー」へ。
+  let backToPrev = false;
+  try {
+    if (document.referrer){
+      const ref = new URL(document.referrer);
+      const rf = ref.pathname.split('/').pop() || '';
+      if (ref.origin === location.origin && rf && rf !== here &&
+          !/^(index|mode-select|report-entry|signup)\.html$/.test(rf)){
+        backToPrev = true;
+      }
+    }
+  } catch (e) {}
 
   function put(){
     const bar = document.querySelector('.bar');
@@ -331,8 +616,17 @@ async function signOut(){
 
     const a = document.createElement('a');
     a.className = 'btn ghost sm barbtn backbtn';
-    a.href = 'mode-select.html';
-    a.textContent = '◂ メニュー';
+    if (backToPrev){
+      a.href = '#';
+      a.textContent = '◂ 戻る';
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        if (history.length > 1) history.back(); else location.href = 'mode-select.html';
+      });
+    } else {
+      a.href = 'mode-select.html';
+      a.textContent = '◂ メニュー';
+    }
 
     const mark = bar.querySelector('.mark');
     if (mark) mark.after(a); else bar.prepend(a);
@@ -343,4 +637,334 @@ async function signOut(){
   } else {
     put();
   }
+})();
+
+/* ============================================================
+   ホーム画面に追加（PWAインストール案内）— 全ページ標準
+   ・アプリとして起動中／PC では出さない
+   ・Android＝ワンタップ導入（beforeinstallprompt）
+   ・iPhone＝Safariの「ホーム画面に追加」を案内（Apple仕様で全自動は不可）
+   ・LINE等アプリ内ブラウザ＝ブラウザで開くよう案内（この状態では追加不可）
+============================================================ */
+(function(){
+  var ua = navigator.userAgent || '';
+  var isIOS = /iP(hone|ad|od)/.test(ua) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+  var inApp = /(Line|FBAN|FBAV|Instagram|Twitter|Messenger|MicroMessenger)/i.test(ua);
+  var standalone = (window.matchMedia &&
+                    window.matchMedia('(display-mode: standalone)').matches) ||
+                   navigator.standalone === true;
+
+  if (standalone) return;             // 既にアプリとして起動中
+  if (!isIOS && !isAndroid) return;   // PCは対象外
+
+  try {
+    var until = parseInt(localStorage.getItem('a2hs_snooze') || '0', 10);
+    if (until && until > Date.now()) return;   // 「あとで」から一定期間は非表示
+  } catch (e) {}
+  function snooze(days){ try { localStorage.setItem('a2hs_snooze', String(Date.now() + days*864e5)); } catch(e){} }
+
+  var deferred = null, ready = false, shown = false;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault(); deferred = e;
+    if (ready && !shown) show('android');
+  });
+
+  function style(){
+    if (document.getElementById('a2hs-style')) return;
+    var s = document.createElement('style'); s.id = 'a2hs-style';
+    s.textContent =
+      '.a2hs{position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#fff;'+
+      'border-top:3px solid var(--safety,#EAA800);box-shadow:0 -6px 22px rgba(0,0,0,.18);'+
+      'padding:10px 12px calc(10px + env(safe-area-inset-bottom));'+
+      'font-family:var(--body,"Noto Sans JP",system-ui,sans-serif);animation:a2up .25s ease}'+
+      '@keyframes a2up{from{transform:translateY(100%)}to{transform:translateY(0)}}'+
+      '.a2hs .rw{display:flex;align-items:center;gap:10px}'+
+      '.a2hs img{width:40px;height:40px;border-radius:10px;flex:0 0 auto}'+
+      '.a2hs .tx{flex:1 1 auto;min-width:0}'+
+      '.a2hs .tx b{display:block;font-size:14px;color:var(--ink,#13385D);line-height:1.3}'+
+      '.a2hs .tx span{display:block;font-size:12px;color:var(--sub,#5a6e82);margin-top:2px}'+
+      '.a2hs .act{flex:0 0 auto;background:var(--ink,#13385D);color:#fff;border:0;border-radius:9px;'+
+      'padding:10px 15px;font-size:13px;font-weight:700;cursor:pointer}'+
+      '.a2hs .x{flex:0 0 auto;background:transparent;border:0;color:#9aa8b5;font-size:22px;'+
+      'line-height:1;padding:2px 6px;cursor:pointer}'+
+      '.a2hs .guide{margin-top:9px;font-size:13px;color:var(--ink,#13385D);line-height:1.75;'+
+      'background:var(--paper,#EBEDE8);border-radius:9px;padding:10px 12px}'+
+      '.a2hs .guide ol{margin:0;padding-left:1.25em}'+
+      '.a2hs .guide .k{display:inline-block;min-width:20px;height:20px;line-height:20px;text-align:center;'+
+      'background:var(--ink,#13385D);color:#fff;border-radius:6px;font-size:12px;padding:0 5px;margin:0 2px}';
+    document.head.appendChild(s);
+  }
+
+  function show(mode){
+    if (shown) return; shown = true;
+    style();
+    var bar = document.createElement('div');
+    bar.className = 'a2hs';
+
+    var titles = {
+      ios:'アプリのように使えます', android:'アプリのように使えます',
+      inapp:'ブラウザで開いてください'
+    };
+    var subs = {
+      ios:'ホーム画面に追加すると全画面で起動します',
+      android:'ホーム画面に追加すると全画面で起動します',
+      inapp:'LINE内のままではホーム画面に追加できません'
+    };
+    var btns = { ios:'追加する', android:'アプリを追加', inapp:'URLをコピー' };
+
+    bar.innerHTML =
+      '<div class="rw">'+
+        '<img src="icons/apple-touch-icon.png" alt="">'+
+        '<div class="tx"><b>'+titles[mode]+'</b><span>'+subs[mode]+'</span></div>'+
+        '<button class="act" type="button">'+btns[mode]+'</button>'+
+        '<button class="x" type="button" aria-label="閉じる">&times;</button>'+
+      '</div>'+
+      '<div class="guide" hidden></div>';
+
+    var act = bar.querySelector('.act');
+    var guide = bar.querySelector('.guide');
+    bar.querySelector('.x').addEventListener('click', function(){ snooze(14); bar.remove(); });
+
+    function openGuide(html){ guide.innerHTML = html; guide.hidden = false; }
+
+    act.addEventListener('click', async function(){
+      if (mode === 'android'){
+        if (deferred){
+          deferred.prompt();
+          try { await deferred.userChoice; } catch(e){}
+          deferred = null; bar.remove();
+        } else {
+          openGuide('<ol><li>右上の <span class="k">⋮</span> をタップ</li>'+
+                    '<li><b>「アプリをインストール」</b>（または「ホーム画面に追加」）をタップ</li></ol>');
+        }
+      } else if (mode === 'ios'){
+        openGuide('<ol><li>画面下の <b>共有ボタン</b> <span class="k">□↑</span> をタップ</li>'+
+                  '<li>メニューを下にスクロールし <b>「ホーム画面に追加」</b> をタップ</li>'+
+                  '<li>右上の <b>「追加」</b> をタップ</li></ol>');
+      } else { // inapp
+        try {
+          await navigator.clipboard.writeText(location.href);
+          openGuide('URLをコピーしました。<br>'+
+            (isIOS ? '右上または下の <span class="k">…</span> から <b>「Safariで開く」</b>、または Safari に貼り付けて開いてください。'
+                   : '右上の <span class="k">⋮</span> から <b>「ブラウザで開く」</b>、または Chrome に貼り付けて開いてください。'));
+        } catch(e){
+          openGuide('このページのURLを Safari／Chrome で開き直してください。');
+        }
+      }
+    });
+
+    document.body.appendChild(bar);
+  }
+
+  function start(){
+    ready = true;
+    if (inApp) return show('inapp');
+    if (isIOS) return show('ios');
+    if (isAndroid) return show('android'); // deferredが無くても案内にフォールバック
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
+
+/* ============================================================
+   多言語対応（日本語 / 简体中文 / English）— 全ページ共通
+   ------------------------------------------------------------
+   ヘッダーに言語スイッチを追加。画面内の日本語（入力データ含む）を
+   オンライン自動翻訳（Google系Lingva→予備MyMemory・CORS対応・キー不要）で
+   選択言語へ翻訳。一度訳した文字列は端末(localStorage)にキャッシュし次回から
+   即時表示（API節約・高速化）。よく使うUI用語は内蔵辞書で即時・正確に置換。
+   既定は日本語で無変換。数字/記号のみ・日本語を含まない文字列は翻訳しない。
+============================================================ */
+(function(){
+  const LANGS = [['ja','🌐 日本語'],['zh','🌐 简体中文'],['en','🌐 English']];
+  const KEY = 'mgr_lang', CACHE_PREFIX = 'mgr_tr_v1_';
+  function getLang(){ try{ return localStorage.getItem(KEY) || 'ja'; }catch(e){ return 'ja'; } }
+  function setLang(l){ try{ localStorage.setItem(KEY, l); }catch(e){} }
+  const lang = getLang();
+
+  // 内蔵辞書（UI用語：即時・正確・API節約）。日本語→{zh,en}
+  const DICT = {
+    '宗像総合管理システム':{zh:'宗像综合管理系统',en:'Munakata Management System'},
+    '管理者':{zh:'管理员',en:'Administrator'},'経営者':{zh:'经营者',en:'Executive'},
+    '現場監督':{zh:'现场监督',en:'Site Manager'},'作業員':{zh:'作业员',en:'Worker'},
+    '◂ メニュー':{zh:'◂ 菜单',en:'◂ Menu'},'◂ 戻る':{zh:'◂ 返回',en:'◂ Back'},
+    'メニュー':{zh:'菜单',en:'Menu'},'戻る':{zh:'返回',en:'Back'},'出る':{zh:'退出',en:'Sign out'},
+    '閉じる':{zh:'关闭',en:'Close'},'保存':{zh:'保存',en:'Save'},'保存する':{zh:'保存',en:'Save'},
+    '登録':{zh:'登记',en:'Register'},'登録する':{zh:'登记',en:'Register'},
+    '削除':{zh:'删除',en:'Delete'},'編集':{zh:'编辑',en:'Edit'},'追加':{zh:'添加',en:'Add'},
+    'キャンセル':{zh:'取消',en:'Cancel'},'開く':{zh:'打开',en:'Open'},
+    'すべて展開':{zh:'全部展开',en:'Expand all'},'すべて畳む':{zh:'全部折叠',en:'Collapse all'},
+    '絞り込み':{zh:'筛选',en:'Filter'},'使い方':{zh:'使用方法',en:'Help'},
+    '取り込む':{zh:'导入',en:'Import'},'見本':{zh:'示例',en:'Sample'},'付箋':{zh:'便签',en:'Notes'},
+    '凡例':{zh:'图例',en:'Legend'},'見方':{zh:'查看方法',en:'Guide'},'全体':{zh:'全部',en:'Fit'},
+    'ガント':{zh:'甘特图',en:'Gantt'},'ネットワーク':{zh:'网络图',en:'Network'},
+    '改訂の履歴':{zh:'修订历史',en:'Revisions'},'工程表を改定する':{zh:'修订工程表',en:'Revise schedule'},
+    '工程を追加する':{zh:'添加工序',en:'Add phase'},
+    '基本':{zh:'基本',en:'Basics'},'現場管理':{zh:'现场管理',en:'Site Management'},
+    '損益':{zh:'损益',en:'Profit & Loss'},'勤怠':{zh:'考勤',en:'Attendance'},
+    '工事案件':{zh:'工程项目',en:'Projects'},'設定':{zh:'设置',en:'Settings'},
+    '権限マトリクス':{zh:'权限矩阵',en:'Permissions Matrix'},'ワークフロー図':{zh:'工作流程图',en:'Workflow'},
+    '工程表':{zh:'工程表',en:'Schedule'},'材工':{zh:'材料与施工',en:'Materials & Labor'},
+    '現場の記録':{zh:'现场记录',en:'Site Records'},'書類':{zh:'文件',en:'Documents'},
+    '準備中':{zh:'准备中',en:'Coming soon'},
+    '見積':{zh:'报价',en:'Estimate'},'予算':{zh:'预算',en:'Budget'},'納期':{zh:'交期',en:'Delivery'},
+    '日報':{zh:'日报',en:'Daily Report'},'写真・書類':{zh:'照片・文件',en:'Photos & Docs'},
+    '安全書類':{zh:'安全文件',en:'Safety Docs'},'竣工図書':{zh:'竣工图书',en:'Handover Docs'},
+    '出来高':{zh:'完成量',en:'Progress'},'設計変更':{zh:'设计变更',en:'Change Orders'},
+    '取引先':{zh:'客户/供应商',en:'Partners'},'社員':{zh:'员工',en:'Staff'},'権限':{zh:'权限',en:'Permissions'},
+    '未着手':{zh:'未开始',en:'Not started'},'着手中':{zh:'进行中',en:'In progress'},
+    '完了':{zh:'完成',en:'Done'},'中断':{zh:'中断',en:'Paused'},'余裕なし':{zh:'无余裕',en:'No slack'},
+    '材料':{zh:'材料',en:'Material'},'最安':{zh:'最低价',en:'Lowest'},
+    '区分':{zh:'类别',en:'Type'},'品名':{zh:'品名',en:'Item'},'数量':{zh:'数量',en:'Qty'},
+    '単価':{zh:'单价',en:'Unit price'},'金額':{zh:'金额',en:'Amount'},'工程':{zh:'工序',en:'Phase'},
+    '着工':{zh:'开工',en:'Start'},'進捗':{zh:'进度',en:'Progress'},'採用':{zh:'采用',en:'Adopt'},
+    '日付':{zh:'日期',en:'Date'},'種別':{zh:'种类',en:'Type'},'件名':{zh:'标题',en:'Title'},
+    '登録者':{zh:'登记人',en:'Registered by'},'操作':{zh:'操作',en:'Actions'},'発注':{zh:'下单',en:'Order'},
+    '業者見積・原価決定':{zh:'供应商报价・成本确定',en:'Vendor Estimates & Cost'},
+    '出来高・進捗':{zh:'完成量・进度',en:'Progress'},'損益・粗利':{zh:'损益・毛利',en:'Profit & Margin'},
+    '利用者':{zh:'用户',en:'Users'},'作業日報':{zh:'作业日报',en:'Daily Report'},
+    'ログイン':{zh:'登录',en:'Sign in'},'メールアドレス':{zh:'邮箱地址',en:'Email'},'パスワード':{zh:'密码',en:'Password'}
+  };
+
+  // 端末キャッシュ（MT結果） { 日本語: 訳 }
+  var cache = {};
+  function loadCache(){ try{ cache = JSON.parse(localStorage.getItem(CACHE_PREFIX+lang) || '{}') || {}; }catch(e){ cache = {}; } }
+  var saveTimer = null;
+  function saveCache(){ if (saveTimer) return; saveTimer = setTimeout(function(){ saveTimer=null; try{ localStorage.setItem(CACHE_PREFIX+lang, JSON.stringify(cache)); }catch(e){} }, 800); }
+
+  function hasJP(s){ return /[぀-ヿ㐀-鿿豈-﫿]/.test(s); }
+  // 即時に得られる訳（辞書→キャッシュ）。無ければ null（要MT）
+  function lookup(s){
+    var k = String(s).trim(); if (!k) return '';
+    var d = DICT[k]; if (d && d[lang] && d[lang] !== k) return d[lang];
+    if (Object.prototype.hasOwnProperty.call(cache, k)) return cache[k];
+    return null;
+  }
+
+  var pending = new Map(); // ja -> [refs]
+  function addPending(k, ref){ var a = pending.get(k); if (!a){ a=[]; pending.set(k,a); } a.push(ref); }
+  function noteText(node){
+    var raw = node.nodeValue, k = (raw||'').trim();
+    if (!k || !hasJP(k)) return;
+    var v = lookup(k);
+    if (v !== null){ if (v && v !== k){ var lead=(raw.match(/^\s*/)||[''])[0], trail=(raw.match(/\s*$/)||[''])[0]; node.nodeValue=lead+v+trail; } }
+    else addPending(k, {type:'text', node:node});
+  }
+  function noteAttr(node, attr){
+    var raw = node.getAttribute(attr), k = (raw||'').trim();
+    if (!k || !hasJP(k)) return;
+    var v = lookup(k);
+    if (v !== null){ if (v && v !== k) node.setAttribute(attr, v); }
+    else addPending(k, {type:'attr', node:node, attr:attr});
+  }
+  function noteValue(node){
+    var raw = node.value, k = (raw||'').trim();
+    if (!k || !hasJP(k)) return;
+    var v = lookup(k);
+    if (v !== null){ if (v && v !== k) node.value = v; }
+    else addPending(k, {type:'value', node:node});
+  }
+  function walk(node){
+    if (!node) return;
+    if (node.nodeType === 3){ noteText(node); return; }
+    if (node.nodeType !== 1) return;
+    var tag = node.tagName;
+    if (tag === 'SCRIPT' || tag === 'STYLE' || (node.classList && node.classList.contains('langsel'))) return;
+    if (node.hasAttribute){
+      if (node.hasAttribute('placeholder')) noteAttr(node, 'placeholder');
+      if (node.hasAttribute('title')) noteAttr(node, 'title');
+      if (tag === 'INPUT' && /^(button|submit|reset)$/i.test(node.getAttribute('type')||'')) noteValue(node);
+    }
+    for (var c = node.firstChild; c; c = c.nextSibling) walk(c);
+  }
+  function applyFor(k, v){
+    var refs = pending.get(k); if (!refs) return;
+    for (var i=0;i<refs.length;i++){ var ref=refs[i];
+      try{
+        if (ref.type==='text'){ var raw=ref.node.nodeValue, lead=(raw.match(/^\s*/)||[''])[0], trail=(raw.match(/\s*$/)||[''])[0]; ref.node.nodeValue=lead+v+trail; }
+        else if (ref.type==='attr'){ ref.node.setAttribute(ref.attr, v); }
+        else if (ref.type==='value'){ ref.node.value = v; }
+      }catch(e){}
+    }
+    pending.delete(k);
+  }
+
+  // 翻訳API（Google系Lingva → 予備MyMemory）。成功エンジンを記憶
+  var goodEngine = null;
+  function tl(){ return lang === 'zh' ? 'zh' : 'en'; }
+  function mmPair(){ return lang === 'zh' ? 'ja|zh-CN' : 'ja|en'; }
+  async function callLingva(host, text){
+    try{ var r = await fetch('https://'+host+'/api/v1/ja/'+tl()+'/'+encodeURIComponent(text));
+      if (r.ok){ var j = await r.json(); if (j && j.translation) return j.translation; } }catch(e){}
+    return null;
+  }
+  async function callMyMemory(text){
+    try{ var r = await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text)+'&langpair='+encodeURIComponent(mmPair()));
+      if (r.ok){ var j = await r.json(); var t = j && j.responseData && j.responseData.translatedText; if (t) return t; } }catch(e){}
+    return null;
+  }
+  // MyMemory はブラウザからCORSで直接利用でき安定。Google系Lingvaは多くの環境でCORS不可のため予備。
+  var ENGINES = [
+    { id:'mymemory', run:callMyMemory },
+    { id:'lingva1', run:function(t){ return callLingva('lingva.ml', t); } },
+    { id:'lingva2', run:function(t){ return callLingva('translate.plausibility.cloud', t); } }
+  ];
+  async function mtOne(text){
+    var order = ENGINES.slice();
+    if (goodEngine){ order.sort(function(a,b){ return a.id===goodEngine ? -1 : (b.id===goodEngine ? 1 : 0); }); }
+    for (var i=0;i<order.length;i++){ var v = await order[i].run(text); if (v && v.trim()){ goodEngine = order[i].id; return v.trim(); } }
+    return null;
+  }
+  function setBusy(b){ var el=document.querySelector('.langsel'); if (el) el.style.opacity = b ? '0.55' : '1'; }
+  var running = false;
+  async function runMT(){
+    if (running || lang === 'ja') return; running = true; setBusy(true);
+    var keys = Array.from(pending.keys());
+    var CONC = 5;
+    for (var i=0;i<keys.length;i+=CONC){
+      var batch = keys.slice(i, i+CONC);
+      await Promise.all(batch.map(async function(k){
+        if (!(k in cache)){ var v = await mtOne(k); cache[k] = (v && v.trim()) ? v.trim() : k; }
+        var val = cache[k];
+        if (val && val !== k) applyFor(k, val); else pending.delete(k);
+      }));
+      saveCache();
+    }
+    saveCache(); running = false; setBusy(false);
+    if (pending.size) runMT();
+  }
+
+  function injectSwitcher(){
+    var bar = document.querySelector('.bar');
+    if (!bar || bar.querySelector('.langsel')) return;
+    var sel = document.createElement('select');
+    sel.className = 'langsel'; sel.setAttribute('aria-label','Language');
+    sel.style.cssText = 'width:auto;max-width:150px;min-width:0;min-height:28px;font-size:12.5px;font-weight:700;border-radius:6px;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.16);color:#fff;padding:0 8px;margin-left:8px;flex:0 0 auto;cursor:pointer;';
+    LANGS.forEach(function(pair){ var o=document.createElement('option'); o.value=pair[0]; o.textContent=pair[1]; o.style.color='#111'; if (pair[0]===lang) o.selected=true; sel.appendChild(o); });
+    sel.addEventListener('change', function(){ setLang(sel.value); location.reload(); });
+    var who = bar.querySelector('.who');
+    if (who) who.after(sel); else bar.appendChild(sel);
+  }
+
+  function boot(){
+    try{ document.documentElement.lang = lang==='zh'?'zh-CN':(lang==='en'?'en':'ja'); }catch(e){}
+    injectSwitcher();
+    if (lang === 'ja') return;
+    loadCache();
+    if (document.body) walk(document.body);
+    { var tt = lookup(document.title); if (tt !== null){ if (tt && tt !== document.title) document.title = tt; } }
+    runMT();
+    if (window.MutationObserver && document.body){
+      var timer = null;
+      var obs = new MutationObserver(function(muts){
+        for (var i=0;i<muts.length;i++){ var an=muts[i].addedNodes; for (var j=0;j<an.length;j++){ try{ walk(an[j]); }catch(e){} } }
+        if (pending.size && !timer){ timer = setTimeout(function(){ timer=null; runMT(); }, 200); }
+      });
+      obs.observe(document.body, { childList:true, subtree:true });
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();

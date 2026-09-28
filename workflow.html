@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<!-- BUILD: workflow (ワークフロー図) v20260911A -->
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>ワークフロー図 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E3AAF; --ink2:#3B5BFF; --ground:#F3F5F9; --card:#FFFFFF;
+    --rule:#D3DAEC; --sub:#5b6b8c; --band:#2440b8; --chip:#EEF2FF;
+    --shadow:0 1px 3px rgba(30,58,175,.12); --shadow2:0 6px 18px rgba(30,58,175,.16);
+    --disp:"BIZ UDPGothic","Noto Sans JP",sans-serif;
+    --body:"Noto Sans JP","Hiragino Sans","Yu Gothic UI",sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+    --canvas:#FBFCFE; --p-work:#238554; --p-lead:#3B5BFF; --p-admin:#B98900; --p-part:#C53826;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ink:#C9D6FF; --ground:#0E1422; --card:#161E30; --rule:#2A3550; --sub:#93A0C0;
+      --band:#0a1120; --chip:#1B2438; --canvas:#0f1626;
+      --p-work:#4FB07D; --p-lead:#8FA9FF; --p-admin:#E8C15A; --p-part:#E3705E; }
+  }
+  :root[data-theme="dark"]{
+    --ink:#C9D6FF; --ground:#0E1422; --card:#161E30; --rule:#2A3550; --sub:#93A0C0;
+    --band:#0a1120; --chip:#1B2438; --canvas:#0f1626;
+    --p-work:#4FB07D; --p-lead:#8FA9FF; --p-admin:#E8C15A; --p-part:#E3705E; }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; overflow:hidden; }
+  body{ background:var(--ground); color:var(--ink); font-family:var(--body); font-size:14px; display:flex; flex-direction:column; }
+
+  header.bar{ flex:0 0 auto; background:linear-gradient(180deg,#3355d6,var(--band) 75%); color:#EAefff;
+    display:flex; align-items:center; gap:12px; padding:9px 16px; box-shadow:var(--shadow2); z-index:30; }
+  .mark{ width:10px; height:26px; background:#FFC53D; border-radius:1px; flex:0 0 10px; }
+  .bar h1{ font-family:var(--disp); font-weight:700; font-size:16px; letter-spacing:.03em; margin:0; }
+  .bar .sub{ font-size:11px; color:#B9C6F2; }
+  .bar .right{ margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .tbtn{ background:transparent; border:1px solid #6a82e0; color:#EAefff; font-family:var(--body); font-size:12px; padding:5px 10px; border-radius:6px; cursor:pointer; text-decoration:none; }
+  .tbtn:hover{ background:#3f60d8; }
+
+  .stage{ flex:1 1 auto; position:relative; overflow:hidden; background:var(--canvas);
+    background-image:radial-gradient(rgba(60,90,160,.10) 1px, transparent 1px); background-size:22px 22px; cursor:grab; touch-action:none; }
+  .stage.dragging{ cursor:grabbing; }
+  .canvas{ position:absolute; left:0; top:0; transform-origin:0 0; will-change:transform; }
+  .grp{ position:absolute; }
+  .grp .gt{ font-family:var(--disp); font-weight:700; font-size:13.5px; color:var(--ink);
+    background:var(--card); border:1px solid var(--rule); border-left:4px solid #FFC53D;
+    border-radius:7px; box-shadow:var(--shadow); padding:4px 12px 4px 10px; display:inline-block; margin-bottom:6px; cursor:move; }
+  .grp .gt::before{ content:"⠿ "; color:#9aa3b8; }
+  .grp .mmd svg{ display:block; }
+  .links{ position:absolute; left:0; top:0; overflow:visible; pointer-events:none; z-index:1; }
+  .canvas g.node{ cursor:pointer; }
+  .canvas g.node:hover *{ filter:brightness(.97); }
+
+  .legend{ position:absolute; left:12px; top:12px; z-index:10; background:var(--card); border:1px solid var(--rule);
+    border-radius:9px; box-shadow:var(--shadow); padding:8px 11px; font-size:11.5px; max-width:min(94vw,660px); }
+  .legend .row{ display:flex; flex-wrap:wrap; gap:5px 12px; align-items:center; }
+  .legend .row + .row{ margin-top:3px; }
+  .legend .ttl{ color:var(--sub); font-weight:700; }
+  .pchip{ display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+  .dot{ width:11px; height:11px; border-radius:3px; border:2px solid; }
+  .d-work{ border-color:var(--p-work); } .d-lead{ border-color:var(--p-lead); }
+  .d-admin{ border-color:var(--p-admin); } .d-part{ border-color:var(--p-part); }
+  .shape{ display:inline-flex; align-items:center; gap:5px; }
+  .sh{ width:20px; height:13px; border:2px solid var(--ink2); background:var(--card); }
+  .sh.round{ border-radius:8px; background:var(--chip); }
+  .sh.dia{ transform:rotate(45deg) scale(.7); }
+  .hint{ color:var(--sub); }
+
+  .ctrls{ position:absolute; left:12px; bottom:12px; z-index:10; display:flex; gap:6px; }
+  .ctrls button{ width:38px; height:38px; border-radius:9px; border:1px solid var(--rule); background:var(--card);
+    color:var(--ink); font-size:17px; font-weight:700; cursor:pointer; box-shadow:var(--shadow); display:flex; align-items:center; justify-content:center; }
+  .ctrls button.wide{ width:auto; padding:0 12px; font-size:12.5px; }
+  .ctrls button:hover{ background:var(--chip); }
+
+  .minimap{ position:absolute; right:12px; bottom:12px; z-index:10; background:var(--card); border:1px solid var(--rule);
+    border-radius:9px; box-shadow:var(--shadow2); padding:6px; cursor:pointer; }
+  .minimap .cap{ font-size:10px; color:var(--sub); font-family:var(--mono); margin:0 2px 3px; letter-spacing:.04em; }
+  .mini-inner{ position:relative; overflow:hidden; border-radius:4px; }
+  .vrect{ position:absolute; border:2px solid #FF6A3D; background:rgba(255,106,61,.14); pointer-events:none; z-index:2; }
+
+  .detail{ position:absolute; right:12px; top:12px; z-index:12; width:min(320px,86vw); max-height:calc(100% - 210px);
+    overflow-y:auto; background:var(--card); border:1px solid var(--rule); border-radius:11px; box-shadow:var(--shadow2);
+    padding:12px 14px; font-size:12.5px; line-height:1.65; }
+  .detail .dh{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .detail .dh b{ font-family:var(--disp); font-size:14.5px; }
+  .detail .dh .x{ margin-left:auto; border:none; background:transparent; color:var(--sub); font-size:16px; cursor:pointer; }
+  .detail .who{ font-family:var(--mono); font-size:10.5px; padding:1px 7px; border-radius:4px; border:1px solid currentColor; }
+  .detail .blk{ margin-top:8px; }
+  .detail .blk .lbl{ font-family:var(--mono); font-size:10px; letter-spacing:.08em; font-weight:700; display:inline-block; padding:1px 6px; border-radius:4px; margin-bottom:2px; }
+  .detail .blk.in  .lbl{ color:#7a5a00; background:#FBF3E0; }
+  .detail .blk.disp .lbl{ color:#12314f; background:#E3EBF3; }
+  .detail .blk.calc .lbl{ color:#154d34; background:#EAF7EF; }
+  .detail .blk .v{ margin:0; }
+  .detail .hintbox{ color:var(--sub); }
+
+  @media (prefers-reduced-motion:reduce){ *{ transition:none!important; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <div>
+    <h1>宗像総合管理システム ワークフロー図</h1>
+    <div class="sub">最新版・システム内表示</div>
+  </div>
+  <div class="right">
+    <a class="tbtn" href="mode-select.html">◀ メニュー</a>
+    <button class="tbtn" id="tt" type="button">◐ 表示切替</button>
+  </div>
+</header>
+
+<div class="stage" id="stage">
+  <div class="canvas" id="canvas">
+    <svg class="links" id="links"><defs>
+      <marker id="arrow" markerWidth="11" markerHeight="11" refX="7.5" refY="3.2" orient="auto"><path d="M0,0 L8,3.2 L0,6.4 Z" fill="#5b6b8c"/></marker>
+      <marker id="arrowo" markerWidth="11" markerHeight="11" refX="7.5" refY="3.2" orient="auto"><path d="M0,0 L8,3.2 L0,6.4 Z" fill="#E08A00"/></marker>
+    </defs></svg>
+
+    <div class="grp" id="g1"><div class="gt">① ログインと権限</div>
+      <pre class="mmd">
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Noto Sans JP, sans-serif","lineColor":"#5b6b8c","fontSize":"14px"},"flowchart":{"useMaxWidth":false,"htmlLabels":true,"nodeSpacing":18,"rankSpacing":34,"padding":6,"curve":"linear"}}}%%
+flowchart LR
+  S(["▶ スタート<br/>ログイン"]) --> V{"入力は<br/>正しい？"}
+  V -->|いいえ| ERR["エラー<br/>再入力へ"]
+  V -->|はい| MC{"メール<br/>確認済み？"}
+  MC -->|未確認| WAIT["確認待ち<br/>確認して再ログイン"]
+  MC -->|確認済み| MENU["メニュー"]
+  MENU --> ROLE{"権限は？<br/>（①〜⑤）"}
+  ROLE -->|管理者だけ| USR["社員・担当者を<br/>登録する"]
+  ROLE -->|作業員も| FIELD1["現場の記録へ"]
+  classDef entry fill:#EEF0F4,stroke:#8b94a8,color:#3a4358;
+  classDef dec fill:#FFFFFF,stroke:#3B5BFF,color:#1E3AAF;
+  classDef admin fill:#FBF3E0,stroke:#B98900,color:#6b5200;
+  classDef work fill:#EAF7EF,stroke:#238554,color:#154d34;
+  classDef start fill:#D6F5E1,stroke:#1B8F4D,color:#0f5a30,stroke-width:3px;
+  class S start;
+  class ERR,WAIT,MENU entry;
+  class V,MC,ROLE dec;
+  class USR admin;
+  class FIELD1 work;
+      </pre>
+    </div>
+
+    <div class="grp" id="g2"><div class="gt">② 段取り（着工前）・監督/管理者</div>
+      <pre class="mmd">
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Noto Sans JP, sans-serif","lineColor":"#5b6b8c","fontSize":"14px"},"flowchart":{"useMaxWidth":false,"htmlLabels":true,"nodeSpacing":18,"rankSpacing":34,"padding":6,"curve":"linear"}}}%%
+flowchart LR
+  SETUP["工事・取引先を<br/>登録する"] --> BUD["実行予算<br/>（着工前原価台帳）<br/>数量・単価・リードタイム"]
+  BUD --> EST["業者見積・原価決定<br/>相見積で原価を確定"]
+  EST --> SCH["工程表<br/>工程ごとに<br/>開始日を決める"]
+  SCH --> NEED["工程ごとの<br/>必要材料を出す"]
+  NEED --> ORD["材工発注<br/>材料・工事の発注（正）"]
+  ORD --> ALT["材料到着スケジュール<br/>発注期限を計算"]
+  ALT --> Q1{"工程開始に<br/>間に合う？"}
+  Q1 -->|間に合わない| RESCH["工程表を<br/>組み直す"]
+  RESCH --> SCH
+  Q1 -->|大丈夫| SAFE["安全書類<br/>施工前に提出・日付別保管"]
+  SAFE --> GO["着工"]
+  classDef lead fill:#EAF0FF,stroke:#3B5BFF,color:#1E3AAF;
+  classDef dec fill:#FFFFFF,stroke:#3B5BFF,color:#1E3AAF;
+  classDef part fill:#FBEDEB,stroke:#C53826,color:#7a241a;
+  classDef work fill:#EAF7EF,stroke:#238554,color:#154d34;
+  classDef loop fill:#FFE6C7,stroke:#E08A00,color:#7a5200;
+  class SETUP,BUD,EST,SCH,NEED,ORD,GO lead;
+  class ALT work;
+  class Q1 dec;
+  class RESCH loop;
+  class SAFE part;
+      </pre>
+    </div>
+
+    <div class="grp" id="g3"><div class="gt">③ 施工〜日々の記録・現場と会社</div>
+      <pre class="mmd">
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Noto Sans JP, sans-serif","lineColor":"#5b6b8c","fontSize":"14px"},"flowchart":{"useMaxWidth":false,"htmlLabels":true,"nodeSpacing":18,"rankSpacing":34,"padding":6,"curve":"linear"}}}%%
+flowchart LR
+  FIELD["現場の<br/>記録へ"] --> REP["日報・写真を<br/>提出する"]
+  PART(["協力会社<br/>リンク"]) --> REP1["日報を<br/>提出"]
+  REP1 --> CHK
+  REP --> CHK{"会社の<br/>確認OK？"}
+  CHK -->|直しが必要| BACK["差戻し"]
+  BACK --> REP
+  CHK -->|OK| RCV["承認・受領"]
+  RCV --> HRS["報・連・相<br/>現場⇄本社"]
+  HRS --> PROG["出来高・進捗<br/>完了で自動100%"]
+  PROG --> PRG{"工程どおりに<br/>進んでる？"}
+  PRG -->|順調| END(["🏁 ゴール<br/>完成・損益確認"])
+  PRG -->|遅れ| RES2["工程表を組み直す<br/>（②へ戻る）"]
+  classDef term fill:#E7ECFF,stroke:#3B5BFF,color:#1E3AAF;
+  classDef dec fill:#FFFFFF,stroke:#3B5BFF,color:#1E3AAF;
+  classDef lead fill:#EAF0FF,stroke:#3B5BFF,color:#1E3AAF;
+  classDef work fill:#EAF7EF,stroke:#238554,color:#154d34;
+  classDef part fill:#FBEDEB,stroke:#C53826,color:#7a241a;
+  classDef loop fill:#FFE6C7,stroke:#E08A00,color:#7a5200;
+  classDef goal fill:#FFE9B0,stroke:#D99400,color:#6b4e00,stroke-width:3px;
+  class END goal;
+  class CHK,PRG dec;
+  class RCV,BACK,HRS lead;
+  class REP,FIELD,PROG work;
+  class PART,REP1 part;
+  class RES2 loop;
+      </pre>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="row">
+      <span class="ttl">形</span>
+      <span class="shape"><span class="sh round"></span>開始/終了</span>
+      <span class="shape"><span class="sh"></span>作業</span>
+      <span class="shape"><span class="sh dia"></span>判断</span>
+      <span class="ttl" style="margin-left:6px">色=だれが使う</span>
+      <span class="pchip"><span class="dot d-part"></span>協力会社</span>
+      <span class="pchip"><span class="dot d-work"></span>作業員も</span>
+      <span class="pchip"><span class="dot d-lead"></span>監督・管理者</span>
+      <span class="pchip"><span class="dot d-admin"></span>管理者だけ</span>
+    </div>
+    <div class="row"><span class="hint"><b>見出し(⠿)をドラッグで移動</b>・<b>ノードで詳細（入力・表示・計算）</b>・ホイール拡大・右下ミニマップ</span></div>
+  </div>
+
+  <div class="ctrls">
+    <button id="zin" title="拡大">＋</button>
+    <button id="zout" title="縮小">－</button>
+    <button id="fit" class="wide" title="全体を表示">全体</button>
+    <button id="resetpos" class="wide" title="グループの配置を初期状態に戻す">配置リセット</button>
+  </div>
+
+  <div class="minimap" id="minimap">
+    <div class="cap">全体マップ（枠＝表示中）</div>
+    <div class="mini-inner" id="miniInner"><div class="vrect" id="vrect"></div></div>
+  </div>
+
+  <div class="detail" id="detail">
+    <div class="dh"><b id="d_title">各ステップの仕組み</b><button class="x" id="d_close" type="button" title="閉じる">×</button></div>
+    <div id="d_body"><p class="hintbox">図の<b>四角・ひし形をクリック</b>すると、そのステップで<b>何を入力し・何が表示され・何が計算されるか</b>が出ます。</p></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+(function(){
+  var SVGNS='http://www.w3.org/2000/svg';
+  var stage=document.getElementById('stage'), canvas=document.getElementById('canvas'),
+      miniInner=document.getElementById('miniInner'), vrect=document.getElementById('vrect'), links=document.getElementById('links');
+  var W=0,H=0,s=1,tx=0,ty=0,miniScale=1, MMW=250, MMH=180;
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  function apply(){ canvas.style.transform='translate('+tx+'px,'+ty+'px) scale('+s+')'; updateMini(); }
+  function updateMini(){ if(!W) return; var cw=stage.clientWidth, ch=stage.clientHeight;
+    var L=clamp((-tx)/s,0,W), T=clamp((-ty)/s,0,H), R=clamp((cw-tx)/s,0,W), B=clamp((ch-ty)/s,0,H);
+    vrect.style.left=(L*miniScale)+'px'; vrect.style.top=(T*miniScale)+'px';
+    vrect.style.width=Math.max(4,(R-L)*miniScale)+'px'; vrect.style.height=Math.max(4,(B-T)*miniScale)+'px'; }
+  function fit(){ var cw=stage.clientWidth,ch=stage.clientHeight,pad=50; s=clamp(Math.min((cw-pad)/W,(ch-pad)/H),0.1,4); tx=(cw-W*s)/2; ty=(ch-H*s)/2; apply(); }
+  function zoomAt(cx,cy,f){ var ns=clamp(s*f,0.12,5); tx=cx-((cx-tx)/s)*ns; ty=cy-((cy-ty)/s)*ns; s=ns; apply(); }
+  function centerOn(id,sx,sy){ var g=canvas.querySelector('g.node[id^="flowchart-'+id+'-"]'); if(!g) return false;
+    var cr=canvas.getBoundingClientRect(), r=g.getBoundingClientRect(); tx=sx-((r.left+r.width/2)-cr.left)/s; ty=sy-((r.top+r.height/2)-cr.top)/s; apply(); return true; }
+
+  function nodeBox(id){ var g=canvas.querySelector('g.node[id^="flowchart-'+id+'-"]'); if(!g) return null;
+    var cr=canvas.getBoundingClientRect(), r=g.getBoundingClientRect();
+    return { l:(r.left-cr.left)/s, t:(r.top-cr.top)/s, r:(r.right-cr.left)/s, b:(r.bottom-cr.top)/s,
+             cx:((r.left+r.right)/2-cr.left)/s, cy:((r.top+r.bottom)/2-cr.top)/s }; }
+  function nodeGrpBox(id){ var g=canvas.querySelector('g.node[id^="flowchart-'+id+'-"]'); var grp=g&&g.closest('.grp'); if(!grp) return null;
+    var cr=canvas.getBoundingClientRect(), r=grp.getBoundingClientRect(); return {l:(r.left-cr.left)/s,t:(r.top-cr.top)/s,r:(r.right-cr.left)/s,b:(r.bottom-cr.top)/s}; }
+  function allNodeBoxes(){ var cr=canvas.getBoundingClientRect(), out=[]; canvas.querySelectorAll('g.node').forEach(function(g){ var r=g.getBoundingClientRect(); out.push({l:(r.left-cr.left)/s,t:(r.top-cr.top)/s,r:(r.right-cr.left)/s,b:(r.bottom-cr.top)/s}); }); return out; }
+  function vHits(x,y1,y2,boxes){ if(y1>y2){var t=y1;y1=y2;y2=t;} for(var i=0;i<boxes.length;i++){var b=boxes[i]; if(x>b.l-9&&x<b.r+9&&y2>b.t-4&&y1<b.b+4) return true;} return false; }
+  function clearColX(xp,y1,y2,boxes){ if(!vHits(xp,y1,y2,boxes)) return xp; for(var dx=12;dx<8000;dx+=12){ if(!vHits(xp+dx,y1,y2,boxes)) return xp+dx; if(xp-dx>0&&!vHits(xp-dx,y1,y2,boxes)) return xp-dx; } return xp; }
+  function nodeLink(aId,bId,o){ var A=nodeBox(aId), B=nodeBox(bId); if(!A||!B) return; o=o||{};
+    var ax,ay,bx,by, vertical=true;
+    if(B.cy>=A.b-2){ ax=A.cx; ay=A.b-3; bx=B.cx; by=B.t; }
+    else if(B.cy<=A.t+2){ ax=A.cx; ay=A.t+3; bx=B.cx; by=B.b; }
+    else { vertical=false; if(B.cx>=A.cx){ ax=A.r-3; ay=A.cy; bx=B.l; by=B.cy; } else { ax=A.l+3; ay=A.cy; bx=B.r; by=B.cy; } }
+    var off=o.off||0, d, lx, ly;
+    if(vertical){
+      if(by>ay){
+        var ga=nodeGrpBox(aId), gb=nodeGrpBox(bId), boxes=allNodeBoxes();
+        var c1=(ga?ga.b:ay)+16+off, c2=(gb?gb.t:by)-28;
+        if(c2>c1+4){ var mx=clearColX(bx,c1,c2,boxes);
+          d='M '+ax+' '+ay+' L '+ax+' '+c1+' L '+mx+' '+c1+' L '+mx+' '+c2+' L '+bx+' '+c2+' L '+bx+' '+by; lx=bx; ly=c2-2; }
+        else { var mY=Math.round((ay+by)/2)+off; d='M '+ax+' '+ay+' L '+ax+' '+mY+' L '+bx+' '+mY+' L '+bx+' '+by; lx=bx; ly=(gb?gb.t-24:by-24); } }
+      else { var mY2=Math.round((ay+by)/2)+off; d='M '+ax+' '+ay+' L '+ax+' '+mY2+' L '+bx+' '+mY2+' L '+bx+' '+by; lx=bx; ly=by+24; } }
+    else { var midX=Math.round((ax+bx)/2)+off; d='M '+ax+' '+ay+' L '+midX+' '+ay+' L '+midX+' '+by+' L '+bx+' '+by; lx=midX; ly=Math.round((ay+by)/2)-16; }
+    var p=document.createElementNS(SVGNS,'path'); p.setAttribute('d',d); p.setAttribute('fill','none');
+    p.setAttribute('stroke',o.color||'#5b6b8c'); p.setAttribute('stroke-width','2.6'); p.setAttribute('stroke-linejoin','round');
+    if(o.dash) p.setAttribute('stroke-dasharray','7 5'); p.setAttribute('marker-end', o.color?'url(#arrowo)':'url(#arrow)');
+    links.appendChild(p);
+    if(o.label){ var t=document.createElementNS(SVGNS,'text'); t.setAttribute('x',lx); t.setAttribute('y',ly);
+      t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','middle'); t.setAttribute('font-size','13'); t.setAttribute('font-weight','700');
+      t.setAttribute('fill',o.color||'#3a4358'); t.setAttribute('font-family','Noto Sans JP, sans-serif'); t.textContent=o.label;
+      var bg=document.createElementNS(SVGNS,'rect'); links.appendChild(bg); links.appendChild(t);
+      var bb=t.getBBox(); bg.setAttribute('x',bb.x-6); bg.setAttribute('y',bb.y-2); bg.setAttribute('width',bb.width+12); bg.setAttribute('height',bb.height+4); bg.setAttribute('rx',5); bg.setAttribute('fill','#FBFCFE'); bg.setAttribute('opacity','.94'); } }
+  function redrawLinks(){ Array.prototype.slice.call(links.childNodes).forEach(function(n){ if(n.nodeName.toLowerCase()!=='defs') links.removeChild(n); });
+    nodeLink('FIELD1','FIELD',{label:'現場の記録', dash:true, off:-34});
+    nodeLink('ROLE','SETUP',{label:'監督・管理者'});
+    nodeLink('GO','PRG',{});
+    nodeLink('ROLE','REP',{label:'作業員も 日報', off:34}); }
+  function recomputeBounds(){ var maxR=0,maxB=0;
+    canvas.querySelectorAll('.grp').forEach(function(g){ var l=parseFloat(g.style.left)||0, t=parseFloat(g.style.top)||0; maxR=Math.max(maxR,l+g.offsetWidth); maxB=Math.max(maxB,t+g.offsetHeight); });
+    W=maxR+50; H=maxB+50; canvas.style.width=W+'px'; canvas.style.height=H+'px'; links.setAttribute('width',W); links.setAttribute('height',H); }
+  function refreshMinimap(){ miniScale=Math.min(MMW/W, MMH/H);
+    Array.prototype.slice.call(miniInner.childNodes).forEach(function(n){ if(n!==vrect) miniInner.removeChild(n); });
+    var clone=canvas.cloneNode(true); clone.removeAttribute('id'); clone.style.transform='scale('+miniScale+')'; clone.style.transformOrigin='0 0'; clone.style.left='0'; clone.style.top='0';
+    clone.querySelectorAll('[id]').forEach(function(el){ el.removeAttribute('id'); });
+    miniInner.style.width=(W*miniScale)+'px'; miniInner.style.height=(H*miniScale)+'px'; miniInner.insertBefore(clone, vrect); updateMini(); }
+
+  function setup(){
+    canvas.querySelectorAll('.grp .mmd svg').forEach(function(svg){ var vb=svg.viewBox&&svg.viewBox.baseVal; if(vb){ svg.setAttribute('width',vb.width); svg.setAttribute('height',vb.height); } svg.style.maxWidth='none'; });
+    s=1; tx=0; ty=0; canvas.style.transform='translate(0px,0px) scale(1)';
+    var g1=document.getElementById('g1'), g2=document.getElementById('g2'), g3=document.getElementById('g3');
+    var saved=null; try{ saved=JSON.parse(localStorage.getItem('wf-pos')||'null'); }catch(e){}
+    if(saved&&saved.g1&&saved.g2&&saved.g3){
+      g1.style.left=saved.g1.l+'px'; g1.style.top=saved.g1.t+'px';
+      g2.style.left=saved.g2.l+'px'; g2.style.top=saved.g2.t+'px';
+      g3.style.left=saved.g3.l+'px'; g3.style.top=saved.g3.t+'px';
+    } else {
+      var GAP=80;
+      g1.style.left='0px'; g1.style.top='0px';
+      var x2=Math.round(g1.offsetWidth*0.34);
+      g2.style.left=x2+'px'; g2.style.top=(g1.offsetHeight+GAP)+'px';
+      g3.style.left=(x2+Math.round(g2.offsetWidth*0.30))+'px'; g3.style.top=(g1.offsetHeight+g2.offsetHeight+2*GAP)+'px';
+    }
+    function savePos(){ try{ localStorage.setItem('wf-pos', JSON.stringify({
+      g1:{l:parseFloat(g1.style.left)||0,t:parseFloat(g1.style.top)||0},
+      g2:{l:parseFloat(g2.style.left)||0,t:parseFloat(g2.style.top)||0},
+      g3:{l:parseFloat(g3.style.left)||0,t:parseFloat(g3.style.top)||0} })); }catch(e){} }
+    recomputeBounds(); redrawLinks(); refreshMinimap();
+    s=1; if(!centerOn('S',150,150)){ tx=30; ty=90; apply(); }
+
+    canvas.querySelectorAll('.grp').forEach(function(grp){ var gt=grp.querySelector('.gt'); if(!gt) return;
+      var gd=false, gx=0, gy=0, gl=0, gtp=0;
+      gt.addEventListener('pointerdown', function(e){ gd=true; gx=e.clientX; gy=e.clientY; gl=parseFloat(grp.style.left)||0; gtp=parseFloat(grp.style.top)||0; gt.setPointerCapture&&gt.setPointerCapture(e.pointerId); e.stopPropagation(); });
+      gt.addEventListener('pointermove', function(e){ if(!gd) return; grp.style.left=(gl+(e.clientX-gx)/s)+'px'; grp.style.top=(gtp+(e.clientY-gy)/s)+'px'; redrawLinks(); e.stopPropagation(); });
+      gt.addEventListener('pointerup', function(e){ if(!gd) return; gd=false; recomputeBounds(); redrawLinks(); refreshMinimap(); savePos(); e.stopPropagation(); }); });
+
+    var drag=false,px=0,py=0,dx=0,dy=0,moved=false,dt=null;
+    stage.addEventListener('pointerdown',function(e){ if(e.target.closest('.minimap')||e.target.closest('.ctrls')||e.target.closest('.legend')||e.target.closest('.detail')||e.target.closest('.gt')) return;
+      drag=true; px=e.clientX; py=e.clientY; dx=e.clientX; dy=e.clientY; moved=false; dt=e.target; stage.classList.add('dragging'); stage.setPointerCapture&&stage.setPointerCapture(e.pointerId); });
+    stage.addEventListener('pointermove',function(e){ if(!drag) return; if(Math.abs(e.clientX-dx)+Math.abs(e.clientY-dy)>5) moved=true; tx+=e.clientX-px; ty+=e.clientY-py; px=e.clientX; py=e.clientY; apply(); });
+    stage.addEventListener('pointerup',function(){ drag=false; stage.classList.remove('dragging'); if(!moved&&dt&&dt.closest){ var g=dt.closest('g.node'); if(g) openDetail(g); } });
+    stage.addEventListener('pointercancel',function(){ drag=false; stage.classList.remove('dragging'); });
+    stage.addEventListener('wheel',function(e){ e.preventDefault(); var r=stage.getBoundingClientRect(); zoomAt(e.clientX-r.left,e.clientY-r.top, e.deltaY<0?1.12:1/1.12); },{passive:false});
+    document.getElementById('zin').onclick=function(){ zoomAt(stage.clientWidth/2,stage.clientHeight/2,1.2); };
+    document.getElementById('zout').onclick=function(){ zoomAt(stage.clientWidth/2,stage.clientHeight/2,1/1.2); };
+    document.getElementById('fit').onclick=fit;
+    document.getElementById('resetpos').onclick=function(){ try{ localStorage.removeItem('wf-pos'); }catch(e){}
+      var GAP=80; g1.style.left='0px'; g1.style.top='0px'; var x2=Math.round(g1.offsetWidth*0.34);
+      g2.style.left=x2+'px'; g2.style.top=(g1.offsetHeight+GAP)+'px';
+      g3.style.left=(x2+Math.round(g2.offsetWidth*0.30))+'px'; g3.style.top=(g1.offsetHeight+g2.offsetHeight+2*GAP)+'px';
+      recomputeBounds(); redrawLinks(); refreshMinimap(); fit(); };
+    function moveTo(e){ var r=miniInner.getBoundingClientRect(); var mx=(e.clientX-r.left)/miniScale, my=(e.clientY-r.top)/miniScale; tx=stage.clientWidth/2-mx*s; ty=stage.clientHeight/2-my*s; apply(); }
+    var md=false;
+    miniInner.addEventListener('pointerdown',function(e){ md=true; moveTo(e); e.stopPropagation(); miniInner.setPointerCapture&&miniInner.setPointerCapture(e.pointerId); });
+    miniInner.addEventListener('pointermove',function(e){ if(md) moveTo(e); });
+    miniInner.addEventListener('pointerup',function(){ md=false; });
+    canvas.querySelectorAll('g.node').forEach(function(g){ g.addEventListener('mouseenter',function(){ if(!drag) openDetail(g); }); });
+    window.addEventListener('resize', updateMini);
+  }
+
+  var DETAIL={
+    S:{t:"ログイン",in:"メールアドレス・パスワード",disp:"エラー文言（違う時）",calc:"認証照合（signInWithPassword）"},
+    V:{t:"入力チェック",calc:"入力の正誤を判定。誤りはエラーへ戻す"},
+    ERR:{t:"エラー",disp:"「メールまたはパスワードが違います」",calc:"再入力へ戻す"},
+    MC:{t:"メール確認",calc:"メール確認済みかを判定。未確認はログイン不可"},
+    WAIT:{t:"確認待ち",disp:"確認の案内",calc:"確認後の初回ログインで会社へ紐づけ（claim_invite）"},
+    MENU:{t:"メニュー",disp:"権限に応じた機能一覧",calc:"役割で表示項目を絞り込む"},
+    ROLE:{t:"権限の判定（5区分）",calc:"①経営者／②現場監督／③一般社員／④外注社員／⑤協力業者 で開ける範囲が決まる。金額は④⑤には最初から表示しない（構造的に非表示）"},
+    USR:{t:"社員・担当者の登録",who:{t:"管理者だけ",c:"#B98900"},in:"氏名・役割・単価・所属",disp:"利用者一覧",calc:"招待リンクを発行→本人がパスワード設定でログイン可"},
+    FIELD1:{t:"現場の記録へ",who:{t:"作業員も",c:"#238554"},calc:"作業員はメニューから現場の記録（日報・写真）へ進む（③へ）"},
+    FIELD:{t:"現場の記録へ",who:{t:"作業員も",c:"#238554"},calc:"作業員はメニューから現場の記録（日報・写真）へ進む"},
+    SETUP:{t:"工事・取引先の登録",who:{t:"監督・管理者",c:"#3B5BFF"},in:"工事名・契約金額・工期・現場担当・協力会社の許可／取引先情報",disp:"工事一覧・概要",calc:"契約金額から税・税込を自動計算"},
+    BUD:{t:"実行予算（着工前原価台帳）",who:{t:"監督・管理者",c:"#3B5BFF"},in:"区分(材/工)・品名・数量・単価・原価区分・納品予定日・リードタイム(発注から入荷までの日数)",disp:"材料費・労務費・合計（列見出しタップで並べ替え）",calc:"金額＝数量×単価、材料費/労務費の合計"},
+    EST:{t:"業者見積・原価決定",who:{t:"監督・管理者",c:"#3B5BFF"},in:"見積先ごとの数量×単価",disp:"見積比較・最安・採用",calc:"相見積で採用した額＝決定額。実行予算・材工発注に反映される"},
+    SCH:{t:"工程表",who:{t:"作業員も閲覧",c:"#238554"},in:"工程名・各工程の開始日と期間・工程の前後関係",disp:"ガントチャート＋各バーに材料の遅れリスクを重ねて表示",calc:"前後関係から各工程の開始日が決まる。開始日が材料の発注期限の基準になる"},
+    NEED:{t:"必要材料の洗い出し",who:{t:"監督・管理者",c:"#3B5BFF"},in:"実行予算の材料明細を、使う工程にひもづける",disp:"工程ごとに必要な材料の一覧",calc:"材料と工程が結びつき、その工程の開始日を材料の必要期限として扱える"},
+    ORD:{t:"材工発注（発注の正）",who:{t:"監督・管理者",c:"#3B5BFF"},in:"発注先・納品予定日",disp:"材料/工事の切替・工程で絞り込み・列見出しで並べ替え",calc:"すべての発注の正。品目の工程を個別に付け替え可。原価＝業者見積の決定額"},
+    ALT:{t:"材料到着スケジュール",who:{t:"作業員も",c:"#238554"},disp:"品目ごとの緊急度を左端に赤/黄/緑で表示(現場別/全工事)",calc:"発注期限＝納品予定日−リードタイム を工程開始日と比較。間に合わない→赤・近い→黄・余裕→緑"},
+    Q1:{t:"納期の判定",calc:"発注期限が工程開始日より後(間に合わない)なら工程表を組み直す。手前(間に合う)なら着工へ"},
+    RESCH:{t:"工程表の組み直し",who:{t:"監督・管理者",c:"#3B5BFF"},in:"工程の期間・順序を修正",disp:"更新後のガント",calc:"工程表の版を更新（履歴が残る）"},
+    SAFE:{t:"安全書類",who:{t:"協力会社が提出／全員閲覧",c:"#C53826"},in:"KY活動・新規入場者教育などを記入・提出",disp:"工事×日付×種別で一覧・全員閲覧（ひな型＋保管書類）",calc:"施工前提出＋日次で保管。ファイル名の日付で自動整理。追加・削除は管理者のみ"},
+    GO:{t:"着工",calc:"着工日＝工程表の開始日。以後、着工前原価への当初見積の追加はロック"},
+    REP:{t:"日報・写真の提出（社員）",who:{t:"作業員も",c:"#238554"},in:"日付・人工・作業内容・写真（既存選択／カメラ撮影）",disp:"提出一覧・状態バッジ",calc:"写真は自動で軽量化（長辺1600px）＋撮影位置(EXIF)、担当者と日報にひもづけ"},
+    PART:{t:"協力会社リンク",who:{t:"協力会社",c:"#C53826"},in:"専用URLを開くだけ",calc:"トークンで対象の工事を特定（ログイン不要）"},
+    REP1:{t:"日報の提出（協力会社）",who:{t:"協力会社",c:"#C53826"},in:"（専用リンクで）日付・会社名・記入者・作業内容",disp:"送信完了の表示",calc:"ログイン不要で登録（submit_partner_report）"},
+    CHK:{t:"会社の確認",who:{t:"監督・管理者",c:"#3B5BFF"},in:"承認／差戻しの操作",calc:"状態遷移：提出→承認／差戻し"},
+    BACK:{t:"差戻し",disp:"差戻しの理由",calc:"状態を差戻しにして現場へ返す"},
+    RCV:{t:"承認・受領",who:{t:"監督・管理者",c:"#3B5BFF"},calc:"状態＝承認→受領。進捗として記録"},
+    HRS:{t:"報・連・相（現場⇄本社）",who:{t:"監督・管理者",c:"#3B5BFF"},in:"種別(報告/連絡/相談)・内容・添付ファイル",disp:"スレッド・状態・本社確認",calc:"現場と本社のやりとりを記録・確認。①②のみ"},
+    PROG:{t:"出来高・進捗",who:{t:"作業員も閲覧",c:"#238554"},in:"各工程の進捗%（自己申告）",disp:"出来高＝予算×% と 全体進捗",calc:"工程を「完了」にすると出来高が自動100%。工程未割付の予算は警告"},
+    PRG:{t:"進捗の判定",calc:"日報・出来高の進み具合と工程表を突き合わせ。遅れていれば工程表を組み直す"},
+    RES2:{t:"工程表の組み直し（進捗遅れ）",who:{t:"監督・管理者",c:"#3B5BFF"},calc:"日報・出来高で遅れが分かったら②の工程表を組み直す"},
+    END:{t:"完成・損益確認",who:{t:"監督・管理者",c:"#3B5BFF"},disp:"損益・竣工図書",calc:"損益＝受注金額−実際原価（粗利）。竣工図書は写真・書類を章別に整理して印刷"}
+  };
+  function esc(x){ return String(x).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+  function openDetail(g){ var id=(g.id||'').replace(/^flowchart-/,'').replace(/-\d+$/,''); var d=DETAIL[id]; if(!d) return;
+    document.getElementById('d_title').textContent=d.t; var h='';
+    if(d.who) h+='<div style="margin-bottom:6px"><span class="who" style="color:'+d.who.c+'">'+esc(d.who.t)+'</span></div>';
+    if(d.in)   h+='<div class="blk in"><span class="lbl">入力</span><p class="v">'+esc(d.in)+'</p></div>';
+    if(d.disp) h+='<div class="blk disp"><span class="lbl">表示</span><p class="v">'+esc(d.disp)+'</p></div>';
+    if(d.calc) h+='<div class="blk calc"><span class="lbl">計算・処理</span><p class="v">'+esc(d.calc)+'</p></div>';
+    document.getElementById('d_body').innerHTML=h||'<p class="hintbox">—</p>'; }
+  document.getElementById('d_close').addEventListener('click',function(){ document.getElementById('d_title').textContent='各ステップの仕組み';
+    document.getElementById('d_body').innerHTML='<p class="hintbox">図の<b>四角・ひし形をクリック</b>すると、そのステップで<b>何を入力し・何が表示され・何が計算されるか</b>が出ます。</p>'; });
+
+  function boot(){ try{ if(window.mermaid){ mermaid.initialize({startOnLoad:false,securityLevel:'loose',flowchart:{useMaxWidth:false}});
+    var p=mermaid.run({querySelector:'.mmd'}); if(p&&p.then) p.then(setup); else setTimeout(setup,400); } }catch(e){ console.error(e); } }
+  function start(){ if(typeof requireAuth==='function'){ requireAuth().then(function(a){ if(a) boot(); }); } else { boot(); } }
+  if(document.readyState==='complete'||document.readyState==='interactive') start(); else window.addEventListener('DOMContentLoaded',start);
+
+  var t=document.getElementById('tt');
+  try{ var sv=localStorage.getItem('wf-theme'); if(sv) document.documentElement.setAttribute('data-theme',sv); }catch(e){}
+  t.addEventListener('click',function(){ var d=document.documentElement.getAttribute('data-theme'); var mql=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches; var isDark=d==='dark'||(!d&&mql);
+    document.documentElement.setAttribute('data-theme', isDark?'light':'dark'); try{ localStorage.setItem('wf-theme', isDark?'light':'dark'); }catch(e){} });
+})();
+</script>
+
+</body></html>

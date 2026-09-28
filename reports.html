@@ -1,17 +1,31 @@
 <!DOCTYPE html>
-<!-- BUILD: reports (日報) v20260723K -->
+<!-- BUILD: reports (日報) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>日報 ｜ 宗像総合管理システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <style>
-  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
-  .ctl select{ width:auto; min-width:170px; max-width:380px; min-height:44px; flex:0 1 auto; }
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .ctl select{ width:auto; min-width:170px; max-width:380px; min-height:38px; flex:0 1 auto; }
   .ctl .sp{ flex:1 1 0; }
 
   .rstat{ font-size:12px; font-weight:700; padding:4px 9px; border-radius:2px;
@@ -41,6 +55,21 @@
 
   .act{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
   .ro{ background:#F3F5F1; }
+
+  /* PCの横幅を活かして、縦にだらだら並べず2カラムにまとめる */
+  .fcol-a > .sheet + .sheet{ margin-top:14px; }
+  @media (min-width:860px){
+    #panel .wrap{ max-width:1100px; }
+    .formgrid{ display:grid; grid-template-columns:400px 1fr; gap:16px; align-items:start; }
+  }
+  /* 日報の写真添付（選ぶ／撮影・枚数無制限で累積） */
+  .phlist{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .phitem{ position:relative; width:82px; height:82px; border:1px solid var(--rule); border-radius:6px; overflow:hidden; background:#F1F3EF; flex:0 0 auto; }
+  .phitem img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .phitem .ph-x{ position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; border:0;
+    background:rgba(0,0,0,.6); color:#fff; font-weight:800; font-size:13px; cursor:pointer; line-height:20px; padding:0; text-align:center; }
+  .phitem .ph-tag{ position:absolute; left:0; right:0; bottom:0; font-size:9px; text-align:center; background:rgba(0,0,0,.5); color:#fff; padding:1px 0; }
+  .phcount{ font-size:11.5px; color:var(--ink-2); margin-top:8px; font-weight:700; }
 </style>
 </head>
 <body>
@@ -49,9 +78,19 @@
   <span class="mark" aria-hidden="true"></span>
   <h1>日報</h1>
   <div class="who" id="who"></div>
-  <button class="btn ghost sm barbtn" id="out">出る</button>
 </header>
 
+<style>
+  .gtab{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--card); border-bottom:1px solid var(--rule); padding:3px 10px; }
+  .gtab a{ font-family:var(--body); font-weight:800; font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:4px 14px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .gtab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .gtab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .gtab[hidden], .gtab a[hidden]{ display:none; }
+</style>
+<nav class="gtab" id="gtab" hidden>
+  <a data-k="daily" href="reports.html">日報</a>
+  <a data-k="photo" href="files.html">写真・書類</a>
+</nav>
 <div class="wrap">
   <div class="ctl">
     <select id="proj"><option value="">すべての工事</option></select>
@@ -63,8 +102,9 @@
       <option value="received">情報部受領</option>
       <option value="rejected">差戻し</option>
     </select>
-    <button class="btn ghost sm" id="lkbtn" hidden>外注先へのURL</button>
+    <button class="btn sm" id="lkbtn" hidden>外注先へのURL</button>
   </div>
+  <p id="pmgr" hidden style="font-size:12.5px;color:var(--sub);margin:2px 0 8px"></p>
 
   <div id="msg" class="msg"></div>
 
@@ -107,63 +147,84 @@
   <div class="wrap">
     <div id="pmsg" class="msg"></div>
 
-    <div class="sheet">
-      <div class="head">現場の状況</div>
-      <div class="row">
-        <label for="f_proj">工事<span class="req">*</span></label>
-        <div class="fld"><select id="f_proj"></select></div>
-      </div>
-      <div class="row">
-        <label for="f_date">日付<span class="req">*</span></label>
-        <div class="fld"><input id="f_date" type="date"></div>
-      </div>
-      <div class="row">
-        <label for="f_weather">天候</label>
-        <div class="fld"><select id="f_weather"></select></div>
-      </div>
-      <div class="row">
-        <label for="f_wk">出た人数</label>
-        <div class="fld"><input id="f_wk" type="number" min="0" step="1" placeholder="0"><span style="font-size:13px;color:var(--sub)">人</span></div>
-      </div>
-      <div class="row">
-        <label for="f_mach">使用した重機</label>
-        <div class="fld"><input id="f_mach" type="text" placeholder="バックホウ0.7×1、ブルドーザ×1 など"></div>
-      </div>
-      <div class="row">
-        <label for="f_mat">搬入した資材</label>
-        <div class="fld"><input id="f_mat" type="text" placeholder="砕石20t、単管50本 など"></div>
-      </div>
-    </div>
+    <div class="formgrid">
+      <div class="fcol-a">
+        <div class="sheet">
+          <div class="head">現場の状況</div>
+          <div class="row">
+            <label for="f_proj">工事<span class="req">*</span></label>
+            <div class="fld"><select id="f_proj"></select></div>
+          </div>
+          <div class="row">
+            <label for="f_date">日付<span class="req">*</span></label>
+            <div class="fld"><input id="f_date" type="date"></div>
+          </div>
+          <div class="row">
+            <label for="f_weather">天候</label>
+            <div class="fld"><select id="f_weather"></select></div>
+          </div>
+          <div class="row">
+            <label for="f_wk">出た人数</label>
+            <div class="fld"><input id="f_wk" type="number" min="0" step="1" placeholder="0"><span style="font-size:13px;color:var(--sub)">人</span></div>
+          </div>
+          <div class="row">
+            <label for="f_mach">使用した重機</label>
+            <div class="fld"><input id="f_mach" type="text" placeholder="バックホウ0.7×1、ブルドーザ×1 など"></div>
+          </div>
+          <div class="row">
+            <label for="f_mat">搬入した資材</label>
+            <div class="fld"><input id="f_mat" type="text" placeholder="砕石20t、単管50本 など"></div>
+          </div>
+        </div>
 
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">やった作業</div>
-      <div class="row" style="grid-template-columns:1fr">
-        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
-          <div id="lines"></div>
-          <button class="btn ghost sm" id="addline" type="button" style="margin-top:6px">＋ 作業を足す</button>
+        <div class="sheet">
+          <div class="head">原価に響くこと</div>
+          <div class="row">
+            <label for="f_up">上がる要因</label>
+            <div class="fld"><textarea id="f_up" placeholder="湧水で排水ポンプを追加、地盤が固く掘削が進まない など"></textarea></div>
+          </div>
+          <div class="row">
+            <label for="f_down">下がる要因</label>
+            <div class="fld"><textarea id="f_down" placeholder="発生土を流用できた、想定より早く進んだ など"></textarea></div>
+          </div>
+          <div class="row">
+            <label for="f_plan">明日の予定</label>
+            <div class="fld"><textarea id="f_plan"></textarea></div>
+          </div>
+          <div class="row">
+            <label for="f_note">特記事項</label>
+            <div class="fld"><textarea id="f_note"></textarea></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fcol-b">
+        <div class="sheet">
+          <div class="head">やった作業</div>
+          <div class="row" style="grid-template-columns:1fr">
+            <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+              <div id="lines"></div>
+              <button class="btn ghost sm" id="addline" type="button" style="margin-top:6px">＋ 作業を足す</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div style="height:14px"></div>
-    <div class="sheet">
-      <div class="head">原価に響くこと</div>
-      <div class="row">
-        <label for="f_up">上がる要因</label>
-        <div class="fld"><textarea id="f_up" placeholder="湧水で排水ポンプを追加、地盤が固く掘削が進まない など"></textarea></div>
-      </div>
-      <div class="row">
-        <label for="f_down">下がる要因</label>
-        <div class="fld"><textarea id="f_down" placeholder="発生土を流用できた、想定より早く進んだ など"></textarea></div>
-      </div>
-      <div class="row">
-        <label for="f_plan">明日の予定</label>
-        <div class="fld"><textarea id="f_plan"></textarea></div>
-      </div>
-      <div class="row">
-        <label for="f_note">特記事項</label>
-        <div class="fld"><textarea id="f_note"></textarea></div>
+    <div class="sheet" style="margin-top:16px">
+      <div class="head">写真</div>
+      <div class="row" style="grid-template-columns:1fr">
+        <div class="fld" style="flex-direction:column;align-items:stretch;padding:12px 14px">
+          <input id="ph_lib" type="file" accept="image/*" multiple hidden>
+          <input id="ph_cam" type="file" accept="image/*" capture="environment" multiple hidden>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn ghost sm" id="ph_pick" type="button">🖼 写真を選ぶ</button>
+            <button class="btn ghost sm" id="ph_shoot" type="button">📷 カメラで撮影</button>
+          </div>
+          <div class="phcount" id="ph_count" hidden></div>
+          <div id="ph_list" class="phlist"></div>
+          <div style="font-size:11px;color:var(--sub);margin-top:6px">現場の写真を添付できます（枚数の上限なし・追加していけます。画像は自動で縮小して保存）。</div>
+        </div>
       </div>
     </div>
 
@@ -185,6 +246,23 @@
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("gtab"); if(!bar) return;
+  const allow = ["daily","photo"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="daily") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
+<script>
 (async function(){
   const $ = id => document.getElementById(id);
 
@@ -200,7 +278,6 @@
   const canReceive = (me.department === 'info' || me.role === 'admin');
 
   paintBar(me, await loadOrgName(me.organization_id));
-  $('out').addEventListener('click', signOut);
   $('dock').hidden = false;
   $('lkbtn').hidden = !isMgr;
 
@@ -208,11 +285,16 @@
     `<option value="${w}">${w || '（未設定）'}</option>`));
 
   let projects = [], users = [], reports = [], phaseCache = {}, editing = null, lines = [];
+  const BUCKET = 'project-files';
+  let phPicked = [];              // これから上げる写真（選択・撮影で累積・枚数無制限）
+  let phExisting = [];            // 既にこの日報に紐づく写真（project_files）
+  const phDelete = new Set();     // 削除する既存写真のid
+  let phReadonly = false;         // 閲覧のみのとき写真の追加・削除を不可に
 
   /* ================= 読み込み ================= */
   async function loadRefs(){
     const [pr, u] = await Promise.all([
-      sb.from('projects').select('id,project_no,name').eq('is_active', true)
+      sb.from('projects').select('id,project_no,name,manager_user_id,manager_name').eq('is_active', true)
         .order('project_no', { ascending:false }),
       sb.from('app_users').select('id,name').eq('is_active', true).order('name')
     ]);
@@ -225,7 +307,11 @@
     const opt = projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
     $('proj').innerHTML   = '<option value="">すべての工事</option>' + opt;
     $('f_proj').innerHTML = '<option value="">選んでください</option>' + opt;
+    setEmptyNote($('f_proj'), projects.length === 0,
+      '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
     $('lk_proj').innerHTML = opt;
+    setEmptyNote($('lk_proj'), projects.length === 0,
+      '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
   }
 
   async function loadPhases(projId){
@@ -260,7 +346,7 @@
       return;
     }
 
-    $('list').innerHTML = rows.map(r => {
+    $('list').innerHTML = rows.map((r, i) => {
       const pj = pmap[r.project_id];
       const who = r.reporter_type === 'partner'
         ? `${esc(r.partner_company || '')} ${esc(r.partner_name || '')}`
@@ -271,6 +357,7 @@
       if (r.reporter_type === 'partner') meta.push('外注先');
 
       return `<button class="item" data-id="${r.id}">
+        <span class="rno">${i + 1}</span>
         <span class="flag f-${r.status}"></span>
         <span class="body">
           <span class="no">${fmtDate(r.report_date)}　${pj ? esc(pj.project_no) : ''}</span>
@@ -285,7 +372,14 @@
       b.addEventListener('click', () => openPanel(reports.find(x => x.id === b.dataset.id))));
   }
 
-  $('proj').addEventListener('change', loadReports);
+  function updateProjMgr(){
+    const p = projects.find(x => x.id === $('proj').value);
+    let name = p ? (p.manager_name || '') : '';
+    if (!name && p && p.manager_user_id){ const u = users.find(x => x.id === p.manager_user_id); name = u ? u.name : ''; }
+    $('pmgr').hidden = !name;
+    $('pmgr').textContent = name ? `現場責任者：${name}` : '';
+  }
+  $('proj').addEventListener('change', () => { loadReports(); updateProjMgr(); });
   $('fst').addEventListener('change', render);
 
   /* ================= 明細 ================= */
@@ -374,6 +468,11 @@
     $('lines').classList.toggle('ro', !canEd);
     $('del').hidden = !(r && isMgr);
 
+    // 写真：この日報に紐づく既存写真を読み込み、追加・削除の可否を反映
+    phReadonly = !canEd;
+    $('ph_pick').disabled = !canEd; $('ph_shoot').disabled = !canEd;
+    await loadPhotos(r ? r.id : null);
+
     $('panel').classList.add('open');
     window.scrollTo(0,0);
   }
@@ -382,6 +481,77 @@
   $('add').addEventListener('click', () => openPanel(null));
   $('close').addEventListener('click', closePanel);
   $('cancel').addEventListener('click', closePanel);
+
+  /* ========== 写真の添付（選ぶ／撮影・累積・枚数無制限） ========== */
+  function renderPhotos(){
+    const ex = phExisting.filter(f => !phDelete.has(f.id));
+    let h = '';
+    const xBtn = (attr) => phReadonly ? '' : `<button type="button" class="ph-x" ${attr} title="外す">×</button>`;
+    ex.forEach(f => { h += `<div class="phitem"><img alt="" data-path="${esc(f.thumb_path||f.storage_path||'')}">${xBtn(`data-ex="${f.id}"`)}<span class="ph-tag">保存済</span></div>`; });
+    phPicked.forEach((p, i) => { h += `<div class="phitem"><img alt="" src="${p._url}">${xBtn(`data-pk="${i}"`)}</div>`; });
+    $('ph_list').innerHTML = h;
+    const n = ex.length + phPicked.length;
+    $('ph_count').hidden = (n === 0);
+    $('ph_count').textContent = n ? `写真 ${n} 枚` : '';
+    // 既存写真のサムネイルは署名URLで表示
+    $('ph_list').querySelectorAll('img[data-path]').forEach(async img => {
+      const path = img.dataset.path; if (!path) return;
+      const { data } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+      if (data && data.signedUrl) img.src = data.signedUrl;
+    });
+    $('ph_list').querySelectorAll('.ph-x').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.ex){ phDelete.add(b.dataset.ex); }
+      else if (b.dataset.pk != null){ const p = phPicked[+b.dataset.pk]; if (p && p._url) URL.revokeObjectURL(p._url); phPicked.splice(+b.dataset.pk, 1); }
+      renderPhotos();
+    }));
+  }
+  function addPhotos(list){
+    for (const f of list){ if (f && (f.type||'').startsWith('image/')){ f._url = URL.createObjectURL(f); phPicked.push(f); } }
+    renderPhotos();
+  }
+  $('ph_pick').addEventListener('click', () => $('ph_lib').click());
+  $('ph_shoot').addEventListener('click', () => $('ph_cam').click());
+  $('ph_lib').addEventListener('change', () => { addPhotos($('ph_lib').files); $('ph_lib').value = ''; });
+  $('ph_cam').addEventListener('change', () => { addPhotos($('ph_cam').files); $('ph_cam').value = ''; });
+
+  async function loadPhotos(reportId){
+    phPicked.forEach(p => { if (p._url) URL.revokeObjectURL(p._url); });
+    phPicked = []; phExisting = []; phDelete.clear();
+    if (reportId){
+      const { data } = await sb.from('project_files')
+        .select('id,storage_path,thumb_path,original_name,daily_report_id')
+        .eq('daily_report_id', reportId);
+      phExisting = data || [];
+    }
+    renderPhotos();
+  }
+  // 保存時：削除マークの既存を消し、選択・撮影した写真をアップロードして日報に紐づける
+  async function syncPhotos(reportId, projId){
+    for (const id of phDelete){
+      const f = phExisting.find(x => x.id === id);
+      if (f && f.storage_path) await sb.storage.from(BUCKET).remove([f.storage_path, f.thumb_path].filter(Boolean));
+      await sb.from('project_files').delete().eq('id', id);
+    }
+    phDelete.clear();
+    for (let k = 0; k < phPicked.length; k++){
+      const f = phPicked[k];
+      try {
+        const shrunk = await shrinkImage(f, 1600, 0.8);
+        const blob = shrunk ? shrunk.blob : f;
+        const path = `${me.organization_id}/daily/${reportId}/${Date.now()}_${k}_${(f.name||'photo').replace(/[^\w.\-]+/g,'_')}${shrunk?'.jpg':''}`;
+        const up = await sb.storage.from(BUCKET).upload(path, blob, { contentType: shrunk ? 'image/jpeg' : (f.type||'image/jpeg') });
+        if (up.error) throw up.error;
+        await sb.from('project_files').insert({
+          organization_id: me.organization_id, project_id: projId || null,
+          file_kind: 'photo', purpose: 'submit', storage_path: path,
+          original_name: f.name || null, mime_type: 'image/jpeg', byte_size: blob.size,
+          daily_report_id: reportId, uploaded_by: me.id
+        });
+      } catch(e){ console.error(e); showMsg($('pmsg'), `一部の写真をアップロードできませんでした（${f.name||'写真'}）。`, 'err'); }
+    }
+    phPicked.forEach(p => { if (p._url) URL.revokeObjectURL(p._url); });
+    phPicked = [];
+  }
 
   /* ================= 保存 ================= */
   function collectLines(){
@@ -442,6 +612,12 @@
         : '保存できませんでした。' + error.message, 'err');
       return null;
     }
+
+    // 写真の反映（削除マーク→削除、選択・撮影→アップロード。日報に紐づける）
+    if (id && (phPicked.length || phDelete.size)){
+      $('save').textContent = '写真を保存しています…';
+      try { await syncPhotos(id, $('f_proj').value || null); } catch(e){ console.error(e); }
+    }
     return id;
   }
 
@@ -484,11 +660,16 @@
   /* ================= 削除 ================= */
   $('del').addEventListener('click', async () => {
     if (!editing) return;
-    if (!confirm('この日報を削除します。取り消せません。')) return;
-    const { error } = await sb.from('daily_reports').delete().eq('id', editing.id);
+    if (!confirm('この日報を削除します。')) return;
+    const id = editing.id;
+    const { error } = await sb.from('daily_reports').update({ is_active:false }).eq('id', id);
     if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
     closePanel(); await loadReports();
-    showMsg($('msg'), '日報を削除しました。', 'ok');
+    showUndo($('msg'), '日報を削除しました。', async () => {
+      const { error:e2 } = await sb.from('daily_reports').update({ is_active:true }).eq('id', id);
+      if (e2) throw e2;
+      await loadReports();
+    });
   });
 
   /* ================= 外注先へのURL ================= */
@@ -545,9 +726,12 @@
 
   /* ================= 起動 ================= */
   await loadRefs();
-  const q = new URL(location.href).searchParams.get('p');
+  const qs = new URL(location.href).searchParams;
+  const q = qs.get('p');
   if (q && projects.some(x => x.id === q)) $('proj').value = q;
+  updateProjMgr();
   await loadReports();
+  if (qs.get('new') === '1') openPanel(null);
 })();
 </script>
 </body>

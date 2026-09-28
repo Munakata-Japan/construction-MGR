@@ -4,6 +4,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>工事 ｜ 宗像総合管理システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -84,13 +98,7 @@
   .ovnone{ background:var(--card); border:1px solid var(--rule); border-radius:2px;
            padding:10px 12px; font-size:12.5px; color:#9AA39C; }
 
-  /* 図面：A3横（420×297）の比率で並べる */
-  .dwgs{ display:grid; gap:8px; }
-  .dwgs.sm{ grid-template-columns:repeat(3,1fr); gap:6px; margin-top:6px; }
-  .dwgs.sm .cap{ padding:4px 6px; }
-  .dwgs.sm .cap b{ font-size:11px; }
-  .dwgs.sm .cap span{ display:none; }
-  .dwgs.sm .ext{ font-size:13px !important; }
+  /* 図面：先頭1件だけ、現場のイメージが掴める大きさで見せる（A3横 420×297の比率） */
   .dwg{
     background:var(--card); border:1px solid var(--rule); border-radius:2px;
     padding:0; cursor:pointer; text-align:left; width:100%; overflow:hidden;
@@ -99,7 +107,7 @@
   .dwg:hover{ border-color:var(--ink); }
   .dwg:focus-visible{ outline:3px solid var(--safety); outline-offset:2px; }
   .dwg .pv{
-    aspect-ratio:420 / 297;               /* A3 横 */
+    aspect-ratio:420 / 297;
     background:#F3F5F1; border-bottom:1px solid var(--rule-2);
     display:flex; align-items:center; justify-content:center;
     position:relative; overflow:hidden;
@@ -114,12 +122,6 @@
   .dwg .cap b{ display:block; font-family:var(--disp); font-size:12.5px; font-weight:700;
                overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .dwg .cap span{ color:var(--sub); font-family:var(--mono); font-size:10.5px; }
-  .dwgmore{
-    display:block; text-align:center; padding:8px; font-size:12px; color:var(--ink-2);
-    background:var(--card); border:1px dashed var(--rule); border-radius:2px;
-    text-decoration:none;
-  }
-  .dwgmore:hover{ border-color:var(--ink); }
 
   .jump{ display:grid; gap:6px; }
   .jump a{
@@ -165,7 +167,7 @@
   .docform > .k .req{ color:var(--alert); margin-left:3px; }
   .docform > .dv{
     padding:3px 7px; border-bottom:1px solid var(--rule-2); min-width:0;
-    display:flex; align-items:center; gap:6px;
+    display:flex; align-items:center; flex-wrap:wrap; gap:6px;
   }
   .docform > .dv.r{ border-right:1px solid var(--rule-2); }
   .docform > .dv.wide{ grid-column:2 / -1; }
@@ -183,11 +185,12 @@
   .docform textarea{ min-height:58px; padding:5px 8px; font-size:13.5px; line-height:1.55; }
   .docform .pmwrap{ grid-column:1 / -1; padding:8px 10px; border-bottom:none; }
 
-  .pmrow{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
-  .pmrow select{ flex:1 1 190px; width:auto; min-width:0; }
-  .pmrow .pno{ flex:1 1 140px; width:auto; min-width:0; }
-  .pmrow .pdt{ flex:0 0 152px; width:152px; }
-  .pmrow .pnt{ flex:1 1 130px; width:auto; min-width:0; }
+  .pmrow{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
+  .pmrow select{ flex:0 1 220px; width:auto; min-width:0; }
+  .pmrow .p_lic{ flex:1 1 260px; min-width:0; font-size:12px; color:var(--sub); line-height:1.5; }
+  .pmrow .p_lic .licwarn{ color:var(--alert); font-weight:700; }
+  .pmrow .p_lic .licnear{ color:#9A6E00; font-weight:700; }
+  .pmrow .p_lic .p_licnone{ color:#9AA39C; }
 
   @media (max-width:1080px){
     .ovmain{ grid-template-columns:1fr; }
@@ -229,15 +232,12 @@
                     -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .jump{ display:none !important; }
     .sheetdoc, .ovpm{ break-inside:avoid; }
-
-    /* 図面は1枚だけ、A3の比率のまま無理のない大きさで */
-    .dwgs.sm{ display:none !important; }
-    .dwgmore{ display:none !important; }
-    .dwgs .dwg{ max-width:132mm; border:1px solid #999 !important; break-inside:avoid; }
+    .dwg{ max-width:132mm; border:1px solid #999 !important; break-inside:avoid; }
     .dwg .pv{ background:#fff !important; }
     .dwg .cap{ padding:3pt 5pt !important; }
     .dwg .cap b{ font-size:9pt; }
     .dwg .cap span{ font-size:7.5pt; }
+
     .ovsec > .t{ font-size:9.5pt; padding:1pt 0 2pt 6pt; border-left-width:2pt; }
     .sheetdoc > .sh{ font-size:9pt; padding:2.5pt 8pt !important; }
     .sheetdoc > .k{ font-size:8.5pt; padding:2.5pt 6pt !important; }
@@ -254,7 +254,6 @@
   <span class="mark" aria-hidden="true"></span>
   <h1>工事一覧</h1>
   <div class="who" id="who"></div>
-  <button class="btn ghost sm barbtn" id="out">出る</button>
 </header>
 
 <div class="wrap">
@@ -284,7 +283,6 @@
   </header>
   <div id="ovbody"></div>
 </div>
-<input id="docfile" type="file" accept="image/*,.pdf,.dwg,.dxf,.xls,.xlsx,.doc,.docx" multiple hidden>
 
 <!-- ========== 編集 ========== -->
 <div class="panel" id="panel">
@@ -349,17 +347,17 @@
       <span class="k">現場代理人</span>
       <span class="dv r"><input id="f_agent" type="text"></span>
       <span class="k">現場担当</span>
-      <span class="dv"><select id="f_mgr"></select></span>
+      <span class="dv"><input id="f_mgr" type="text"></span>
 
       <span class="k">主任技術者</span>
       <span class="dv r"><input id="f_eng" type="text"></span>
       <span class="k">備考</span>
       <span class="dv"><textarea id="f_note"></textarea></span>
 
-      <div class="sh">許認可</div>
+      <div class="sh">許認可（協力会社の建設業許可）</div>
       <div class="pmwrap">
         <div id="pms"></div>
-        <button class="btn ghost sm" id="pmadd" type="button" style="margin-top:4px">＋ 許認可を足す</button>
+        <button class="btn ghost sm" id="pmadd" type="button" style="margin-top:4px">＋ 協力会社を足す</button>
       </div>
     </div>
 
@@ -396,7 +394,6 @@
   const canDelete = (me.role === 'admin');
 
   paintBar(me, await loadOrgName(me.organization_id));
-  $('out').addEventListener('click', signOut);
   if (canEdit) $('dock').hidden = false;
 
   for (const [k,v] of Object.entries(STATUS)){
@@ -409,7 +406,7 @@
   /* ================= 読み込み ================= */
   async function loadRefs(){
     const [p, u, k] = await Promise.all([
-      sb.from('partners').select('id,name').eq('is_active', true).order('name'),
+      sb.from('partners').select('id,name,is_subcontractor,license_no,license_kinds,license_start_on,license_end_on').eq('is_active', true).order('name'),
       sb.from('app_users').select('id,name,role').eq('is_active', true).order('name'),
       sb.from('permit_kinds').select('id,name').eq('is_active', true).order('sort_order')
     ]);
@@ -425,9 +422,6 @@
 
     $('f_client').innerHTML = '<option value="">（未設定）</option>' +
       partners.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
-    $('f_mgr').innerHTML = '<option value="">（未設定）</option>' +
-      users.filter(x => x.role !== 'member')
-           .map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
   }
 
   async function loadProjects(){
@@ -459,16 +453,17 @@
       return;
     }
 
-    $('list').innerHTML = rows.map(p => {
+    $('list').innerHTML = rows.map((p, i) => {
       const meta = [];
       if (pmap[p.client_partner_id]) meta.push(esc(pmap[p.client_partner_id]));
-      if (umap[p.manager_user_id])   meta.push('担当 ' + esc(umap[p.manager_user_id]));
+      if (p.manager_name)   meta.push('担当 ' + esc(p.manager_name));
       if (p.start_date || p.end_date_planned)
         meta.push(`${fmtDate(p.start_date)||'—'} 〜 ${fmtDate(p.end_date_planned)||'—'}`);
       if (Number(p.contract_amount) > 0)
         meta.push(`<span class="amt">${fmtMoney(p.contract_amount)}</span>`);
 
       return `<button class="item" data-id="${p.id}">
+        <span class="rno">${i + 1}</span>
         <span class="flag fl-${p.status}"></span>
         <span class="body">
           <span class="no">${esc(p.project_no)}</span>
@@ -515,11 +510,19 @@
     const tax  = Math.floor(amt * rate);
     const area = p.site_area ? Number(p.site_area).toLocaleString('ja-JP') + '<span class="un">㎡</span>' : '';
 
+    const pmap2 = Object.fromEntries(partners.map(x => [x.id, x]));
+    const _today = new Date(new Date().toDateString());
     const pms = Array.isArray(p.permits) ? p.permits : [];
     const pmHtml = pms.length
-      ? `<table class="ovpm"><thead><tr><th>種類</th><th>番号</th><th>取得日</th><th>備考</th></tr></thead><tbody>` +
-        pms.map(x => `<tr><td>${esc(x.kind||'')}</td><td class="mono">${esc(x.no||'')}</td>` +
-          `<td class="mono">${x.date ? fmtDate(x.date) : ''}</td><td>${esc(x.note||'')}</td></tr>`).join('') +
+      ? `<table class="ovpm"><thead><tr><th>協力会社</th><th>許可番号</th><th>業種</th><th>有効期限</th></tr></thead><tbody>` +
+        pms.map(x => {
+          const pt = pmap2[x.partner_id]; if (!pt) return '';
+          const exp = pt.license_end_on ? fmtDate(pt.license_end_on) : '—';
+          const late = pt.license_end_on && new Date(pt.license_end_on + 'T00:00:00') < _today;
+          return `<tr><td>${esc(pt.name)}</td><td class="mono">${esc(pt.license_no||'—')}</td>` +
+            `<td>${esc((pt.license_kinds||[]).join('・')||'—')}</td>` +
+            `<td class="mono"${late ? ' style="color:var(--alert);font-weight:700"' : ''}>${exp}</td></tr>`;
+        }).join('') +
         `</tbody></table>`
       : `<div class="ovnone">登録されていません</div>`;
 
@@ -551,7 +554,7 @@
           <div class="sh">体制・その他</div>
           ${cell('現場代理人', esc(p.agent_name||''), {r:true})}${cell('工事種別', esc(p.construction_type||''))}
           ${cell('主任技術者', esc(p.engineer_name||''), {r:true})}${cell('保険・保証', esc(p.insurance_note||''))}
-          ${cell('現場担当', esc(umap[p.manager_user_id]||''), {r:true})}${cell('備考', esc(p.note||'').replace(/\n/g,'<br>'))}
+          ${cell('現場担当', esc(p.manager_name||''), {r:true})}${cell('備考', esc(p.note||'').replace(/\n/g,'<br>'))}
         </div>
 
         <div class="ovsec" style="margin-top:10px"><div class="t">許認可</div>${pmHtml}</div>
@@ -559,152 +562,116 @@
 
         <div class="ovside">
           <div class="ovsec">
-            <div class="t">図面<span class="sp"></span>
-              ${canEdit ? '<button class="btn ghost sm noprint" id="docadd" type="button">追加</button>' : ''}
-            </div>
-            <div id="doclist"></div>
+            <div class="t">図面</div>
+            <div id="leaddwg"></div>
           </div>
           <div class="ovsec noprint"><div class="t">この工事の記録</div>
             <div class="jump">
               <a href="schedule.html?p=${p.id}">工程表 <span class="c">${ph.count ?? 0} 工程</span></a>
               <a href="reports.html?p=${p.id}">日報 <span class="c">${dr.count ?? 0} 件</span></a>
-              <a href="files.html?p=${p.id}">写真・書類 <span class="c">${pf.count ?? 0} 件</span></a>
+              <a href="files.html?p=${p.id}">書類・写真 <span class="c">${pf.count ?? 0} 件</span></a>
             </div>
           </div>
         </div>
       </div>
      </div>`;
 
-    await paintDocs(p.id);
-    if ($('docadd')) $('docadd').onclick = () => $('docfile').click();
-
+    await paintLeadDrawing(p.id);
     $('ovedit').hidden = !canEdit;
     $('ovp').classList.add('open');
   }
 
-  /* ---- 図面 ---- */
+  /* ---- 図面：先頭1件だけ、現場のイメージが掴める大きさで見せる ---- */
   function extOf(name){
     const m = /\.([A-Za-z0-9]+)$/.exec(name || '');
     return m ? m[1].toUpperCase() : 'FILE';
   }
 
-  async function paintDocs(pid){
-    const box = $('doclist');
+  async function paintLeadDrawing(pid){
+    const box = $('leaddwg');
     if (!box) return;
 
     const { data, error } = await sb.from('project_files')
-      .select('id,file_kind,original_name,title,storage_path,thumb_path,mime_type,created_at')
+      .select('id,original_name,title,storage_path,thumb_path,mime_type,created_at')
       .eq('project_id', pid).eq('is_active', true)
       .in('file_kind', ['drawing','document','other'])
-      .order('created_at', { ascending:false }).limit(12);
+      .order('created_at', { ascending:false }).limit(1);
 
     if (error){ box.innerHTML = `<div class="ovnone">${esc(error.message)}</div>`; return; }
     if (!data || !data.length){
-      box.innerHTML = `<div class="ovnone">図面が登録されていません${canEdit ? '。上の「追加」から取り込めます。' : '。'}</div>`;
+      box.innerHTML = `<div class="ovnone">図面が登録されていません${canEdit ? '。「書類・写真」から取り込めます。' : '。'}</div>`;
       return;
     }
 
-    function tile(f, cls){
-      const nm = f.title || f.original_name || '';
-      return `<button class="dwg" data-p="${esc(f.storage_path)}" title="${esc(nm)}">
-        <span class="pv" data-t="${esc(f.thumb_path || '')}" data-o="${esc(f.storage_path)}" data-m="${esc(f.mime_type||'')}">
-          <span class="ext">${esc(extOf(f.original_name))}</span>
-        </span>
-        <span class="cap"><b>${esc(nm)}</b><span>${fmtDate((f.created_at||'').slice(0,10))}</span></span>
-      </button>`;
-    }
+    const f = data[0];
+    const nm = f.title || f.original_name || '';
+    box.innerHTML = `<button class="dwg" data-p="${esc(f.storage_path)}" title="${esc(nm)}">
+      <span class="pv" data-t="${esc(f.thumb_path || '')}" data-o="${esc(f.storage_path)}" data-m="${esc(f.mime_type||'')}">
+        <span class="ext">${esc(extOf(f.original_name))}</span>
+      </span>
+      <span class="cap"><b>${esc(nm)}</b><span>${fmtDate((f.created_at||'').slice(0,10))}</span></span>
+    </button>`;
 
-    const head = data[0];
-    const rest = data.slice(1, 4);
-    box.innerHTML =
-      `<div class="dwgs">${tile(head)}</div>` +
-      (rest.length ? `<div class="dwgs sm">${rest.map(f => tile(f)).join('')}</div>` : '') +
-      (data.length > 4
-        ? `<a class="dwgmore noprint" href="files.html?p=${pid}">ほか ${data.length - 4} 件をすべて見る</a>`
-        : '');
-
-    // 画像は縮小版を差し込む
-    box.querySelectorAll('.pv').forEach(async pv => {
-      const path = pv.dataset.t || ((pv.dataset.m || '').startsWith('image/') ? pv.dataset.o : '');
-      if (!path) return;
+    const pv = box.querySelector('.pv');
+    const path = pv.dataset.t || ((pv.dataset.m || '').startsWith('image/') ? pv.dataset.o : '');
+    if (path){
       const { data:u } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
       if (u && u.signedUrl){
         pv.insertAdjacentHTML('beforeend', `<img src="${u.signedUrl}" alt="" loading="lazy">`);
-        const ex = pv.querySelector('.ext');
-        if (ex) ex.remove();          // 絵が出たら拡張子の文字は不要
+        pv.querySelector('.ext')?.remove();
       }
-    });
-
-    box.querySelectorAll('.dwg').forEach(b2 => b2.onclick = async () => {
-      const { data:u } = await sb.storage.from(BUCKET).createSignedUrl(b2.dataset.p, 3600);
-      if (u && u.signedUrl) window.open(u.signedUrl, '_blank');
-    });
-  }
-
-  $('docfile').addEventListener('change', async e => {
-    const list = [...e.target.files];
-    e.target.value = '';
-    if (!list.length || !editing) return;
-
-    showMsg($('msg'), `${list.length}件を取り込んでいます…（PDFは中身を絵にするため少し時間がかかります）`, 'ok');
-    let ok = 0;
-    for (let i = 0; i < list.length; i++){
-      const f = list[i];
-      const nm = f.name.replace(/[^\w.\-]/g, '_').slice(-80);
-      const stamp = `${Date.now()}_${i}`;
-      const base = `${me.organization_id}/${editing.id}`;
-      const path = `${base}/orig/${stamp}_${nm}`;
-      try {
-        const up = await sb.storage.from(BUCKET)
-          .upload(path, f, { contentType: f.type || 'application/octet-stream' });
-        if (up.error) throw up.error;
-
-        // 一覧に出す絵をつくる（画像は縮小、PDFは1ページ目）
-        let thumb = null;
-        const t = await makeThumb(f, 1400, 0.8);
-        if (t){
-          thumb = `${base}/thumb/${stamp}_${nm}.jpg`;
-          const up2 = await sb.storage.from(BUCKET)
-            .upload(thumb, t, { contentType:'image/jpeg' });
-          if (up2.error) thumb = null;
-        }
-
-        const kind = /\.(dwg|dxf|jww|p21|sfc|pdf)$/i.test(f.name) ? 'drawing'
-                   : (f.type.startsWith('image/') ? 'drawing' : 'other');
-        const { error } = await sb.from('project_files').insert({
-          organization_id: me.organization_id, project_id: editing.id,
-          file_kind: kind, purpose: 'submit', storage_path: path, thumb_path: thumb,
-          original_name: f.name, mime_type: f.type || null, byte_size: f.size,
-          uploaded_by: me.id
-        });
-        if (error) throw error;
-        ok++;
-      } catch (err){ console.error(err); }
     }
-    showMsg($('msg'), `${ok}件を登録しました。`, ok === list.length ? 'ok' : 'err');
-    await paintDocs(editing.id);
-  });
+
+    box.querySelector('.dwg').onclick = async () => {
+      const { data:u } = await sb.storage.from(BUCKET).createSignedUrl(f.storage_path, 3600);
+      if (u && u.signedUrl) window.open(u.signedUrl, '_blank');
+    };
+  }
 
   $('ovprint').addEventListener('click', () => window.print());
   $('ovclose').addEventListener('click', () => { $('ovp').classList.remove('open'); editing = null; });
   $('ovedit').addEventListener('click', () => { $('ovp').classList.remove('open'); openPanel(editing); });
 
-  /* ================= 許認可の編集 ================= */
+  /* ================= 許認可（協力会社の建設業許可） ================= */
+  const _pmDay = 86400000;
+  const _pmd2n = s => s ? Math.round(new Date(s + 'T00:00:00').getTime() / _pmDay) : null;
+  // 選んだ協力会社の建設業許可（番号・業種・期限）を取引先の登録から表示。未登録・期限切れは警告
+  function licHtml(pt){
+    if (!pt) return '<span class="p_licnone">協力会社を選んでください</span>';
+    if (!pt.is_subcontractor) return '<span class="licwarn">協力会社として登録されていません</span>';
+    const parts = [];
+    if (pt.license_no) parts.push('許可 ' + esc(pt.license_no));
+    if (Array.isArray(pt.license_kinds) && pt.license_kinds.length) parts.push('業種 ' + esc(pt.license_kinds.join('・')));
+    let warn = '';
+    if (!pt.license_no){
+      warn = '<span class="licwarn">建設業許可 未登録</span>';
+    } else if (pt.license_end_on){
+      const left = _pmd2n(pt.license_end_on) - Math.round(Date.now() / _pmDay);
+      if (left < 0) warn = `<span class="licwarn">許可の期限切れ（${fmtDate(pt.license_end_on)}）</span>`;
+      else if (left < 90) warn = `<span class="licnear">許可の期限まで${left}日（${fmtDate(pt.license_end_on)}）</span>`;
+      else parts.push('期限 ' + fmtDate(pt.license_end_on));
+    }
+    return parts.join('　') + (warn ? (parts.length ? '　' : '') + warn : '');
+  }
+  function paintLic(row){
+    const id = row.querySelector('.p_sub').value;
+    row.querySelector('.p_lic').innerHTML = licHtml(partners.find(x => x.id === id));
+  }
   function pmRow(v){
-    const known = pkinds.some(k => k.name === (v && v.kind));
-    const opt = '<option value="">（種類を選ぶ）</option>' +
-      pkinds.map(k => `<option value="${esc(k.name)}"${v && v.kind === k.name ? ' selected' : ''}>${esc(k.name)}</option>`).join('') +
-      (v && v.kind && !known ? `<option value="${esc(v.kind)}" selected>${esc(v.kind)}</option>` : '');
+    const sel = (v && v.partner_id) || '';
+    const subs = partners.filter(p => p.is_subcontractor);
+    const opt = '<option value="">（協力会社を選ぶ）</option>' +
+      subs.map(p => `<option value="${p.id}"${sel === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
     return `<div class="pmrow">
-      <select class="p_kind">${opt}</select>
-      <input class="pno p_no" type="text" placeholder="番号" value="${esc((v&&v.no)||'')}">
-      <input class="pdt p_dt" type="date" value="${esc((v&&v.date)||'')}">
-      <input class="pnt p_nt" type="text" placeholder="備考" value="${esc((v&&v.note)||'')}">
+      <select class="p_sub">${opt}</select>
+      <span class="p_lic"></span>
       <button class="btn ghost sm p_rm" type="button">削除</button>
     </div>`;
   }
   function bindPmRm(){
     $('pms').querySelectorAll('.p_rm').forEach(b => b.onclick = () => b.closest('.pmrow').remove());
+    $('pms').querySelectorAll('.pmrow').forEach(paintLic);
+    $('pms').querySelectorAll('.p_sub').forEach(s => s.onchange = () => paintLic(s.closest('.pmrow')));
   }
   $('pmadd').addEventListener('click', () => {
     $('pms').insertAdjacentHTML('beforeend', pmRow(null)); bindPmRm();
@@ -734,11 +701,12 @@
     $('f_actual').value = p ? (p.end_date_actual||'') : '';
     $('f_agent').value  = p ? (p.agent_name||'') : '';
     $('f_eng').value    = p ? (p.engineer_name||'') : '';
-    $('f_mgr').value    = p ? (p.manager_user_id||'') : '';
+    $('f_mgr').value    = p ? (p.manager_name||'') : '';
     $('f_ins').value    = p ? (p.insurance_note||'') : '';
     $('f_note').value   = p ? (p.note||'') : '';
 
-    const pms = (p && Array.isArray(p.permits)) ? p.permits : [];
+    // 協力会社ID方式の行だけを表示（旧・土地開発系の手入力データは空欄として出さない）
+    const pms = (p && Array.isArray(p.permits) ? p.permits : []).filter(x => x && x.partner_id);
     $('pms').innerHTML = pms.map(pmRow).join('');
     bindPmRm();
 
@@ -830,11 +798,8 @@
     if (!name){ showMsg($('pmsg'), '工事名を入力してください。', 'err'); $('f_name').focus(); return; }
 
     const permits = [...$('pms').querySelectorAll('.pmrow')].map(r => ({
-      kind: r.querySelector('.p_kind').value,
-      no  : r.querySelector('.p_no').value.trim(),
-      date: r.querySelector('.p_dt').value,
-      note: r.querySelector('.p_nt').value.trim()
-    })).filter(x => x.kind || x.no || x.date || x.note);
+      partner_id: r.querySelector('.p_sub').value
+    })).filter(x => x.partner_id);
 
     const body = {
       organization_id  : me.organization_id,
@@ -855,7 +820,7 @@
       end_date_actual  : $('f_actual').value || null,
       agent_name       : $('f_agent').value.trim() || null,
       engineer_name    : $('f_eng').value.trim() || null,
-      manager_user_id  : $('f_mgr').value || null,
+      manager_name     : $('f_mgr').value.trim() || null,
       permits          : permits,
       insurance_note   : $('f_ins').value.trim() || null,
       note             : $('f_note').value.trim() || null
@@ -889,13 +854,18 @@
   /* ================= 削除 ================= */
   $('del').addEventListener('click', async () => {
     if (!editing) return;
-    if (!confirm(`「${editing.name}」を削除します。\n工程・日報・写真もまとめて消えます。取り消せません。`)) return;
-    const { error } = await sb.from('projects').delete().eq('id', editing.id);
+    if (!confirm(`「${editing.name}」を削除します。\n工程・日報・写真は消えず、この工事ごと一覧から隠れます（元に戻せます）。`)) return;
+    const id = editing.id, nm = editing.name;
+    const { error } = await sb.from('projects').update({ is_active:false }).eq('id', id);
     if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
     snapshot = formState();
     closePanel(); editing = null;
     await loadProjects();
-    showMsg($('msg'), '工事を削除しました。', 'ok');
+    showUndo($('msg'), `「${nm}」を削除しました。`, async () => {
+      const { error:e2 } = await sb.from('projects').update({ is_active:true }).eq('id', id);
+      if (e2) throw e2;
+      await loadProjects();
+    });
   });
 
   /* ================= 起動 ================= */

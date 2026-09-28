@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<!-- BUILD: progress (出来高・進捗) v20260909A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>出来高・進捗 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{ max-width:1240px; }
+
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:4px; padding-bottom:6px; }
+  .lead, .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
+  #ptable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
+  .lead{ color:var(--sub); font-size:10.5px; line-height:1.3; margin:0 0 4px; }
+  .lead b{ color:var(--ink); }
+
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:4px; }
+  .ctl select{ width:auto; min-width:180px; max-width:380px; min-height:30px; }
+  .ctl .sp{ flex:1 1 0; }
+  .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
+  .ctl .fl-lb{ font-size:10px; font-weight:800; color:var(--ink-2); letter-spacing:.06em;
+    padding:3px 8px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; white-space:nowrap; }
+  .fl-help{ font-size:10px; font-weight:700; color:var(--sub); background:transparent;
+    border:1px solid var(--rule-2); border-radius:999px; padding:3px 8px; cursor:pointer; white-space:nowrap; }
+  .fl-help:hover{ background:#EEF1EA; color:var(--ink-2); }
+  #proj{ font-weight:700; border-color:var(--ink-2); box-shadow:inset 0 0 0 1px rgba(37,90,145,.15); }
+
+  /* ===== サマリ（出来高＝ヒーロー／未割付＝琥珀の注意） ===== */
+  .sumgrid{ display:grid; gap:6px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); margin-bottom:5px; }
+  .sumcard{ position:relative; background:var(--card); border:1px solid var(--rule); border-radius:var(--radius); box-shadow:var(--shadow-1);
+    padding:3px 12px; display:flex; align-items:baseline; flex-wrap:wrap; gap:2px 8px; }
+  .sumcard.hero{ border-color:var(--ink-2); }
+  .sumcard .t{ font-size:10.5px; color:var(--sub); font-weight:700; }
+  .sumcard .v{ font-family:var(--mono); font-weight:800; font-size:16px; color:var(--ink); line-height:1.15; margin-left:auto; }
+  .sumcard .s{ font-size:10px; color:var(--sub); flex-basis:100%; }
+  /* 未割付予算あり＝琥珀の注意（工程割付を促す） */
+  .sumcard.warn{ background:linear-gradient(180deg,#FBF3E2,var(--card)); border-color:#E7C866; padding-left:15px; }
+  .sumcard.warn::before{ content:""; position:absolute; left:0; top:5px; bottom:5px; width:4px; border-radius:2px; background:var(--safety); }
+  .sumcard.warn .v{ color:#8A6200; }
+  @media (prefers-reduced-motion:no-preference){
+    .sumgrid .sumcard{ animation:cardin .35s ease both; }
+    .sumgrid .sumcard:nth-child(2){ animation-delay:.05s; }
+    .sumgrid .sumcard:nth-child(3){ animation-delay:.10s; }
+    .sumgrid .sumcard:nth-child(4){ animation-delay:.15s; }
+    @keyframes cardin{ from{ opacity:0; transform:translateY(-5px); } to{ opacity:1; transform:none; } }
+  }
+
+  .ptable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+           box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
+  table.pg{ border-collapse:separate; border-spacing:0; width:100%; min-width:760px; font-size:13.5px; }
+  table.pg th, table.pg td{ padding:4px 10px; border-bottom:1px solid var(--rule-2); text-align:left; vertical-align:middle; }
+  table.pg thead th{ position:sticky; top:0; z-index:6; background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+                     white-space:nowrap; border-bottom:1px solid var(--rule); }
+  table.pg .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+  table.pg thead th.num{ text-align:right; }
+  table.pg thead th.sh{ cursor:pointer; user-select:none; }
+  table.pg thead th.sh:hover{ color:var(--ink-2); }
+  table.pg thead th.sh.on{ color:var(--ink); }
+  table.pg thead th.sh .ar{ font-style:normal; font-size:9px; margin-left:3px; color:var(--ink-2); }
+  table.pg thead th.sh:focus-visible{ outline:2px solid var(--ink-2); outline-offset:-2px; }
+  col.cno{ width:42px; } col.cdate{ width:92px; } col.cmoney{ width:116px; } col.cprog{ width:250px; }
+  .rno{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
+  .nm{ font-weight:700; overflow-wrap:break-word; line-height:1.4; }
+  .st{ font-size:10px; font-weight:700; padding:1px 7px; border-radius:var(--radius-sm); white-space:nowrap; margin-left:6px; }
+  .st.z{ background:#EEF1EA; color:var(--sub); }
+  .st.mid{ background:#FBF3E2; color:#8A6D1B; }
+  .st.done{ background:#EAF4EC; color:#1F6B3B; }
+
+  /* 進捗セル：スライダー＋数値＋バー */
+  .pcell{ display:flex; align-items:center; gap:8px; }
+  .pcell input[type=range]{ flex:1 1 auto; min-width:80px; accent-color:var(--ok); height:20px; }
+  .pcell .pv{ font-family:var(--mono); font-weight:700; width:44px; text-align:right; }
+  .pbar{ height:5px; border-radius:999px; background:#EEF1EA; overflow:hidden; margin-top:3px; }
+  .pbar > span{ display:block; height:100%; background:var(--ok); }
+  .roinfo{ display:flex; align-items:center; gap:8px; }
+  .roinfo .pv{ font-family:var(--mono); font-weight:700; }
+
+  tr.unassigned td{ background:#FBF6EC; }
+  tr.unassigned .nm{ color:#8A6200; }
+
+  tfoot td{ position:sticky; bottom:0; z-index:5; background:#F5F7F3; border-top:2px solid var(--ink); font-weight:700; }
+  tfoot td.num{ font-family:var(--mono); }
+
+  @media (max-width:820px){
+    body{ height:auto; overflow:visible; display:block; }
+    .wrap{ flex:none; height:auto; overflow:visible; display:block; }
+    #ptable{ display:block; }
+    .ptable{ flex:none; max-height:72vh; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1><span class="pgico" aria-hidden="true">📶</span>出来高・進捗</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<style>
+  .ptab{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--card); border-bottom:1px solid var(--rule); padding:3px 10px; }
+  .ptab a{ font-family:var(--body); font-weight:800; font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:4px 14px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .ptab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .ptab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .ptab[hidden], .ptab a[hidden]{ display:none; }
+</style>
+<nav class="ptab" id="ptab" hidden>
+  <a data-k="progress" href="progress.html">出来高</a>
+  <a data-k="profit" href="profit.html">損益</a>
+  <a data-k="changes" href="changes.html">設計変更</a>
+</nav>
+<div class="wrap">
+  <p class="lead" id="lead" hidden>
+    各工程の<b>進み具合（％）</b>を担当者が<b>自分で確認して入れる</b>、工程ごとの<b>自己確認</b>です。
+    入れた％から<b>出来高＝予算 × ％</b>を積み上げ、工事全体の進捗を金額で見える化します（金額は<b>予算＝原価ベース</b>）。
+    ％は自己申告なので、細かい正確さより<b>「終わった／まだ／途中」を全員で共有する</b>ことが目的です。
+    工程に紐づいていない予算は出来高に入らないので<b>未割付</b>として警告します（材料到着スケジュールで工程を割り付け）。
+  </p>
+
+  <div class="ctl">
+    <span class="fl-lb">絞り込み</span>
+    <button class="fl-help" id="helpBtn" type="button">？使い方 ▼</button>
+    <select id="proj"><option value="">工事を選んでください</option></select>
+    <span class="sp"></span>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div class="sumgrid" id="sumgrid" hidden></div>
+
+  <p class="count" id="count"></p>
+  <div id="ptable"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("ptab"); if(!bar) return;
+  const t = tierOf(a.me);
+  const allow = t<=2 ? ["progress","profit","changes"] : [];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="progress") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isMgr = me.role === 'admin' || me.role === 'manager';
+
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  // 使い方（説明）は既定で畳んで一覧を最大化。開閉は記憶する
+  const HELPKEY = 'progress_help_open';
+  function applyHelp(){
+    const open = localStorage.getItem(HELPKEY) === '1';
+    $('lead').hidden = !open;
+    $('helpBtn').textContent = open ? '？使い方 ▲' : '？使い方 ▼';
+  }
+  $('helpBtn').addEventListener('click', () => {
+    localStorage.setItem(HELPKEY, localStorage.getItem(HELPKEY) === '1' ? '0' : '1');
+    applyHelp();
+  });
+  applyHelp();
+
+  let projects = [], phases = [], items = [], projId = null;
+  const nz = v => Number(v) || 0;
+  const clampPct = v => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  // 工程の「進み具合＝完了(done)」は、出来高を常に100%として扱う（自動・オンタイム）
+  const effPct = p => (p && p.status === 'done') ? 100 : clampPct(p.progress_pct);
+  const itemCost = x => nz(x.budget_amount ?? x.amount ?? x.contract_amount);
+
+  // 並べ替え（Excel風：列見出しをタップで昇順/降順）。既定は工程順（seq）。
+  let sortKey = 'phase', sortDir = 1;
+  try { const s = JSON.parse(localStorage.getItem('pg_sort') || 'null'); if (s && s.k){ sortKey = s.k; sortDir = (s.d === -1 ? -1 : 1); } } catch(e){}
+  const SKN = { phase:'工程', start:'着工', budget:'予算', prog:'進捗', earned:'出来高' };
+
+  const fmtShort = v => { if (!v) return ''; const d = new Date(v + 'T00:00:00'); return isNaN(d) ? v : `${d.getMonth() + 1}/${d.getDate()}`; };
+
+  async function loadRefs(){
+    const { data } = await sb.from('projects')
+      .select('id,project_no,name').eq('is_active', true).order('project_no', { ascending:false });
+    projects = data || [];
+    $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
+      projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+  }
+
+  async function loadProject(){
+    if (!projId){ phases = []; items = []; render(); return; }
+    const [ph, bi] = await Promise.all([
+      sb.from('project_phases').select('id,name,seq,start_date,progress_pct,status')
+        .eq('project_id', projId).eq('is_active', true).order('seq'),
+      sb.from('phase_budget_items').select('id,phase_id,category,budget_amount,amount,contract_amount,status')
+        .eq('project_id', projId)
+    ]);
+    if (ph.error){
+      showMsg($('msg'),
+        /column .* does not exist|schema cache/i.test(ph.error.message || '')
+          ? '進捗の項目がまだありません。Supabase で phase20_progress.sql を実行してください。'
+          : '読み込めませんでした。' + ph.error.message, 'err');
+      phases = [];
+    } else phases = ph.data || [];
+    items = (bi.data || []).filter(x => x.status !== 'cancelled');
+    render();
+  }
+
+  const phaseCost = phId => items.filter(x => x.phase_id === phId).reduce((s, x) => s + itemCost(x), 0);
+
+  // 集計（現在のローカル progress_pct を使う）
+  function totals(){
+    const phaseIds = new Set(phases.map(p => p.id));
+    let assigned = 0, earned = 0, unassigned = 0;
+    phases.forEach(p => { const b = phaseCost(p.id); assigned += b; earned += b * effPct(p) / 100; });
+    items.forEach(x => { if (!x.phase_id || !phaseIds.has(x.phase_id)) unassigned += itemCost(x); });
+    const grand = assigned + unassigned;
+    const pct = grand > 0 ? earned / grand * 100 : 0;
+    return { assigned, earned, unassigned, grand, pct };
+  }
+
+  function stChip(pct){
+    if (pct >= 100) return '<span class="st done">完了</span>';
+    if (pct > 0) return '<span class="st mid">進行中</span>';
+    return '<span class="st z">未着手</span>';
+  }
+
+  function render(){
+    if (!projId){
+      $('sumgrid').hidden = true; $('count').textContent = '';
+      $('ptable').innerHTML = `<div class="hold" style="height:200px"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、工程ごとの進捗と出来高が出ます。</div></div>`;
+      return;
+    }
+    if (!phases.length){
+      $('sumgrid').hidden = true; $('count').textContent = '';
+      $('ptable').innerHTML = `<div class="empty"><b>工程がありません</b>工程表で工程を登録すると、ここに進捗・出来高が出ます。</div>`;
+      return;
+    }
+    renderSummary();
+    renderTable();
+  }
+
+  function renderSummary(){
+    const t = totals();
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML = `
+      <div class="sumcard"><div class="t">総予算（原価）</div><div class="v" id="s_grand">${fmtMoney(t.grand)}</div>
+        <div class="s">工程割付 ${fmtMoney(t.assigned)}</div></div>
+      <div class="sumcard hero"><div class="t">出来高（予算×進捗）</div><div class="v" id="s_earned">${fmtMoney(t.earned)}</div>
+        <div class="s">&nbsp;</div></div>
+      <div class="sumcard"><div class="t">全体進捗</div><div class="v" id="s_pct">${t.pct.toFixed(1)}%</div>
+        <div class="s">出来高 ÷ 総予算</div></div>
+      <div class="sumcard ${t.unassigned > 0 ? 'warn' : ''}"><div class="t">未割付予算（要工程割付）</div>
+        <div class="v" id="s_unassigned">${fmtMoney(t.unassigned)}</div>
+        <div class="s">${t.unassigned > 0 ? '出来高に入りません' : '&nbsp;'}</div></div>
+    `;
+  }
+
+  function renderTable(){
+    $('count').innerHTML = `工程 ${phases.length} 件 ・ ↕ 並べ替え：<b style="color:var(--ink-2)">${SKN[sortKey]||'工程'}（${sortDir===1?'昇順':'降順'}）</b> <span style="color:var(--sub)">— 列見出しをタップ</span>`;
+
+    // 並べ替え（Excel風）：選んだ列で昇順/降順。既定は工程順（seq）。
+    const jc = (a,b) => String(a==null?'':a).localeCompare(String(b==null?'':b), 'ja', { numeric:true });
+    const cmps = {
+      phase:  (a,b)=> ((a.seq??9999)-(b.seq??9999)) || jc(a.name,b.name),
+      start:  (a,b)=> jc(a.start_date||'9999-99-99', b.start_date||'9999-99-99'),
+      budget: (a,b)=> phaseCost(a.id)-phaseCost(b.id),
+      prog:   (a,b)=> effPct(a)-effPct(b),
+      earned: (a,b)=> (phaseCost(a.id)*effPct(a)/100) - (phaseCost(b.id)*effPct(b)/100),
+    };
+    const rows = phases.slice().sort((a,b)=> (cmps[sortKey]||cmps.phase)(a,b) * sortDir);
+
+    const arrow = k => sortKey===k ? (sortDir===1?'▲':'▼') : '';
+    const th = (k,label,cls='') => `<th class="sh${cls?' '+cls:''}${sortKey===k?' on':''}" data-sort="${k}" role="button" tabindex="0">${label}<i class="ar">${arrow(k)}</i></th>`;
+    let h = `<div class="ptable"><table class="pg"><colgroup>
+      <col class="cno"><col><col class="cdate"><col class="cmoney"><col class="cprog"><col class="cmoney"></colgroup>
+      <thead><tr>
+        <th class="rno">NO</th>${th('phase','工程')}${th('start','着工')}${th('budget','予算','num')}${th('prog','進捗')}${th('earned','出来高','num')}
+      </tr></thead><tbody>`;
+
+    rows.forEach((p, i) => {
+      const b = phaseCost(p.id);
+      const done = (p.status === 'done');   // 進み具合＝完了なら自動100%（スライダーはロック）
+      const pct = effPct(p);
+      const earned = b * pct / 100;
+      const prog = (isMgr && !done)
+        ? `<div class="pcell">
+             <input type="range" min="0" max="100" step="5" value="${pct}" data-range="${p.id}" aria-label="進捗%">
+             <span class="pv" id="pv_${p.id}">${pct}%</span>
+           </div>
+           <div class="pbar"><span id="pbar_${p.id}" style="width:${pct}%"></span></div>`
+        : `<div class="roinfo"><span class="pv">${pct}%</span>${done ? '<span class="st done">完了（自動100%）</span>' : stChip(pct)}</div>
+           <div class="pbar"><span style="width:${pct}%"></span></div>`;
+      h += `<tr>
+        <td class="rno">${i + 1}</td>
+        <td><span class="nm">${esc(p.name || '（無題）')}</span> <span class="pchip" id="chip_${p.id}">${isMgr ? stChip(pct) : ''}</span></td>
+        <td>${p.start_date ? fmtShort(p.start_date) : '—'}</td>
+        <td class="num">${b ? fmtMoney(b) : '—'}</td>
+        <td>${prog}</td>
+        <td class="num" id="earn_${p.id}">${fmtMoney(earned)}</td>
+      </tr>`;
+    });
+
+    const t = totals();
+    // 工程未割付
+    if (t.unassigned > 0){
+      h += `<tr class="unassigned">
+        <td class="rno">—</td>
+        <td><span class="nm">工程未割付</span><span class="st z">要割付</span></td>
+        <td>—</td>
+        <td class="num">${fmtMoney(t.unassigned)}</td>
+        <td style="color:var(--sub);font-size:11px">材料到着スケジュールで工程を割り付けると出来高に入ります</td>
+        <td class="num">—</td>
+      </tr>`;
+    }
+
+    h += `</tbody><tfoot><tr>
+      <td colspan="3">合計</td>
+      <td class="num" id="f_grand">${fmtMoney(t.grand)}</td>
+      <td><b id="f_pct">${t.pct.toFixed(1)}%</b></td>
+      <td class="num" id="f_earned">${fmtMoney(t.earned)}</td>
+    </tr></tfoot></table></div>`;
+
+    $('ptable').innerHTML = h;
+    wire();
+  }
+
+  function repaint(){
+    const t = totals();
+    const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+    set('s_grand', fmtMoney(t.grand)); set('s_earned', fmtMoney(t.earned));
+    set('s_pct', t.pct.toFixed(1) + '%'); set('s_unassigned', fmtMoney(t.unassigned));
+    set('f_grand', fmtMoney(t.grand)); set('f_earned', fmtMoney(t.earned)); set('f_pct', t.pct.toFixed(1) + '%');
+    phases.forEach(p => {
+      const b = phaseCost(p.id), pct = effPct(p);
+      set('earn_' + p.id, fmtMoney(b * pct / 100));
+    });
+  }
+
+  function wire(){
+    // 列見出しのタップで並べ替え（同じ列を再タップで昇順⇄降順）
+    $('ptable').querySelectorAll('thead .sh').forEach(el => {
+      const doSort = () => {
+        const k = el.dataset.sort;
+        if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+        try { localStorage.setItem('pg_sort', JSON.stringify({ k:sortKey, d:sortDir })); } catch(e){}
+        renderTable();
+      };
+      el.addEventListener('click', doSort);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doSort(); } });
+    });
+    $('ptable').querySelectorAll('[data-range]').forEach(r => {
+      const id = r.dataset.range;
+      const p = phases.find(x => x.id === id);
+      r.addEventListener('input', () => {
+        const v = clampPct(r.value);
+        p.progress_pct = v;
+        const pv = $('pv_' + id); if (pv) pv.textContent = v + '%';
+        const bar = $('pbar_' + id); if (bar) bar.style.width = v + '%';
+        const chip = $('chip_' + id); if (chip) chip.innerHTML = stChip(v);
+        repaint();
+      });
+      r.addEventListener('change', () => savePct(id, clampPct(r.value)));
+    });
+  }
+
+  async function savePct(id, pct){
+    const { error } = await sb.from('project_phases').update({ progress_pct: pct }).eq('id', id);
+    if (error){ showMsg($('msg'), '進捗を保存できませんでした。' + (error.message || ''), 'err'); return; }
+    const p = phases.find(x => x.id === id); if (p) p.progress_pct = pct;
+    // 全体を描き直さない（スクロールが先頭へ飛ぶのを防ぐ）。数値・バー・状態・出来高は input 時に更新済み。
+  }
+
+  $('proj').addEventListener('change', async () => {
+    projId = $('proj').value || null;
+    const u = new URL(location.href);
+    if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+    await loadProject();
+  });
+
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)){ $('proj').value = q; projId = q; await loadProject(); }
+  else render();
+})();
+</script>
+</body>
+</html>

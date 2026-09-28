@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<!-- BUILD: handover (竣工図書) v20260906Q -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>竣工図書 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  .ctl{ margin-bottom:8px; }
+  .ctl select{ width:auto; min-width:200px; max-width:420px; min-height:38px; flex:0 0 auto; }
+  .actrow{ display:flex; gap:8px 10px; flex-wrap:wrap; align-items:center; margin:0 0 8px; }
+  .actrow .btn{ flex:0 0 auto; min-height:34px; font-size:12.5px; padding:0 16px; }
+
+  /* 概要は工事選択の右に並ぶ細字（1行・縦中央・はみ出しは省略） */
+  .summary{ flex:1 1 auto; min-width:0; font-family:var(--mono); font-size:11.5px; color:var(--sub);
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.5; }
+
+  /* 目次チェックリスト */
+  .toc{ margin-bottom:20px; }
+  .toc .item .rno{ min-width:40px; }
+  .toc .cbadge{ font-family:var(--mono); font-size:12px; color:var(--sub); }
+  .toc .stt{ font-size:12px; font-weight:700; padding:2px 9px; border-radius:var(--radius-sm);
+             border:1px solid currentColor; white-space:nowrap; }
+  .toc .stt.has{ color:var(--ok); } .toc .stt.non{ color:#9AA39C; }
+  .toc .item .side{ gap:10px; }
+
+  /* 章別 整理エリア */
+  .sech{ font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink);
+         margin:22px 0 10px; padding-left:10px; border-left:4px solid var(--safety); }
+  .sech .subhint{ font-family:var(--body); font-weight:400; font-size:11.5px; color:var(--sub); margin-left:8px; }
+  .chap{ border:1px solid var(--rule); border-radius:var(--radius); background:var(--card);
+         box-shadow:var(--shadow-1); margin-bottom:12px; overflow:hidden; }
+  .chap > .ch{ display:flex; align-items:center; gap:10px; padding:9px 13px;
+               background:#F1F3EF; border-bottom:1px solid var(--rule-2); }
+  .chap > .ch .cn{ font-family:var(--mono); font-size:12px; color:var(--sub); min-width:26px; }
+  .chap > .ch .cl{ font-family:var(--disp); font-weight:700; font-size:14.5px; flex:1 1 auto; }
+  .chap > .ch .cc{ font-family:var(--mono); font-size:12px; color:var(--sub); }
+  .chap.none > .ch{ background:#FBF6EA; }
+  .chap.dragover{ outline:2px dashed var(--safety); outline-offset:-2px; }
+  .chap .items{ padding:8px; display:flex; flex-direction:column; gap:6px; min-height:20px; }
+  .chap .items:empty::after{ color:#9AA39C; font-size:12.5px; padding:6px 4px; }
+  .chap.folder .items:empty::after{ content:"ここへドラッグ／写真・PDFをドロップ（この章へ）"; }
+  .chap.pool .items:empty::after{ content:"ここへ写真・PDFをドロップで一括取り込み（未分類）"; color:#8A6400; }
+
+  .row2{ display:grid; grid-template-columns:34px 52px 1fr auto; align-items:center; gap:10px;
+         border:1px solid var(--rule); border-radius:var(--radius-sm); background:#fff; padding:6px 8px;
+         cursor:grab; box-shadow:var(--shadow-1); }
+  .row2.dragging{ opacity:.4; }
+  .row2.dropbefore{ box-shadow:inset 0 3px 0 var(--safety); }
+  .row2.dropafter{ box-shadow:inset 0 -3px 0 var(--safety); }
+  .row2 .rno{ font-family:var(--mono); font-size:12px; color:var(--sub); text-align:center; }
+  .row2 .rno .gh{ color:#9aa3b8; }
+  .row2 .th{ width:52px; height:40px; border-radius:2px; background:#DFE2DC; object-fit:cover;
+             display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .row2 .th img{ width:100%; height:100%; object-fit:cover; }
+  .row2 .th .ext{ font-family:var(--mono); font-size:10px; color:var(--sub); }
+  .row2 .th.clk{ cursor:zoom-in; }
+  .row2 .th.clk:hover{ outline:2px solid var(--safety); outline-offset:-1px; }
+  /* 通知バナーは細く（移動確認などは一時的な表示） */
+  #msg{ padding:7px 12px; margin-bottom:10px; line-height:1.5; font-size:13px; box-shadow:none; }
+  /* その場プレビュー（1ページ目・別ページへ飛ばない） */
+  #qv{ position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; }
+  #qv .qv-back{ position:absolute; inset:0; background:rgba(15,20,30,.78); }
+  #qv .qv-box{ position:relative; width:min(94vw,1100px); height:min(92vh,880px);
+    display:grid; grid-template-columns:48px 1fr 48px; grid-template-rows:minmax(0,1fr) auto; gap:6px; }
+  #qv .qv-stage{ grid-column:2; grid-row:1; min-height:0; display:flex; align-items:center; justify-content:center;
+    background:#fff; border-radius:6px; overflow:auto; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  #qv .qv-stage img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
+  #qv .qv-load,#qv .qv-none{ font-family:var(--disp); color:var(--sub); text-align:center; padding:24px; line-height:1.7; }
+  #qv .qv-none b{ color:var(--ink); }
+  #qv .qv-none a{ color:#2b6cb0; text-decoration:underline; cursor:pointer; }
+  #qv .qv-nav{ grid-row:1; align-self:center; width:42px; height:64px; border:0; border-radius:8px; cursor:pointer;
+    background:rgba(255,255,255,.9); color:#111; font-size:18px; font-weight:700; }
+  #qv .qv-nav:hover{ background:#fff; } #qv .qv-nav:disabled{ opacity:.25; cursor:default; }
+  #qv .qv-prev{ grid-column:1; } #qv .qv-next{ grid-column:3; }
+  #qv .qv-x{ position:absolute; top:-38px; right:0; width:34px; height:34px; border:0; border-radius:8px;
+    background:rgba(255,255,255,.9); color:#111; font-size:20px; line-height:1; cursor:pointer; }
+  #qv .qv-cap{ grid-column:1 / -1; grid-row:2; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    color:#fff; font-family:var(--disp); padding:4px 6px; }
+  #qv .qc-n{ font-family:var(--mono); font-size:12px; opacity:.8; }
+  #qv .qc-t{ font-weight:700; font-size:14px; }
+  #qv .qc-m{ font-size:12px; opacity:.85; }
+  #qv .qc-open{ margin-left:auto; color:#bfe0ff; text-decoration:underline; }
+  .row2 .nm{ min-width:0; }
+  .row2 .nm .t1{ font-family:var(--disp); font-weight:700; font-size:13.5px; line-height:1.4;
+                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row2 .nm .t2{ font-size:11.5px; color:var(--sub); font-family:var(--mono); line-height:1.5;
+                 overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row2 .mv{ font-size:11px; }
+  .row2.sel{ background:#DCE9F7; border-color:var(--ink);
+             box-shadow:inset 4px 0 0 var(--safety), inset 0 0 0 1px var(--ink); }
+  .row2.multidrag{ opacity:.5; }
+  .selbar{ position:sticky; top:0; z-index:20; background:var(--ink); color:#EBEDE8;
+           border-radius:var(--radius); padding:8px 12px; margin-bottom:12px; display:flex; align-items:center;
+           gap:12px; flex-wrap:wrap; box-shadow:var(--shadow-2); font-size:13px; }
+  .selbar b{ font-family:var(--mono); font-size:15px; color:#fff; }
+  .selbar .hint2{ color:#B9C6F2; font-size:12px; }
+  .selbar .hint2 .w{ color:#fff; }
+  /* 移動先として選べる状態のフォルダを強調 */
+  .tree.moving .folder{ cursor:copy; }
+  .tree.moving .folder:hover{ background:#FBF1D6; box-shadow:inset 4px 0 0 var(--safety); }
+  .selbar button{ margin-left:auto; background:transparent; border:1px solid #6a82e0; color:#EBEDE8;
+                  border-radius:var(--radius-sm); padding:5px 10px; font-size:12.5px; cursor:pointer; font-family:var(--body); }
+  .selbar button:hover{ background:#204D7E; }
+  .selbar .selmovel{ display:inline-flex; align-items:center; gap:6px; color:#EBEDE8; font-size:12.5px; }
+  .selbar select{ min-height:34px; padding:4px 8px; border-radius:var(--radius-sm); border:1px solid #6a82e0;
+                  background:#fff; color:var(--ink); font-family:var(--body); font-size:13px; max-width:200px; }
+  .selbar .selacts{ margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .selbar .selacts button{ margin-left:0; }
+  .selbar #seldel{ border-color:#e08a6a; color:#ffdccf; }
+  .selbar #seldel:hover{ background:#7e2a20; border-color:#e08a6a; }
+
+  /* エクスプローラー風の2ペイン */
+  .explorer{ display:grid; grid-template-columns:250px 1fr; gap:12px; align-items:start; }
+  @media (max-width:640px){ .explorer{ grid-template-columns:1fr; } }
+  .tree{ border:1px solid var(--rule); border-radius:var(--radius); background:var(--card);
+         box-shadow:var(--shadow-1); overflow:hidden; position:sticky; top:8px; }
+  .folder{ display:flex; align-items:center; gap:9px; padding:10px 11px; border-bottom:1px solid var(--rule-2);
+           cursor:pointer; user-select:none; }
+  .folder:last-child{ border-bottom:none; }
+  .folder:hover{ background:#F1F5FA; }
+  .folder .ic{ flex:0 0 auto; font-size:16px; line-height:1; }
+  .folder .fn{ flex:1 1 auto; font-family:var(--disp); font-weight:700; font-size:13.5px;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .folder .fc{ flex:0 0 auto; font-family:var(--mono); font-size:12px; color:var(--sub);
+               min-width:22px; text-align:right; }
+  .folder.cur{ background:#E3EDF7; box-shadow:inset 4px 0 0 var(--ink); }
+  .folder.cur .fn{ color:var(--ink); }
+  .folder.pool .fn{ color:#8A6400; }
+  .folder.pool .fc{ color:#8A6400; font-weight:700; }
+  .folder.filled .fc{ color:var(--ok); }
+  .folder.fileover{ outline:2px solid var(--safety); outline-offset:-2px; background:#FBF6EA; }
+
+  .pane{ border:1px solid var(--rule); border-radius:var(--radius); background:var(--card);
+         box-shadow:var(--shadow-1); overflow:hidden; min-height:140px; }
+  .pane .paneh{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; padding:9px 13px;
+                background:#F1F3EF; border-bottom:1px solid var(--rule-2); }
+  .pane .paneh b{ font-family:var(--disp); font-size:14.5px; }
+  .pane .paneh .pc{ font-family:var(--mono); font-size:12px; color:var(--sub); }
+  .pane .paneh .panehint{ font-size:11.5px; color:var(--sub); margin-left:auto; }
+  .pane .items{ padding:8px; display:flex; flex-direction:column; gap:6px; min-height:70px; }
+  .pane.fileover{ outline:2px dashed var(--safety); outline-offset:-3px; background:#FBF9F0; }
+  .paneempty{ color:#9AA39C; font-size:13px; text-align:center; padding:24px 8px; }
+  /* 章の中のサブフォルダ */
+  .subfolder{ display:flex; align-items:center; gap:9px; padding:9px 11px; border:1px solid var(--rule);
+              border-radius:var(--radius-sm); background:#FBF6EA; cursor:pointer; box-shadow:var(--shadow-1); }
+  .subfolder:hover{ border-color:var(--ink); background:#FBF1D6; }
+  .subfolder.fileover{ outline:2px solid var(--safety); outline-offset:-2px; }
+  .subfolder .ic{ flex:0 0 auto; font-size:16px; }
+  .subfolder .fn{ flex:1 1 auto; font-family:var(--disp); font-weight:700; font-size:13.5px; color:#7a5a00;
+                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .subfolder .fc{ flex:0 0 auto; font-family:var(--mono); font-size:12px; color:var(--sub); }
+  .pane .paneh .crumbup{ color:var(--ink-2); text-decoration:none; }
+  .pane .paneh .crumbup:hover{ text-decoration:underline; }
+  .pane .paneh #mksub{ margin-left:2px; min-height:28px; padding:0 10px; font-size:12px; }
+
+  /* ===== 上部をコンパクトに、作業（2ペイン）を全高＆各ペイン独立スクロール ===== */
+  @media (min-width: 641px){
+    html, body{ height:100%; }
+    body{ display:flex; flex-direction:column; overflow:hidden; }
+    .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+           overflow:hidden; max-width:1280px; width:100%; margin:0 auto; padding:10px 16px; }
+    #msg{ margin-bottom:8px; }
+    #rohint{ margin:0 0 6px; }
+    #body{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+    .selbar{ margin-bottom:8px; }
+    .sech{ margin:2px 0 4px; font-size:13px; }
+    .explorer{ flex:1 1 auto; min-height:0; grid-template-rows:minmax(0,1fr); align-items:stretch; }
+    .tree{ position:static; max-height:100%; overflow:auto; }
+    .pane{ display:flex; flex-direction:column; max-height:100%; overflow:hidden; }
+    .pane .items{ flex:1 1 auto; min-height:0; overflow:auto; }
+  }
+
+  .hint{ font-size:12px; color:var(--sub); margin:2px 0 8px; line-height:1.6; }
+
+  /* 進捗バー（ボタン行の右の空きに流し込む・数値＋バー＋完了印の1行） */
+  .prog2{ display:none; align-items:center; gap:10px; background:var(--card); border:1px solid var(--rule);
+          border-radius:var(--radius); box-shadow:var(--shadow-inset); padding:4px 12px; }
+  .prog2.on{ display:flex; flex:1 1 260px; min-width:220px; }
+  .prog2 .pgnum{ font-family:var(--mono); font-size:12px; color:var(--sub); white-space:nowrap; flex:0 0 auto; }
+  .prog2 .pgnum b{ color:var(--ok); }
+  .prog2 .pgnum .rem{ color:#8A6400; font-weight:700; }
+  .prog2 .pgbar{ flex:1 1 auto; height:7px; background:var(--rule-2); border-radius:4px; overflow:hidden; }
+  .prog2 .pgbar > span{ display:block; height:100%; background:var(--ok); width:0; transition:width .3s ease; }
+  .prog2 .pgdone{ color:var(--ok); font-weight:700; font-size:12.5px; white-space:nowrap; flex:0 0 auto; }
+
+  /* 受け皿（未分類）は目立たせ、章フォルダは埋まると緑に */
+  .chap.pool{ border-color:var(--safety); box-shadow:0 0 0 1px var(--safety) inset, var(--shadow-1); }
+  .chap.pool > .ch{ background:#FBF1D6; }
+  .chap.pool > .ch .cl{ color:#8A6400; }
+  .chap.pool > .ch .cc{ color:#8A6400; font-weight:700; }
+  .chap.folder.filled > .ch{ background:#EFF5F1; }
+  .chap.folder.filled > .ch .cl{ color:var(--ok); }
+  .chap.folder.filled > .ch .cn::after{ content:"✓"; color:var(--ok); margin-left:4px; }
+  .chap.folder.empty > .ch{ opacity:.72; }
+  /* 外部ファイルのドラッグ中、章の枠を強調 */
+  .chap.fileover{ outline:3px solid var(--safety); outline-offset:-3px; background:#FBF6EA; }
+  .dropveil{ position:fixed; inset:0; z-index:70; background:rgba(19,56,93,.10);
+             border:3px dashed var(--ink); display:none; align-items:center; justify-content:center; pointer-events:none; }
+  .dropveil.on{ display:flex; }
+  .dropveil span{ background:var(--ink); color:#fff; font-family:var(--disp); font-weight:700; font-size:15px;
+                  padding:12px 22px; border-radius:var(--radius); box-shadow:var(--shadow-3); text-align:center; line-height:1.6; }
+
+  /* ===== 印刷（目次・工事写真帳） ===== */
+  .printdoc{ display:none; }
+
+  @media print{
+    @page{ size:A4 portrait; margin:12mm; }
+    body{ background:#fff; color:#000; }
+    body > header.bar, .wrap, .dock, .noprint{ display:none !important; }
+    .printdoc{ color:#000; font-family:var(--body); }
+    body.pm-toc   #printToc{ display:block; }
+    body.pm-album #printAlbum{ display:block; }
+
+    .pdhead{ font-family:var(--disp); font-weight:700; font-size:20px; text-align:center;
+             letter-spacing:.2em; margin:0 0 4px; }
+    .pdsub{ text-align:center; font-size:12px; color:#333; margin:0 0 18px; }
+    .pdproj{ font-family:var(--disp); font-weight:700; font-size:15px; margin:0 0 12px; }
+    .pdtbl{ width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:16px; }
+    .pdtbl th, .pdtbl td{ border:1px solid #000; padding:5px 8px; text-align:left; vertical-align:top; }
+    .pdtbl th{ background:#eee !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; width:26%; }
+    .toctbl{ width:100%; border-collapse:collapse; font-size:13px; }
+    .toctbl th, .toctbl td{ border:1px solid #000; padding:7px 10px; }
+    .toctbl th{ background:#eee !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .toctbl td.no{ text-align:center; width:12%; font-family:var(--mono); }
+    .toctbl td.ct{ text-align:center; width:16%; font-family:var(--mono); }
+    .toctbl td.stt{ text-align:center; width:16%; }
+
+    .albumhead{ font-family:var(--disp); font-weight:700; font-size:16px; text-align:center;
+                letter-spacing:.14em; margin:0 0 3px; }
+    .albumsub{ text-align:center; font-size:11.5px; color:#333; margin:0 0 12px; }
+    .album{ display:grid; grid-template-columns:1fr 1fr; gap:6mm; }
+    .acard{ border:1px solid #000; break-inside:avoid; display:flex; flex-direction:column; }
+    .acard .aimg{ background:#fff; display:flex; align-items:center; justify-content:center;
+                  height:62mm; overflow:hidden; border-bottom:1px solid #000; }
+    .acard .aimg img{ max-width:100%; max-height:62mm; object-fit:contain; }
+    .acard .acap{ font-size:10.5px; }
+    .acard .crow{ display:grid; grid-template-columns:20mm 1fr; border-top:1px solid #ccc; }
+    .acard .crow:first-child{ border-top:none; }
+    .acard .crow .ck{ background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact;
+                      padding:2px 4px; font-weight:700; border-right:1px solid #ccc; }
+    .acard .crow .cv{ padding:2px 5px; min-width:0; overflow-wrap:anywhere; }
+    .acard .ano{ font-family:var(--mono); font-size:9.5px; text-align:right; padding:1px 4px; color:#333; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1>竣工図書</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<style>
+  .dtab{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--card); border-bottom:1px solid var(--rule); padding:3px 10px; }
+  .dtab a{ font-family:var(--body); font-weight:800; font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:4px 14px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .dtab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .dtab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .dtab[hidden], .dtab a[hidden]{ display:none; }
+</style>
+<nav class="dtab" id="dtab" hidden>
+  <a data-k="safety" href="safety-docs.html">安全書類</a>
+  <a data-k="handover" href="handover.html">竣工図書</a>
+</nav>
+<div class="wrap">
+  <div class="ctl">
+    <select id="proj"><option value="">工事を選んでください</option></select>
+    <div id="summary" class="summary" hidden></div>
+  </div>
+
+  <div class="actrow" id="actrow" hidden>
+    <button class="btn sm" id="printTocBtn" type="button">目次を印刷（PDF）</button>
+    <button class="btn sm" id="printAlbumBtn" type="button">工事写真帳を印刷（PDF）</button>
+    <button class="btn sm" id="allToAlbum" type="button">未分類の写真を工事写真帳へ</button>
+    <div id="progress" class="prog2"></div>
+  </div>
+
+  <div id="msg" class="msg"></div>
+  <p class="hint" id="rohint" hidden>整理（分類・並べ替え）は現場監督・管理者のみ行えます。</p>
+
+  <div id="body" hidden>
+    <div id="selbar" class="selbar" hidden></div>
+
+    <p class="sech">仕分け<span class="subhint">右で選び→フォルダをクリックで移動（Ctrl／Shiftで複数）。章の中は「＋フォルダ」でサブフォルダに分けられます</span></p>
+    <div class="explorer">
+      <div class="tree" id="tree"></div>
+      <div class="pane" id="pane"></div>
+    </div>
+  </div>
+
+  <div id="emptymsg"></div>
+</div>
+
+<div class="dropveil" id="dropveil"><span>章の枠に落とすとその章へ／枠の外は「未分類（受け皿）」へ取り込み</span></div>
+
+<!-- ===== 印刷用：目次 ===== -->
+<div id="printToc" class="printdoc">
+  <div class="pdhead">竣 工 図 書</div>
+  <div class="pdsub" id="pt_sub"></div>
+  <div class="pdproj" id="pt_proj"></div>
+  <table class="pdtbl" id="pt_overview"></table>
+  <div class="pdproj" style="font-size:14px">目　次</div>
+  <table class="toctbl">
+    <thead><tr><th style="width:12%">NO</th><th>章</th><th style="width:16%">点数</th><th style="width:16%">状態</th></tr></thead>
+    <tbody id="pt_rows"></tbody>
+  </table>
+</div>
+
+<!-- ===== 印刷用：工事写真帳 ===== -->
+<div id="printAlbum" class="printdoc">
+  <div class="albumhead">工 事 写 真 帳</div>
+  <div class="albumsub" id="pa_sub"></div>
+  <div class="album" id="pa_grid"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("dtab"); if(!bar) return;
+  const t = tierOf(a.me);
+  const allow = t<=2 ? ["safety","handover"] : ["safety"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="handover") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+  const BUCKET = 'project-files';
+  const KINDEXT = { photo:'写真', drawing:'図面', document:'書類', other:'ファイル' };
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const isMgr = (me.role === 'admin' || me.role === 'manager');
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  let projects = [], partners = [], phases = [], files = [], projId = null, curProj = null;
+  let urlCache = {}, draggingId = null;
+  let selected = new Set(), anchorId = null, dragIds = [];   // 複数選択（Ctrl／Shift）
+  let curFolder = '';   // 右ペインに表示中の章（''＝未分類/受け皿）
+  let curSub = '';      // 章の中のサブフォルダ（''＝章の直下）
+  const bySort = (a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) ||
+                           ((a.taken_on || '') < (b.taken_on || '') ? 1 : -1);
+  // ファイル名の自然順（1,2,…,10 の順。番号付き同種ファイルがきれいに並ぶ）
+  const natCmp = (a, b) => (a.original_name || a.title || '').localeCompare(
+    b.original_name || b.title || '', 'ja', { numeric: true, sensitivity: 'base' });
+
+  const isPhoto = f => f.file_kind === 'photo' || (f.mime_type || '').startsWith('image/');
+  const isPdf = f => (f.mime_type || '').includes('pdf') || /\.pdf$/i.test(f.original_name || '');
+  const NONE = '__none__';
+
+  /* ---------- 参照読み込み ---------- */
+  async function loadRefs(){
+    const [pr, pa] = await Promise.all([
+      sb.from('projects')
+        .select('id,project_no,name,construction_type,status,contract_amount,tax_rate,start_date,end_date_planned,end_date_actual,agent_name,engineer_name,manager_name,manager_user_id,client_partner_id,site_address')
+        .eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('partners').select('id,name').eq('is_active', true)
+    ]);
+    if (pr.error){ showMsg($('msg'), '読み込めませんでした。' + pr.error.message, 'err'); return; }
+    projects = pr.data || []; partners = pa.data || [];
+    $('proj').innerHTML = '<option value="">工事を選んでください</option>' +
+      projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+    setEmptyNote($('proj'), projects.length === 0,
+      '工事が登録されていません。先に工事ページから登録してください。', 'projects.html', '工事ページへ');
+  }
+
+  async function loadPhases(){
+    if (!projId){ phases = []; return; }
+    const { data } = await sb.from('project_phases')
+      .select('id,name').eq('project_id', projId).eq('is_active', true).order('seq');
+    phases = data || [];
+  }
+  const phName = id => (phases.find(p => p.id === id) || {}).name || '';
+
+  async function loadFiles(){
+    if (!projId){ files = []; return; }
+    const { data, error } = await sb.from('project_files')
+      .select('*').eq('project_id', projId).eq('is_active', true);
+    if (error){
+      showMsg($('msg'), /doc_category|sort_order|column|schema cache/i.test(error.message||'')
+        ? '竣工図書に必要な項目がまだありません。Supabase で phase14_handover.sql を実行してください。'
+        : '読み込めませんでした。' + error.message, 'err');
+      files = []; return;
+    }
+    files = data || [];
+  }
+
+  async function signedUrl(path){
+    if (!path) return null;
+    if (urlCache[path]) return urlCache[path];
+    const { data } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+    if (data?.signedUrl) urlCache[path] = data.signedUrl;
+    return data?.signedUrl || null;
+  }
+
+  /* ---------- 概要 ---------- */
+  function money(v, rate){
+    if (v === null || v === undefined || v === '') return '';
+    const n = Number(v); if (isNaN(n)) return '';
+    const tax = Math.round(n * (1 + (Number(rate) || 0)));
+    return `${fmtMoney(n)}（税込 ${fmtMoney(tax)}）`;
+  }
+  function clientName(p){ const c = partners.find(x => x.id === p.client_partner_id); return c ? c.name : ''; }
+
+  function paintSummary(){
+    const p = curProj;
+    if (!p){ $('summary').hidden = true; return; }
+    const term = [fmtDate(p.start_date), (p.end_date_actual || p.end_date_planned) ? fmtDate(p.end_date_actual || p.end_date_planned) : '']
+      .filter(Boolean).join(' 〜 ');
+    $('summary').hidden = false;
+    // 工事名は選択欄にあるので、ここは発注・工期・担当だけを細字で（選択欄と同じ行）
+    $('summary').innerHTML =
+      [ clientName(p) ? '発注 ' + esc(clientName(p)) : '',
+        term ? esc(term) : '',
+        p.agent_name ? '代理人 ' + esc(p.agent_name) : '',
+        p.engineer_name ? '主任 ' + esc(p.engineer_name) : ''
+      ].filter(Boolean).join('　／　');
+  }
+
+  /* ---------- 章ごとの集計 ---------- */
+  function byChapter(){
+    const map = new Map();
+    HANDOVER_CHAPTERS.forEach(c => map.set(c.key, []));
+    map.set(NONE, []);
+    files.forEach(f => {
+      const k = (f.doc_category && map.has(f.doc_category)) ? f.doc_category : NONE;
+      map.get(k).push(f);
+    });
+    const ord = (a, b) => ((a.sort_order || 0) - (b.sort_order || 0)) ||
+                          ((a.taken_on || '') < (b.taken_on || '') ? 1 : -1);
+    map.forEach(arr => arr.sort(ord));
+    return map;
+  }
+
+  /* ---------- 目次チェックリスト ---------- */
+  function renderToc(map){
+    $('toc').innerHTML = HANDOVER_CHAPTERS.map((c, i) => {
+      const n = (map.get(c.key) || []).length;
+      const has = n > 0;
+      return `<button class="item" data-jump="${c.key}">
+        <span class="rno">${String(i + 1).padStart(2, '0')}</span>
+        <span class="flag ${has ? 'fl-completed' : ''}"></span>
+        <span class="body">
+          <span class="nm" style="font-size:15px;margin:0">${esc(c.label)}</span>
+        </span>
+        <span class="side">
+          <span class="cbadge">${n} 点</span>
+          <span class="stt ${has ? 'has' : 'non'}">${has ? '有' : '未'}</span>
+        </span></button>`;
+    }).join('');
+    $('toc').querySelectorAll('[data-jump]').forEach(b => b.addEventListener('click', () => {
+      const el = document.querySelector(`.chap[data-key="${b.dataset.jump}"]`);
+      if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    }));
+  }
+
+  /* ---------- 章別 整理エリア ---------- */
+  function itemRow(f, no){
+    const ext = /\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1]?.toUpperCase() || '';
+    // 画像＝サムネ、PDF/変換済みCAD＝1ページ目画像(thumb_path)、素のPDF＝クリックでその場描画、その他CAD＝バッジ
+    const prevP = isPhoto(f) ? (f.thumb_path || f.storage_path || '') : (f.thumb_path || '');
+    const th = prevP
+      ? `<span class="th clk" data-p="${esc(prevP)}" data-qv="${f.id}" title="クリックで中身を表示"></span>`
+      : `<span class="th clk" data-qv="${f.id}" title="クリックで中身を表示"><span class="ext">${esc(ext || KINDEXT[f.file_kind] || '')}</span></span>`;
+    const t2 = [ f.taken_on ? fmtDate(f.taken_on) : '', f.bb_work_type || '', phName(f.phase_id),
+                 f.assignee_name || '' ].filter(Boolean).map(esc).join(' ・ ');
+    return `<div class="row2" draggable="${isMgr}" data-id="${f.id}">
+      <span class="rno">${isMgr ? '<span class="gh" title="ドラッグして章へ移動・並べ替え">⠿</span>' : ''}${no}</span>
+      ${th}
+      <span class="nm">
+        <span class="t1">${esc(f.title || f.original_name || '（無題）')}</span>
+        <span class="t2">${t2}</span>
+      </span>
+      <span class="mv"><a class="btn ghost sm open" href="#" data-id="${f.id}" title="原本を新しいタブで開く">開く</a></span>
+    </div>`;
+  }
+
+  function paintProgress(map){
+    const total = files.length;
+    const el = $('progress');
+    if (!total){ el.classList.remove('on'); el.innerHTML = ''; return; }
+    const none = (map.get(NONE) || []).length;
+    const done = total - none;
+    const pct = Math.round(done / total * 100);
+    el.classList.add('on');
+    el.innerHTML =
+      `<span class="pgnum">分類 済 <b>${done}</b>／<span class="rem">未 ${none}</span>（全 ${total}）</span>` +
+      `<div class="pgbar"><span style="width:${pct}%"></span></div>` +
+      (none === 0 ? `<span class="pgdone">✓完了</span>` : '');
+  }
+
+  function paintSelection(){
+    // 消えたIDは選択から外す
+    [...selected].forEach(id => { if (!files.some(f => f.id === id)) selected.delete(id); });
+    const box = $('pane');
+    if (box) box.querySelectorAll('.row2').forEach(r => r.classList.toggle('sel', selected.has(r.dataset.id)));
+    const n = selected.size, bar = $('selbar');
+    if ($('tree')) $('tree').classList.toggle('moving', n > 0);   // 移動先フォルダを強調
+    if (!n){ bar.hidden = true; bar.innerHTML = ''; return; }
+    bar.hidden = false;
+    const opt = folderList().map(f => {
+      let o = `<option value="${esc(JSON.stringify({ c: f.key, s: '' }))}">${esc(f.label)}</option>`;
+      (f.key === '' ? [] : subFoldersOf(f.key)).forEach(s => {
+        o += `<option value="${esc(JSON.stringify({ c: f.key, s }))}">${esc(f.label)} / ${esc(s)}</option>`;
+      });
+      return o;
+    }).join('');
+    bar.innerHTML = `<b>${n}</b>件を選択中` +
+      `<span class="hint2">左の<b class="w">移動先フォルダをクリック</b>で移動</span>` +
+      `<label class="selmovel">または移動先 <select id="selmove"><option value="__ph__" selected>選んで移動…</option>${opt}</select></label>` +
+      `<span class="selacts">` +
+        (isMgr && n === 1 ? `<button type="button" id="selren">✎ 名前を変更</button>` : '') +
+        (isMgr ? `<button type="button" id="seldel">🗑 削除</button>` : '') +
+        `<button type="button" id="selclear">選択を解除</button>` +
+      `</span>`;
+    const sm = bar.querySelector('#selmove');
+    sm.onchange = async () => {
+      if (sm.value === '__ph__') return;
+      let t; try { t = JSON.parse(sm.value); } catch (_){ return; }
+      await doMoveMany([...selected], t.c, t.s, null, false);
+    };
+    const sr = bar.querySelector('#selren');
+    if (sr) sr.onclick = () => renameSelected();
+    const sd = bar.querySelector('#seldel');
+    if (sd) sd.onclick = () => deleteSelected();
+    bar.querySelector('#selclear').onclick = () => { selected.clear(); anchorId = null; paintSelection(); };
+  }
+
+  function folderList(){
+    return [{ key:'', label:'未分類（受け皿）', pool:true },
+            ...HANDOVER_CHAPTERS.map((c, i) => ({ key:c.key, label:c.label, no:i + 1 }))];
+  }
+  function folderCount(map, key){ return (map.get(key === '' ? NONE : key) || []).length; }
+
+  function subFoldersOf(cat){
+    const set = new Set();
+    files.forEach(x => { if ((x.doc_category || '') === cat && x.doc_subcategory) set.add(x.doc_subcategory); });
+    return [...set].sort((a, b) => a.localeCompare(b, 'ja'));
+  }
+  function filesIn(cat, sub){
+    return files.filter(x => (x.doc_category || '') === cat && (x.doc_subcategory || '') === sub).slice().sort(bySort);
+  }
+
+  // 左：章のツリー
+  function renderTree(map){
+    $('tree').innerHTML = folderList().map(f => {
+      const n = folderCount(map, f.key);
+      const cur = (curFolder || '') === (f.key || '');
+      const cls = [ f.pool ? 'pool' : 'folder', cur ? 'cur' : '', (!f.pool && n > 0) ? 'filled' : '' ].filter(Boolean).join(' ');
+      const ic = f.pool ? '🗂️' : (cur ? '📂' : '📁');
+      return `<div class="folder ${cls}" data-key="${f.key}">
+        <span class="ic">${ic}</span><span class="fn">${esc(f.label)}</span><span class="fc">${n}</span>
+      </div>`;
+    }).join('');
+    $('tree').querySelectorAll('.folder').forEach(el => {
+      el.addEventListener('click', async () => {
+        const key = el.dataset.key || '';
+        if (isMgr && selected.size > 0){ await doMoveMany([...selected], key, '', null, false); return; }  // 章の直下へ
+        if ((curFolder || '') === key && !curSub) return;
+        showMsg($('msg'), '');   // 別フォルダへ移ったら前の通知を消す
+        curFolder = key; curSub = ''; selected.clear(); anchorId = null; render();
+      });
+      if (isMgr) wireFolderDrop(el, el.dataset.key || '', '');
+    });
+  }
+
+  // 右：選択中フォルダの中身（サブフォルダ＋資料）
+  function renderPane(map){
+    const cat = curFolder || '', sub = curSub || '';
+    const catLabel = cat === '' ? '未分類（受け皿）' : chapterLabel(cat);
+    const subs = subFoldersOf(cat);
+    const arr = filesIn(cat, sub);
+    const crumb = sub
+      ? `<b><a href="#" class="crumbup">${cat === '' ? '🗂️' : '📂'} ${esc(catLabel)}</a> › 📁 ${esc(sub)}</b>`
+      : `<b>${cat === '' ? '🗂️ ' : '📂 '}${esc(catLabel)}</b>`;
+    const mkbtn = (isMgr && cat !== '' && !sub) ? `<button type="button" class="btn ghost sm" id="mksub">＋ フォルダ</button>` : '';
+    const sortbtn = (isMgr && cat !== '' && arr.length >= 2) ? `<select id="sortsel" class="sortsel" title="このフォルダの並べ替え">` +
+        `<option value="" selected>並べ替え…</option>` +
+        `<option value="name:asc">名前（昇順）</option>` +
+        `<option value="name:desc">名前（降順）</option>` +
+        `<option value="date:desc">日付（新しい順）</option>` +
+        `<option value="date:asc">日付（古い順）</option>` +
+      `</select>` : '';
+    $('pane').innerHTML =
+      `<div class="paneh">${crumb}<span class="pc">${arr.length}件</span>${mkbtn}${sortbtn}` +
+      `<span class="panehint">${isMgr ? '選択→フォルダをクリックで移動・ここへD&D取り込み' : ''}</span></div>` +
+      `<div class="items" id="paneitems">` +
+        ((sub === '' && subs.length) ? subs.map(s =>
+          `<div class="subfolder" data-sub="${esc(s)}"><span class="ic">📁</span><span class="fn">${esc(s)}</span><span class="fc">${filesIn(cat, s).length}</span></div>`).join('') : '') +
+        arr.map((f, i) => itemRow(f, i + 1)).join('') +
+        ((!arr.length && !(sub === '' && subs.length)) ? ('<div class="paneempty">このフォルダは空です。' +
+          (isMgr ? '<br>資料を選んでここへ移すか、写真・PDFをドロップして取り込めます。' : '') + '</div>') : '') +
+      `</div>`;
+    $('pane').querySelectorAll('.th[data-p]').forEach(box => {
+      const p = box.dataset.p; if (!p) return;
+      signedUrl(p).then(u => { if (u) box.innerHTML = `<img src="${u}" alt="" loading="lazy">`; });
+    });
+    // サムネイルのクリック＝その場プレビュー（行選択には伝播させない）
+    $('pane').querySelectorAll('.th.clk[data-qv]').forEach(box => {
+      box.addEventListener('click', e => { e.stopPropagation(); openQuick(box.dataset.qv); });
+    });
+    const up = $('pane').querySelector('.crumbup');
+    if (up) up.addEventListener('click', e => { e.preventDefault(); showMsg($('msg'), ''); curSub = ''; selected.clear(); anchorId = null; render(); });
+    const mk = $('mksub');
+    if (mk) mk.addEventListener('click', async () => {
+      if (!selected.size){ showMsg($('msg'), 'フォルダへ入れる資料を先に選んでください。', 'err'); return; }
+      const name = (prompt('新しいフォルダ名（この章の中）') || '').trim();
+      if (!name) return;
+      await doMoveMany([...selected], cat, name, null, false);
+    });
+    const ssel = $('sortsel');
+    if (ssel) ssel.addEventListener('change', () => {
+      const v = ssel.value; ssel.value = '';   // 選んだら「並べ替え…」に戻す
+      if (!v) return;
+      const [key, dir] = v.split(':');
+      sortFolder(key, dir);
+    });
+    $('pane').querySelectorAll('.subfolder').forEach(el => {
+      el.addEventListener('click', async () => {
+        const s = el.dataset.sub || '';
+        if (isMgr && selected.size > 0){ await doMoveMany([...selected], cat, s, null, false); return; }
+        showMsg($('msg'), '');   // 別フォルダへ移ったら前の通知を消す
+        curSub = s; selected.clear(); anchorId = null; render();
+      });
+      if (isMgr) wireFolderDrop(el, cat, el.dataset.sub || '');
+    });
+    if (isMgr){ wirePaneRows(); wirePaneDrop(); }
+    paintSelection();
+  }
+
+  function render(){
+    const map = byChapter();
+    paintProgress(map);
+    renderTree(map);
+    renderPane(map);
+  }
+
+  /* ---------- CAD図面をその場でSVG化（files.html と同じ仕組み） ---------- */
+  function dxfEsc(s){ return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function entitiesToSvg(ents){
+    const allX = [], allY = [], parts = [];
+    const bump = (x, y) => { allX.push(x); allY.push(y); };
+    for (const e of ents){
+      switch (e.type){
+        case 'LINE': {
+          const a = (e.vertices && e.vertices[0]) || e.startPoint;
+          const b = (e.vertices && e.vertices[1]) || e.endPoint;
+          if (!a || !b) break;
+          bump(a.x, a.y); bump(b.x, b.y);
+          parts.push(`<line x1="${a.x}" y1="${-a.y}" x2="${b.x}" y2="${-b.y}"/>`); break;
+        }
+        case 'POINT': { const p = e.position; if (!p) break; bump(p.x, p.y);
+          parts.push(`<circle cx="${p.x}" cy="${-p.y}" r="0.3" fill="currentColor" stroke="none"/>`); break; }
+        case 'CIRCLE': { const c = e.center; if (!c) break;
+          bump(c.x - e.radius, c.y - e.radius); bump(c.x + e.radius, c.y + e.radius);
+          parts.push(`<circle cx="${c.x}" cy="${-c.y}" r="${e.radius}"/>`); break; }
+        case 'ARC': { const c = e.center; if (!c) break;
+          bump(c.x - e.radius, c.y - e.radius); bump(c.x + e.radius, c.y + e.radius);
+          const a0 = e.startAngle, a1 = e.endAngle;
+          const x0 = c.x + e.radius * Math.cos(a0), y0 = c.y + e.radius * Math.sin(a0);
+          const x1 = c.x + e.radius * Math.cos(a1), y1 = c.y + e.radius * Math.sin(a1);
+          let sweep = a1 - a0; if (sweep < 0) sweep += Math.PI * 2;
+          const large = sweep > Math.PI ? 1 : 0;
+          parts.push(`<path d="M ${x0} ${-y0} A ${e.radius} ${e.radius} 0 ${large} 0 ${x1} ${-y1}"/>`); break; }
+        case 'LWPOLYLINE': case 'POLYLINE': {
+          const pts = (e.vertices || []).map(v => [v.x, v.y]); if (!pts.length) break;
+          pts.forEach(([x, y]) => bump(x, y));
+          const d = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x} ${-y}`).join(' ') + (e.shape ? ' Z' : '');
+          parts.push(`<path d="${d}"/>`); break; }
+        case 'TEXT': case 'MTEXT': {
+          const p = e.startPoint || e.position; if (!p) break; bump(p.x, p.y);
+          const h = e.textHeight || e.height || 2.5;
+          const txt = dxfEsc((e.text || '').replace(/[{}\\][^;]*;?/g, ''));
+          parts.push(`<text x="${p.x}" y="${-p.y}" font-size="${h}" transform="rotate(${-(e.rotation || 0)} ${p.x} ${-p.y})">${txt}</text>`); break; }
+        case 'DIMENSION': {
+          if (e.linearOrAngularPoint1 && e.linearOrAngularPoint2){
+            const p1 = e.linearOrAngularPoint1, p2 = e.linearOrAngularPoint2;
+            bump(p1.x, p1.y); bump(p2.x, p2.y);
+            parts.push(`<line x1="${p1.x}" y1="${-p1.y}" x2="${p2.x}" y2="${-p2.y}" stroke-dasharray="1,1"/>`);
+          }
+          if (e.middleOfText){ bump(e.middleOfText.x, e.middleOfText.y);
+            parts.push(`<text x="${e.middleOfText.x}" y="${-e.middleOfText.y}" font-size="2.5">${dxfEsc(e.text || '')}</text>`); }
+          break; }
+        default: break;
+      }
+    }
+    if (!allX.length) return null;
+    const pct = (arr, p) => { const s = [...arr].sort((a, b) => a - b); return s[Math.max(0, Math.min(s.length - 1, Math.floor(s.length * p)))]; };
+    const minX = pct(allX, 0.01), maxX = pct(allX, 0.99), minY = pct(allY, 0.01), maxY = pct(allY, 0.99);
+    const w = maxX - minX, h = maxY - minY, pad = Math.max(w, h) * 0.05 || 10;
+    const vb = `${minX - pad} ${-maxY - pad} ${w + pad * 2} ${h + pad * 2}`;
+    const sw = Math.max(w, h) / 800;
+    return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+      <rect x="${minX - pad}" y="${-maxY - pad}" width="${w + pad * 2}" height="${h + pad * 2}" fill="#fff"/>
+      <g fill="none" stroke="#13385D" stroke-width="${sw}" color="#13385D" font-family="sans-serif">${parts.join('')}</g>
+    </svg>`;
+  }
+  async function renderDxf(path){
+    const u = await signedUrl(path); if (!u) return '<div class="qv-none">図面を読み込めませんでした。</div>';
+    try {
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const text = new TextDecoder('shift-jis').decode(buf);
+      const dxf = new DxfParser().parseSync(text);
+      const svg = entitiesToSvg(dxf.entities || []);
+      return svg || '<div class="qv-none">この図面には表示できる図形（線・円・文字など）が見つかりませんでした。</div>';
+    } catch (err){ return `<div class="qv-none">この図面は表示できませんでした。${dxfEsc(err.message || '')}</div>`; }
+  }
+  let libredwgPromise = null;
+  function getLibreDwg(){
+    if (!libredwgPromise){
+      libredwgPromise = import('https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.7.10/+esm')
+        .then(mod => mod.LibreDwg.create().then(lw => ({ lw, Dwg_File_Type: mod.Dwg_File_Type })));
+    }
+    return libredwgPromise;
+  }
+  async function renderDwg(path){
+    const u = await signedUrl(path); if (!u) return '<div class="qv-none">図面を読み込めませんでした。</div>';
+    try {
+      const buf = await fetch(u).then(r => r.arrayBuffer());
+      const { lw, Dwg_File_Type } = await getLibreDwg();
+      const dwg = lw.dwg_read_data(new Uint8Array(buf), Dwg_File_Type.DWG);
+      if (dwg.error) return `<div class="qv-none">この図面は読み込めませんでした。（エラーコード ${dwg.error}）</div>`;
+      const db = lw.convert(dwg);
+      lw.dwg_free(db);
+      const svg = entitiesToSvg(db.entities || []);
+      return svg || '<div class="qv-none">この図面には表示できる図形が見つかりませんでした。</div>';
+    } catch (err){ return `<div class="qv-none">この図面は表示できませんでした。${dxfEsc(err.message || '')}</div>`; }
+  }
+  const isDxf = f => /\.dxf$/i.test(f.original_name || '');
+  const isDwg = f => /\.dwg$/i.test(f.original_name || '');
+  // 同名の別形式（PDF・画像・DXF・DWG）を探す：JWW/SFC など未対応でもツインで中身を確認できる
+  function baseName(n){ return (n || '').replace(/\.[^.]+$/, '').trim().toLowerCase(); }
+  function siblingPreviewable(f){
+    const b = baseName(f.original_name); if (!b) return null;
+    const score = g => g.thumb_path ? 5 : isPhoto(g) ? 4 : isPdf(g) ? 4 : isDxf(g) ? 3 : isDwg(g) ? 2 : 0;
+    const best = files.filter(g => g.id !== f.id && baseName(g.original_name) === b)
+      .map(g => [score(g), g]).filter(([s]) => s > 0).sort((a, b) => b[0] - a[0])[0];
+    return best ? best[1] : null;
+  }
+
+  /* ---------- その場プレビュー（1ページ目・別ページへ飛ばない） ---------- */
+  const qvPdfCache = {};
+  let qvList = [], qvIdx = 0, qvToken = 0;
+  async function openOriginal(f){
+    const w = window.open('', '_blank');
+    const u = await signedUrl(f.storage_path);
+    if (u && w){ w.location = u; } else { if (w) w.close(); showMsg($('msg'), '原本を開けませんでした。', 'err'); }
+  }
+  async function pdfFirstPageUrl(path){
+    if (!path) return null;
+    if (qvPdfCache[path]) return qvPdfCache[path];
+    const u = await signedUrl(path); if (!u) return null;
+    const buf = await (await fetch(u)).arrayBuffer();
+    const lib = await loadPdfLib();
+    const doc = await lib.getDocument({ data: buf }).promise;
+    const page = await doc.getPage(1);
+    const v0 = page.getViewport({ scale: 1 });
+    const sc = Math.min(2.2, 1600 / Math.max(v0.width, v0.height));
+    const vp = page.getViewport({ scale: sc });
+    const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    const url = cv.toDataURL('image/jpeg', 0.82);
+    qvPdfCache[path] = url; return url;
+  }
+  function ensureQv(){
+    if ($('qv')) return;
+    const d = document.createElement('div'); d.id = 'qv'; d.hidden = true;
+    d.innerHTML =
+      '<div class="qv-back"></div>' +
+      '<div class="qv-box">' +
+        '<button type="button" class="qv-x" title="閉じる (Esc)">×</button>' +
+        '<button type="button" class="qv-nav qv-prev" title="前へ (←)">◀</button>' +
+        '<div class="qv-stage"></div>' +
+        '<button type="button" class="qv-nav qv-next" title="次へ (→)">▶</button>' +
+        '<div class="qv-cap"></div>' +
+      '</div>';
+    document.body.appendChild(d);
+    d.querySelector('.qv-back').onclick = closeQuick;
+    d.querySelector('.qv-x').onclick = closeQuick;
+    d.querySelector('.qv-prev').onclick = () => stepQuick(-1);
+    d.querySelector('.qv-next').onclick = () => stepQuick(1);
+  }
+  function openQuick(id){
+    const list = filesIn(curFolder || '', curSub || '');
+    const idx = list.findIndex(f => f.id === id);
+    if (idx < 0) return;
+    qvList = list; qvIdx = idx; ensureQv();
+    $('qv').hidden = false; document.body.style.overflow = 'hidden';
+    renderQuick();
+  }
+  function closeQuick(){ qvToken++; const d = $('qv'); if (d) d.hidden = true; document.body.style.overflow = ''; }
+  function stepQuick(dir){ if (qvList.length < 2) return; qvIdx = (qvIdx + dir + qvList.length) % qvList.length; renderQuick(); }
+  function extOf(f){ return (/\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1] || '').toUpperCase(); }
+  async function previewNode(f){
+    if (isPhoto(f)){ const u = await signedUrl(f.storage_path); return u ? { img: u } : null; }
+    if (f.thumb_path){ const u = await signedUrl(f.thumb_path); return u ? { img: u } : null; } // PDF・変換済みCADの1ページ目
+    if (isDxf(f)) return { html: await renderDxf(f.storage_path) };
+    if (isDwg(f)) return { html: await renderDwg(f.storage_path) };
+    if (isPdf(f)){ const u = await pdfFirstPageUrl(f.storage_path); return u ? { img: u } : null; }
+    return null; // JWW/JWC・SFC(SXF) など：ブラウザ用の変換ライブラリが無い
+  }
+  async function renderQuick(){
+    const d = $('qv'); if (!d || d.hidden) return;
+    const f = qvList[qvIdx]; if (!f){ closeQuick(); return; }
+    const my = ++qvToken;
+    const stage = d.querySelector('.qv-stage'), cap = d.querySelector('.qv-cap');
+    const ext = /\.([A-Za-z0-9]+)$/.exec(f.original_name || '')?.[1]?.toUpperCase() || '';
+    const meta = [f.taken_on ? fmtDate(f.taken_on) : '', f.bb_work_type || '', f.assignee_name || ''].filter(Boolean).join(' ・ ');
+    cap.innerHTML =
+      '<span class="qc-n">' + (qvIdx + 1) + ' / ' + qvList.length + '</span>' +
+      '<span class="qc-t">' + esc(f.title || f.original_name || '（無題）') + '</span>' +
+      (meta ? '<span class="qc-m">' + esc(meta) + '</span>' : '') +
+      '<a class="qc-open" href="#">原本を開く</a>';
+    cap.querySelector('.qc-open').onclick = e => { e.preventDefault(); openOriginal(f); };
+    d.querySelector('.qv-prev').disabled = qvList.length < 2;
+    d.querySelector('.qv-next').disabled = qvList.length < 2;
+    stage.innerHTML = '<div class="qv-load">読み込み中…</div>';
+    try {
+      let node = await previewNode(f), note = '';
+      if (!node){   // JWW/SFC など未対応：同名の PDF・画像・DXF・DWG があればそれを表示
+        const tw = siblingPreviewable(f);
+        if (tw){ node = await previewNode(tw); if (node) note = '同名の ' + extOf(tw) + ' を表示しています'; }
+      }
+      if (my !== qvToken) return;
+      if (note){ const s = document.createElement('span'); s.className = 'qc-m'; s.textContent = '※ ' + note; cap.insertBefore(s, cap.querySelector('.qc-open')); }
+      if (node && node.img){
+        stage.innerHTML = ''; const img = new Image(); img.alt = ''; img.src = node.img; stage.appendChild(img);
+      } else if (node && node.html){
+        stage.innerHTML = node.html;
+      } else {
+        stage.innerHTML = '<div class="qv-none"><b>' + esc(ext || 'この形式') + '</b> はブラウザで直接は表示できません。<br>' +
+          '原本を開いてご確認ください。<br>（同名の PDF・画像・DXF・DWG を取り込むと、ここに表示されます）<br><br>' +
+          '<a href="#" class="qv-openbig">原本を開く</a></div>';
+        stage.querySelector('.qv-openbig').onclick = e => { e.preventDefault(); openOriginal(f); };
+      }
+    } catch (err){
+      if (my !== qvToken) return;
+      stage.innerHTML = '<div class="qv-none">表示できませんでした。<br>' + esc(err.message || '') + '</div>';
+    }
+  }
+  document.addEventListener('keydown', e => {
+    const d = $('qv'); if (!d || d.hidden) return;
+    if (e.key === 'Escape') closeQuick();
+    else if (e.key === 'ArrowLeft') stepQuick(-1);
+    else if (e.key === 'ArrowRight') stepQuick(1);
+  });
+
+  /* ---------- 外部ファイルの取り込み（章の枠＝その章へ／枠外＝未分類へ） ---------- */
+  const hasFiles = e => !!e.dataTransfer && Array.prototype.includes.call(e.dataTransfer.types || [], 'Files');
+  function isAcceptableFile(f){
+    return (f.type && (f.type.startsWith('image/') || f.type === 'application/pdf'))
+        || /\.(jpe?g|png|gif|webp|heic|heif|pdf|dwg|dxf|jww|jwc|sfc|sxf|p21)$/i.test(f.name || '');
+  }
+  let uploading = false;
+  async function uploadFiles(fileList, docCategory, docSub){
+    if (!isMgr){ return; }
+    if (!projId){ showMsg($('msg'), '先に工事を選んでください。', 'err'); return; }
+    if (uploading){ return; }
+    const all = [...fileList].filter(isAcceptableFile);
+    if (!all.length){
+      if (fileList.length) showMsg($('msg'), '取り込めるのは写真・PDF・図面（DWG/DXF/JWW/SFC）です。', 'err');
+      return;
+    }
+    uploading = true;
+    const dc = docCategory || null, ds = docSub || undefined;   // サブは値がある時だけ送る（列未作成でも取り込みが壊れない）
+    const devPos = await currentPosition(6000);
+    // その章の末尾の並び順から続ける
+    let base = dc ? Math.max(0, ...files.filter(x => x.doc_category === dc).map(x => x.sort_order || 0)) : 0;
+    let ok = 0, ng = 0;
+    for (let i = 0; i < all.length; i++){
+      const f = all[i];
+      showMsg($('msg'), `取り込み中… ${i + 1} / ${all.length}（${f.name}）`, '');
+      try {
+        showMsg($('msg'), `取り込み中… ${i + 1} / ${all.length}（${f.name}）を軽くしています`, '');
+        const prep = await prepUpload(f, { edge: 1600, quality: 0.80 });   // 写真は縮小・PDFは圧縮
+        let origBlob = prep.blob, w = prep.width, h = prep.height;
+        const stamp = Date.now() + '_' + i;
+        const baseP = `${me.organization_id}/${projId}`;
+        const nm = (f.name || 'file').replace(/[^\w.\-]/g, '_').slice(-80);
+        const origPath = `${baseP}/orig/${stamp}_${nm}`;
+        const up1 = await sb.storage.from(BUCKET).upload(origPath, origBlob, { contentType: origBlob.type || mimeOf(f) });
+        if (up1.error) throw up1.error;
+        let thumbPath = null;
+        const t = await makeThumb(f, 900, 0.75);
+        if (t){
+          thumbPath = `${baseP}/thumb/${stamp}_${nm}.jpg`;
+          const up2 = await sb.storage.from(BUCKET).upload(thumbPath, t, { contentType: 'image/jpeg' });
+          if (up2.error) thumbPath = null;
+        }
+        const geo = await resolveGeo(f, devPos);
+        base += 10;
+        const { error } = await sb.from('project_files').insert({
+          organization_id: me.organization_id,
+          project_id     : projId,
+          file_kind      : f.type.startsWith('image/') ? 'photo' : (f.type === 'application/pdf' ? 'document' : 'other'),
+          purpose        : 'submit',
+          storage_path   : origPath,
+          thumb_path     : thumbPath,
+          original_name  : f.name,
+          mime_type      : f.type || null,
+          byte_size      : origBlob.size,
+          width_px       : w, height_px: h,
+          doc_category   : dc,
+          doc_subcategory: ds,
+          sort_order     : dc ? base : 0,
+          taken_on       : (geo.at ? geo.at.slice(0, 10)
+                            : new Date(f.lastModified || Date.now()).toISOString().slice(0, 10)),
+          captured_at    : geo.at ? new Date(geo.at).toISOString() : null,
+          lat            : geo.lat, lng: geo.lng,
+          geo_source     : geo.source, geo_accuracy_m: geo.acc,
+          uploaded_by    : me.id
+        });
+        if (error) throw error;
+        ok++;
+      } catch (e){ ng++; console.error(e); }
+    }
+    uploading = false;
+    await loadFiles();
+    try { await applyChapterNames(files, dc || ''); } catch (_){}   // 章へ入れた分にファイル名タグ・No.を付与
+    if (files.length){ $('body').hidden = false; $('emptymsg').innerHTML = ''; }
+    render();
+    showMsg($('msg'),
+      `${ok}件を${dc ? `「${chapterLabel(dc)}」へ` : '未分類（受け皿）へ'}取り込みました。` +
+      (ng ? `（${ng}件は失敗しました）` : ''),
+      ng ? 'err' : 'ok');
+  }
+
+  /* ---------- ドラッグで章へ振り分け・並べ替え ---------- */
+  function clearInd(){
+    $('chaps').querySelectorAll('.dropbefore,.dropafter,.dragover')
+      .forEach(el => el.classList.remove('dropbefore', 'dropafter', 'dragover'));
+  }
+  function orderedIds(){ return [...$('pane').querySelectorAll('.row2')].map(r => r.dataset.id); }
+
+  // 右ペインの行：選択（Ctrl／Shift）とドラッグ元
+  function wirePaneRows(){
+    const box = $('pane');
+    // 「開く」＝原本の署名URLを新しいタブで開く（ポップアップブロック回避で先にタブを開く）
+    box.querySelectorAll('a.open').forEach(a => a.addEventListener('click', async e => {
+      e.preventDefault(); e.stopPropagation();
+      const f = files.find(x => x.id === a.dataset.id); if (!f) return;
+      const w = window.open('', '_blank');
+      const u = await signedUrl(f.storage_path);
+      if (u && w){ w.location = u; }
+      else { if (w) w.close(); showMsg($('msg'), '原本を開けませんでした。', 'err'); }
+    }));
+    box.querySelectorAll('.row2').forEach(row => {
+      // 選択は click で（pointerdown はネイティブのドラッグ開始を妨げることがあるため）。
+      // ドラッグ時は click が発火しないので、選択とドラッグは両立する（genka と同方式）。
+      row.addEventListener('click', e => {
+        if (e.target.closest('a')) return;     // 「開く」リンクは除外
+        const id = row.dataset.id, ord = orderedIds();
+        if (e.shiftKey && anchorId && ord.includes(anchorId)){
+          if (!(e.ctrlKey || e.metaKey)) selected.clear();
+          const a = ord.indexOf(anchorId), b = ord.indexOf(id), lo = Math.min(a, b), hi = Math.max(a, b);
+          for (let i = lo; i <= hi; i++) selected.add(ord[i]);
+        } else if (e.ctrlKey || e.metaKey){
+          if (selected.has(id)) selected.delete(id); else selected.add(id);
+          anchorId = id;
+        } else if (selected.has(id) && selected.size > 1){
+          // 複数選択の一部を押したときは保持（そのままグループでドラッグできる）
+        } else {
+          selected.clear(); selected.add(id); anchorId = id;
+        }
+        paintSelection();
+      });
+      row.addEventListener('dragstart', e => {
+        const id = row.dataset.id;
+        if (!selected.has(id)){ selected.clear(); selected.add(id); anchorId = id; paintSelection(); }
+        dragIds = [...selected];
+        box.querySelectorAll('.row2').forEach(r => { if (selected.has(r.dataset.id)) r.classList.add('multidrag'); });
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', id); } catch (_) {}
+      });
+      row.addEventListener('dragend', () => {
+        box.querySelectorAll('.row2').forEach(r => r.classList.remove('multidrag', 'dragging', 'dropbefore', 'dropafter'));
+      });
+      // 工程表と同じ手動並び替え：行の上/下半分で「前/後」に差し込む
+      row.addEventListener('dragover', e => {
+        if (hasFiles(e) || !dragIds.length || dragIds.includes(row.dataset.id)) return;
+        e.preventDefault(); e.stopPropagation();
+        const r = row.getBoundingClientRect();
+        const after = (e.clientY - r.top) > r.height / 2;
+        box.querySelectorAll('.row2').forEach(x => x.classList.remove('dropbefore', 'dropafter'));
+        row.classList.add(after ? 'dropafter' : 'dropbefore');
+      });
+      row.addEventListener('dragleave', () => row.classList.remove('dropbefore', 'dropafter'));
+      row.addEventListener('drop', async e => {
+        if (hasFiles(e) || !dragIds.length || dragIds.includes(row.dataset.id)){ row.classList.remove('dropbefore', 'dropafter'); return; }
+        e.preventDefault(); e.stopPropagation();
+        const r = row.getBoundingClientRect();
+        const after = (e.clientY - r.top) > r.height / 2;
+        row.classList.remove('dropbefore', 'dropafter');
+        await doMoveMany(dragIds, curFolder || '', curSub || '', row.dataset.id, after);
+      });
+    });
+  }
+
+  // フォルダ（章 or サブ）：資料の移動先（内部D&D）／OSファイルの取り込み先
+  function wireFolderDrop(el, cat, sub){
+    cat = cat || ''; sub = sub || '';
+    el.addEventListener('dragover', e => { e.preventDefault(); try { e.dataTransfer.dropEffect = hasFiles(e) ? 'copy' : 'move'; } catch (_){} el.classList.add('fileover'); });
+    el.addEventListener('dragleave', () => el.classList.remove('fileover'));
+    el.addEventListener('drop', async e => {
+      e.preventDefault(); e.stopPropagation(); el.classList.remove('fileover');
+      if (hasFiles(e)){ if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, cat, sub); return; }
+      await doMoveMany(dragIds, cat, sub, null, false);
+    });
+  }
+
+  // 右ペイン：OSファイルを今のフォルダ（章＋サブ）へ取り込み
+  function wirePaneDrop(){
+    const pane = $('pane');
+    pane.addEventListener('dragover', e => { if (!hasFiles(e)) return; e.preventDefault(); pane.classList.add('fileover'); });
+    pane.addEventListener('dragleave', e => { if (e.target === pane) pane.classList.remove('fileover'); });
+    pane.addEventListener('drop', async e => {
+      if (!hasFiles(e)) return;
+      e.preventDefault(); e.stopPropagation(); pane.classList.remove('fileover');
+      if (e.dataTransfer.files?.length) await uploadFiles(e.dataTransfer.files, curFolder || '', curSub || '');
+    });
+  }
+
+  async function doMoveMany(ids, targetCat, targetSub, refId, after){
+    ids = [...new Set((ids || []).filter(Boolean))];
+    targetCat = targetCat || ''; targetSub = targetSub || '';
+    const moved = ids.map(id => files.find(x => x.id === id)).filter(Boolean);
+    if (!moved.length) return;
+    const idset = new Set(moved.map(x => x.id));
+    const sources = new Set(moved.map(x => x.doc_category || ''));
+    moved.sort(bySort);
+    // 移動先の章（サブ問わず）に、参照位置へまとめて差し込む
+    const inSec = files.filter(x => !idset.has(x.id) && ((x.doc_category || '') === targetCat)).sort(bySort);
+    let idx = inSec.length;
+    if (refId && !idset.has(refId)){ const i = inSec.findIndex(x => x.id === refId); if (i >= 0) idx = after ? i + 1 : i; }
+    inSec.splice(idx, 0, ...moved);
+    // ローカルを先に反映：分類先（章・サブ）と並び順
+    moved.forEach(x => { x.doc_category = targetCat || null; x.doc_subcategory = targetSub || null; });
+    inSec.forEach((x, i) => { x.sort_order = (i + 1) * 10; });
+    render();
+
+    try {
+      // 分類先(doc_category / doc_subcategory)をDBへ保存（これが無いと loadFiles で元に戻る）
+      await Promise.all(moved.map(async x => {
+        const { error } = await sb.from('project_files')
+          .update({ doc_category: targetCat || null, doc_subcategory: targetSub || null }).eq('id', x.id);
+        if (error) throw error;
+      }));
+      // 並び順(sort_order)も明示的に保存（同じ章内での並び替えは applyChapterNames が
+      // 値一致とみなして書かないため、ここで確実に。これが無いと loadFiles で元に戻る）
+      await Promise.all(inSec.map(async x => {
+        const { error } = await sb.from('project_files').update({ sort_order: x.sort_order }).eq('id', x.id);
+        if (error) throw error;
+      }));
+      // 章の採番＆ファイル名タグを付け直す（移動先／元の各章）
+      await applyChapterNames(files, targetCat);
+      for (const s of sources){ if (s !== targetCat) await applyChapterNames(files, s); }
+      const label = (targetCat ? chapterLabel(targetCat) : '未分類') + (targetSub ? ' / ' + targetSub : '');
+      showMsg($('msg'), `${moved.length}件を「${label}」へ移動しました。`, 'ok');
+      selected.clear(); anchorId = null;
+      await loadFiles(); render();
+    } catch (err){
+      showMsg($('msg'),
+        /doc_subcategory|column|schema cache/i.test(err.message || '')
+          ? 'サブフォルダに必要な項目がまだありません。Supabase で phase15_subfolder.sql を実行してください。'
+          : /doc_category|sort_order/i.test(err.message || '')
+            ? '保存に必要な項目がまだありません。Supabase で phase14_handover.sql を実行してください。'
+            : '保存できませんでした。' + (err.message || ''), 'err');
+    }
+  }
+
+  /* ---------- 自動整列（名前 昇順/降順・日付 新しい順/古い順） ---------- */
+  async function sortFolder(key, dir){
+    const cat = curFolder || '';
+    if (cat === '' || !isMgr) return;
+    const arr = files.filter(x => (x.doc_category || '') === cat);
+    if (arr.length < 2) return;
+    const sign = dir === 'desc' ? -1 : 1;
+    const cmp = (key === 'date')
+      ? (a, b) => {   // 日付(撮影日)で。日付なしは向きに関係なく末尾へ、同点は名前順
+          const da = a.taken_on || '', db = b.taken_on || '';
+          if (da && db) return da < db ? -sign : da > db ? sign : natCmp(a, b);
+          if (da) return -1;
+          if (db) return 1;
+          return natCmp(a, b);
+        }
+      : (a, b) => natCmp(a, b) * sign;
+    arr.sort(cmp);
+    arr.forEach((x, i) => { x.sort_order = (i + 1) * 10; });
+    render();
+    try {
+      // sort_order を明示的に保存（applyChapterNames は値が一致すると書かないため、ここで確実に）
+      await Promise.all(arr.map(x => sb.from('project_files').update({ sort_order: x.sort_order }).eq('id', x.id)));
+      await applyChapterNames(files, cat);       // No. タグを付け直す
+      await loadFiles(); render();
+      const lbl = (key === 'date') ? `日付（${dir === 'desc' ? '新しい順' : '古い順'}）`
+                                   : `名前（${dir === 'desc' ? '降順' : '昇順'}）`;
+      showMsg($('msg'), `「${chapterLabel(cat)}」を${lbl}で並べ替えました。`, 'ok');
+    } catch (err){
+      showMsg($('msg'), '並べ替えを保存できませんでした。' + (err.message || ''), 'err');
+    }
+  }
+
+  /* ---------- 選択したファイルを削除（原本は消さず一覧から隠す・元に戻せる） ---------- */
+  async function deleteSelected(){
+    if (!isMgr) return;
+    const targets = [...selected].map(id => files.find(x => x.id === id)).filter(Boolean);
+    if (!targets.length) return;
+    if (!confirm(`選択した ${targets.length} 件を削除します。よろしいですか？\n（原本は消さず一覧から隠します。「元に戻す」で復元できます）`)) return;
+    const cats = new Set(targets.map(x => x.doc_category || ''));
+    try {
+      await Promise.all(targets.map(async x => {
+        const { error } = await sb.from('project_files').update({ is_active: false }).eq('id', x.id);
+        if (error) throw error;
+      }));
+      selected.clear(); anchorId = null;
+      await loadFiles();
+      for (const c of cats){ if (c) await applyChapterNames(files, c); }   // 欠番のNo.を詰め直す
+      await loadFiles(); render();
+      showUndo($('msg'), `${targets.length} 件を削除しました。`, async () => {
+        await Promise.all(targets.map(async x => {
+          const { error } = await sb.from('project_files').update({ is_active: true }).eq('id', x.id);
+          if (error) throw error;
+        }));
+        await loadFiles();
+        for (const c of cats){ if (c) await applyChapterNames(files, c); }
+        await loadFiles(); render();
+      });
+    } catch (err){
+      showMsg($('msg'), '削除できませんでした。' + (err.message || ''), 'err');
+    }
+  }
+
+  /* ---------- 名前を変更（文字化けした元名なども直せる） ---------- */
+  async function renameSelected(){
+    if (!isMgr || selected.size !== 1) return;
+    const id = [...selected][0];
+    const f = files.find(x => x.id === id); if (!f) return;
+    const cur = stripDocTag(f.original_name || '');   // （章名・No.・日付）タグを外した基準名
+    const name = (prompt('ファイル名を変更してください（拡張子も含めて）', cur) || '').trim();
+    if (!name || name === cur) return;
+    try {
+      await sb.from('project_files').update({ original_name: name }).eq('id', id);
+      f.original_name = name;
+      if (f.doc_category) await applyChapterNames(files, f.doc_category);   // No.・日付タグを付け直す
+      await loadFiles(); render();
+      showMsg($('msg'), '名前を変更しました。', 'ok');
+    } catch (err){
+      showMsg($('msg'), '名前を変更できませんでした。' + (err.message || ''), 'err');
+    }
+  }
+
+  /* ---------- 未分類の写真をまとめて工事写真帳へ ---------- */
+  $('allToAlbum').addEventListener('click', async () => {
+    if (!isMgr){ return; }
+    const targets = files.filter(f => isPhoto(f) && !f.doc_category);
+    if (!targets.length){ showMsg($('msg'), '未分類の写真はありません。', 'ok'); return; }
+    if (!confirm(`未分類の写真 ${targets.length} 枚を「工事写真帳」へまとめます。`)) return;
+    // 既存の工事写真帳の末尾へ続ける
+    let base = Math.max(0, ...files.filter(f => f.doc_category === 'photo').map(f => f.sort_order || 0));
+    const updates = targets.map(f => { base += 10; return { id: f.id, so: base }; });
+    try {
+      await Promise.all(updates.map(async u => {
+        const { error } = await sb.from('project_files')
+          .update({ doc_category: 'photo', sort_order: u.so }).eq('id', u.id);
+        if (error) throw error;
+        const f = files.find(x => x.id === u.id); if (f){ f.doc_category = 'photo'; f.sort_order = u.so; }
+      }));
+      render();
+      showMsg($('msg'), `${targets.length} 枚を工事写真帳へ入れました。`, 'ok');
+    } catch (err){
+      showMsg($('msg'),
+        /doc_category|sort_order|column|schema cache/i.test(err.message || '')
+          ? '保存に必要な項目がまだありません。Supabase で phase14_handover.sql を実行してください。'
+          : 'まとめられませんでした。' + (err.message || ''), 'err');
+    }
+  });
+
+  /* ---------- 印刷：目次 ---------- */
+  function buildTocPrint(map){
+    const p = curProj || {};
+    $('pt_sub').textContent = `${p.project_no || ''}`;
+    $('pt_proj').textContent = p.name || '';
+    const term = [fmtDate(p.start_date), (p.end_date_actual || p.end_date_planned) ? fmtDate(p.end_date_actual || p.end_date_planned) : ''].filter(Boolean).join(' 〜 ');
+    const ovRows = [
+      ['工事名', p.name || ''],
+      ['工事番号', p.project_no || ''],
+      ['工事種別', p.construction_type || ''],
+      ['発注者', clientName(p)],
+      ['工事場所', p.site_address || ''],
+      ['工期', term],
+      ['請負金額', p.contract_amount != null ? money(p.contract_amount, p.tax_rate) : ''],
+      ['現場代理人', p.agent_name || ''],
+      ['主任技術者', p.engineer_name || ''],
+      ['現場担当', p.manager_name || '']
+    ].filter(r => r[1]);
+    $('pt_overview').innerHTML = ovRows.map(r => `<tr><th>${esc(r[0])}</th><td>${esc(r[1])}</td></tr>`).join('');
+    $('pt_rows').innerHTML = HANDOVER_CHAPTERS.map((c, i) => {
+      const n = (map.get(c.key) || []).length;
+      return `<tr><td class="no">${String(i + 1).padStart(2, '0')}</td><td>${esc(c.label)}</td>` +
+             `<td class="ct">${n} 点</td><td class="stt">${n > 0 ? '有' : '－'}</td></tr>`;
+    }).join('');
+  }
+
+  $('printTocBtn').addEventListener('click', () => {
+    if (!curProj) return;
+    buildTocPrint(byChapter());
+    document.body.classList.add('pm-toc');
+    const done = () => { document.body.classList.remove('pm-toc'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+  });
+
+  /* ---------- 印刷：工事写真帳 ---------- */
+  function cap(f){
+    const rows = [
+      ['工種', f.bb_work_type || ''],
+      ['内容', f.title || f.description || ''],
+      ['撮影日', f.taken_on ? fmtDate(f.taken_on) : ''],
+      ['位置', [f.bb_location, f.bb_station].filter(Boolean).join('　')]
+    ];
+    return rows;
+  }
+  async function buildAlbumPrint(){
+    const p = curProj || {};
+    const photos = (byChapter().get('photo') || []).filter(isPhoto);
+    $('pa_sub').textContent = `${p.project_no || ''}　${p.name || ''}`;
+    if (!photos.length){
+      $('pa_grid').innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#666;padding:20px">
+        工事写真帳に写真がありません。画面で「未分類の写真を工事写真帳へ」か、写真を工事写真帳へドラッグしてください。</div>`;
+      return true;
+    }
+    // 署名URLを先に用意（印刷前に画像を読み込ませる）
+    const urls = await Promise.all(photos.map(f => signedUrl(f.storage_path)));
+    $('pa_grid').innerHTML = photos.map((f, i) => {
+      const capRows = cap(f).map(r =>
+        `<div class="crow"><span class="ck">${esc(r[0])}</span><span class="cv">${esc(r[1])}</span></div>`).join('');
+      return `<div class="acard">
+        <div class="ano">No.${i + 1}</div>
+        <div class="aimg">${urls[i] ? `<img src="${urls[i]}" alt="">` : ''}</div>
+        <div class="acap">${capRows}</div>
+      </div>`;
+    }).join('');
+    // 画像の読み込み完了を待つ
+    const imgs = [...$('pa_grid').querySelectorAll('img')];
+    await Promise.all(imgs.map(im => im.complete ? Promise.resolve()
+      : new Promise(res => { im.onload = im.onerror = res; })));
+    return true;
+  }
+
+  $('printAlbumBtn').addEventListener('click', async () => {
+    if (!curProj) return;
+    const btn = $('printAlbumBtn'); btn.disabled = true; const t = btn.textContent; btn.textContent = '準備中…';
+    await buildAlbumPrint();
+    btn.disabled = false; btn.textContent = t;
+    document.body.classList.add('pm-album');
+    const done = () => { document.body.classList.remove('pm-album'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+  });
+
+  /* ---------- 外部ファイルのD&D（ページ全体で受け止め・枠外は未分類へ） ---------- */
+  (function wireDocDnd(){
+    const veil = $('dropveil');
+    let depth = 0;
+    document.addEventListener('dragenter', e => { if (!hasFiles(e) || !isMgr || !projId) return; depth++; veil.classList.add('on'); });
+    document.addEventListener('dragover', e => { if (!hasFiles(e) || !isMgr || !projId) return; e.preventDefault(); try { e.dataTransfer.dropEffect = 'copy'; } catch (_){} });
+    document.addEventListener('dragleave', e => { if (!hasFiles(e)) return; depth = Math.max(0, depth - 1); if (depth === 0) veil.classList.remove('on'); });
+    document.addEventListener('drop', async e => {
+      if (!hasFiles(e)) return;
+      e.preventDefault(); depth = 0; veil.classList.remove('on');
+      if (!isMgr || !projId) return;
+      // 章の枠に落ちたものは stopPropagation 済みでここへは来ない → 未分類（受け皿）へ
+      if (e.dataTransfer.files && e.dataTransfer.files.length) await uploadFiles(e.dataTransfer.files, '', '');
+    });
+    window.addEventListener('dragend', () => { depth = 0; veil.classList.remove('on'); });
+  })();
+
+  // Escで選択を解除
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && selected.size){ selected.clear(); anchorId = null; paintSelection(); }
+  });
+
+  /* ---------- 工事切り替え ---------- */
+  async function selectProject(id){
+    projId = id || null;
+    curProj = projects.find(x => x.id === projId) || null;
+    selected.clear(); anchorId = null; curFolder = ''; curSub = '';
+    const u = new URL(location.href);
+    if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
+    history.replaceState(null, '', u);
+    urlCache = {};
+    showMsg($('msg'), '');
+    paintSummary();
+    $('progress').classList.remove('on'); $('progress').innerHTML = '';   // files 読込後の render で再表示
+    $('actrow').hidden = !projId;
+    $('rohint').hidden = isMgr || !projId;
+    if (!projId){
+      $('body').hidden = true;
+      $('emptymsg').innerHTML = `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、竣工図書の整理ができます。</div>`;
+      return;
+    }
+    $('emptymsg').innerHTML = '';
+    await loadPhases();
+    await loadFiles();
+    if (!files.length){
+      $('body').hidden = true;
+      $('emptymsg').innerHTML = `<div class="empty"><b>まだ資料がありません</b>「写真・書類」画面から写真や書類を取り込むと、ここで章別に整理できます。<br><a href="files.html?p=${projId}">写真・書類へ</a></div>`;
+      return;
+    }
+    $('body').hidden = false;
+    render();
+  }
+  $('proj').addEventListener('change', () => selectProject($('proj').value));
+
+  /* ---------- 起動 ---------- */
+  await loadRefs();
+  const q = new URL(location.href).searchParams.get('p');
+  if (q && projects.some(x => x.id === q)){ $('proj').value = q; await selectProject(q); }
+  else showMsg($('msg'), ''), $('emptymsg').innerHTML =
+    `<div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと、竣工図書の整理ができます。</div>`;
+})();
+</script>
+</body>
+</html>

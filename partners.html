@@ -1,18 +1,32 @@
 <!DOCTYPE html>
-<!-- BUILD: partners (取引先) v20260724F -->
+<!-- BUILD: partners (取引先) v20260909A -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>取引先 ｜ 宗像総合管理システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
 <style>
-  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
-  .ctl select{ width:auto; min-width:150px; min-height:44px; flex:0 1 auto; }
-  .ctl input[type=text]{ width:auto; flex:1 1 200px; min-width:0; min-height:44px; }
+  .ctl{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .ctl select{ width:auto; min-width:150px; min-height:38px; flex:0 1 auto; }
+  .ctl input[type=text]{ width:auto; flex:1 1 200px; min-width:0; min-height:38px; }
 
   .kb{ font-size:11px; font-weight:700; padding:2px 7px; border-radius:2px;
        border:1px solid currentColor; white-space:nowrap; }
@@ -88,9 +102,19 @@
   <span class="mark" aria-hidden="true"></span>
   <h1>取引先</h1>
   <div class="who" id="who"></div>
-  <button class="btn ghost sm barbtn" id="out">出る</button>
 </header>
 
+<style>
+  .xtab{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--card); border-bottom:1px solid var(--rule); padding:3px 10px; }
+  .xtab a{ font-family:var(--body); font-weight:800; font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:4px 14px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .xtab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .xtab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .xtab[hidden], .xtab a[hidden]{ display:none; }
+</style>
+<nav class="xtab" id="xtab" hidden>
+  <a data-k="partners" href="partners.html">取引先</a>
+  <a data-k="users" href="users.html">社員</a>
+</nav>
 <div class="wrap">
   <div id="msg" class="msg"></div>
 
@@ -105,7 +129,7 @@
     <select id="fwarn">
       <option value="">すべて</option>
       <option value="lic">許可の期限が近い・切れている</option>
-      <option value="si">社会保険が未確認</option>
+      <option value="si">労災未確認</option>
     </select>
   </div>
 
@@ -166,18 +190,18 @@
       <span class="k">取引開始</span>
       <span class="dv"><input id="f_start" type="date"></span>
 
-      <div class="sh">建設業許可（協力会社に出すときの確認）</div>
-      <span class="k">許可番号</span>
-      <span class="dv r"><input id="f_lic" type="text" placeholder="福岡県知事許可（般-5）第12345号"></span>
-      <span class="k">許可業種</span>
-      <span class="dv"><input id="f_lkind" type="text" placeholder="土木一式、とび・土工、舗装（読点で区切る）"></span>
+      <div class="sh licf">建設業許可（協力会社に出すときの確認）</div>
+      <span class="k licf">許可番号</span>
+      <span class="dv r licf"><input id="f_lic" type="text" placeholder="福岡県知事許可（般-5）第12345号"></span>
+      <span class="k licf">許可業種</span>
+      <span class="dv licf"><input id="f_lkind" type="text" placeholder="土木一式、とび・土工、舗装（読点で区切る）"></span>
 
-      <span class="k">許可の開始</span>
-      <span class="dv r"><input id="f_lst" type="date"></span>
-      <span class="k">許可の期限</span>
-      <span class="dv"><input id="f_led" type="date"></span>
+      <span class="k licf">許可の開始</span>
+      <span class="dv r licf"><input id="f_lst" type="date"></span>
+      <span class="k licf">許可の期限</span>
+      <span class="dv licf"><input id="f_led" type="date"></span>
 
-      <div class="sh">社会保険と振込先</div>
+      <div class="sh">社会保険</div>
       <span class="k">加入状況</span>
       <span class="dv r">
         <label class="chk"><input id="f_sih" type="checkbox">健康保険</label>
@@ -187,37 +211,15 @@
       <span class="k">確認した日</span>
       <span class="dv"><input id="f_sid" type="date"></span>
 
-      <span class="k">金融機関</span>
-      <span class="dv r"><input id="f_bank" type="text" placeholder="福岡銀行"></span>
-      <span class="k">支店</span>
-      <span class="dv"><input id="f_branch" type="text" placeholder="宗像支店"></span>
-
-      <span class="k">口座</span>
-      <span class="dv r">
-        <select id="f_batype" style="flex:0 0 92px">
-          <option value="">—</option><option value="futsu">普通</option>
-          <option value="touza">当座</option><option value="chochiku">貯蓄</option>
-        </select>
-        <input id="f_bano" type="text" inputmode="numeric" placeholder="口座番号" style="flex:1 1 100px">
-      </span>
-      <span class="k">名義</span>
-      <span class="dv"><input id="f_bahol" type="text" placeholder="カナ"></span>
-
-      <div class="sh">支払・入金の条件</div>
-      <span class="k">締め日</span>
-      <span class="dv r"><input id="f_close" type="number" min="1" max="31" placeholder="20"><span class="u2">日</span></span>
-      <span class="k">支払</span>
-      <span class="dv">
-        <select id="f_moff" style="flex:0 0 96px">
-          <option value="0">当月</option><option value="1">翌月</option><option value="2">翌々月</option>
-        </select>
-        <input id="f_pday" type="number" min="1" max="31" placeholder="25" style="flex:0 0 84px"><span class="u2">日</span>
-      </span>
-
       <div class="sh">担当者</div>
       <div class="full">
         <div class="cts" id="cts"></div>
         <button class="btn ghost sm" id="ctadd" type="button" style="margin-top:6px">＋ 担当者を足す</button>
+        <div id="ctinvite" hidden style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#F1F3EF;border-radius:6px;padding:8px 10px">
+          <span style="font-size:12px;color:var(--sub);font-weight:700">招待リンク（7日間有効・本人へ送ってください）</span>
+          <input id="ctinviteUrl" type="text" readonly style="flex:1 1 260px;min-width:0">
+          <button class="btn ghost sm" id="ctinviteCopy" type="button">コピー</button>
+        </div>
       </div>
 
       <div class="sh">備考</div>
@@ -241,6 +243,24 @@
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("xtab"); if(!bar) return;
+  const t = tierOf(a.me);
+  const allow = t===1 ? ["partners","users"] : ["partners"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="partners") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
+<script>
 (async function(){
   const $ = id => document.getElementById(id);
   const DAY = 86400000;
@@ -251,10 +271,10 @@
   const canEdit = (me.role === 'admin' || me.role === 'manager');
 
   paintBar(me, await loadOrgName(me.organization_id));
-  $('out').addEventListener('click', signOut);
   if (canEdit) $('dock').hidden = false;
 
   let partners = [], contacts = {}, editing = null;
+  let puMap = {};   // 招待用：この取引先に紐づく app_users（id → {invite_token, auth_user_id}）
 
   /* ================= 読み込み ================= */
   async function load(){
@@ -281,7 +301,7 @@
 
   function licState(p){
     if (!p.is_subcontractor) return null;
-    if (!p.license_end_on) return { lv:'none', txt:'許可未登録' };
+    if (!p.license_end_on) return { lv:'none', txt:'許可未確認' };
     const left = d2n(p.license_end_on) - today;
     if (left < 0)  return { lv:'over', txt:`許可の期限切れ（${-left}日前）` };
     if (left < 90) return { lv:'near', txt:`許可の期限まで${left}日` };
@@ -289,8 +309,8 @@
   }
   function siState(p){
     if (!p.is_subcontractor) return null;
-    if (p.si_health === null || p.si_health === undefined) return { txt:'社会保険が未確認' };
-    if (!(p.si_health && p.si_pension && p.si_employment)) return { txt:'社会保険に未加入あり' };
+    if (p.si_health === null || p.si_health === undefined) return { txt:'労災未確認' };
+    if (!(p.si_health && p.si_pension && p.si_employment)) return { txt:'労災未確認' };
     return null;
   }
 
@@ -318,7 +338,7 @@
       return;
     }
 
-    $('list').innerHTML = rows.map(p => {
+    $('list').innerHTML = rows.map((p, i) => {
       const kbs = [];
       if (p.is_client) kbs.push('<span class="kb cl">クライアント</span>');
       if (p.is_subcontractor) kbs.push('<span class="kb sb">協力会社</span>');
@@ -337,6 +357,7 @@
       const flag = lic ? 'fl-cancelled' : (p.is_subcontractor ? 'fl-started' : 'fl-ordered');
 
       return `<button class="item" data-id="${p.id}">
+        <span class="rno">${i + 1}</span>
         <span class="flag ${flag}"></span>
         <span class="body">
           <span class="nm">${esc(p.name)}</span>
@@ -357,12 +378,15 @@
 
   /* ================= 担当者の行 ================= */
   function ctRow(c){
-    return `<div class="ctrow">
+    const cid = (c && c.id) || '';
+    const auid = (c && c.app_user_id) || '';
+    return `<div class="ctrow" data-cid="${cid}" data-auid="${auid}">
       <input class="cn c_name" type="text" placeholder="氏名" value="${esc((c&&c.name)||'')}">
       <input class="ct c_title" type="text" placeholder="役職" value="${esc((c&&c.title)||'')}">
       <input class="cp c_tel" type="text" placeholder="電話・携帯" value="${esc((c&&(c.tel||c.mobile))||'')}">
       <input class="cp c_mail" type="text" placeholder="メール" value="${esc((c&&c.email)||'')}">
       <label class="chk"><input class="c_pri" type="checkbox"${c&&c.is_primary?' checked':''}>主担当</label>
+      <span class="c_inv" style="display:inline-flex;align-items:center;gap:6px"></span>
       <button class="btn ghost sm c_rm" type="button">削除</button>
     </div>`;
   }
@@ -370,11 +394,89 @@
     $('cts').querySelectorAll('.c_rm').forEach(b => b.onclick = () => b.closest('.ctrow').remove());
   }
   $('ctadd').addEventListener('click', () => {
-    $('cts').insertAdjacentHTML('beforeend', ctRow(null)); bindCtRm();
+    $('cts').insertAdjacentHTML('beforeend', ctRow(null)); bindCtRm(); paintInvites();
+  });
+
+  /* ================= 担当者→システム招待（再入力なし） ================= */
+  // 各担当者行に「システムに招待／招待中／登録済み」を描く（経営者のみ）
+  function paintInvites(){
+    $('cts').querySelectorAll('.ctrow').forEach(row => {
+      const cell = row.querySelector('.c_inv');
+      if (!cell) return;
+      if (me.role !== 'admin'){ cell.innerHTML = ''; return; }
+      const cid = row.dataset.cid;
+      if (!cid){ cell.innerHTML = '<span style="font-size:11px;color:var(--sub)">保存後に招待できます</span>'; return; }
+      const u = row.dataset.auid ? puMap[row.dataset.auid] : null;
+      if (u && u.auth_user_id){ cell.innerHTML = '<span style="font-size:11px;font-weight:700;color:#1F6B3B">✓ 登録済み</span>'; return; }
+      if (u && u.invite_token){ cell.innerHTML = '<span style="font-size:11px;font-weight:700;color:#8A6D1B">招待中</span> <button class="btn ghost sm c_showlink" type="button">リンク表示</button>'; return; }
+      cell.innerHTML = '<button class="btn sm c_invite" type="button">システムに招待</button>';
+    });
+    $('cts').querySelectorAll('.c_invite').forEach(b => b.onclick = () => inviteContact(b.closest('.ctrow')));
+    $('cts').querySelectorAll('.c_showlink').forEach(b => b.onclick = () => inviteContact(b.closest('.ctrow')));
+  }
+
+  async function inviteContact(row){
+    const cid = row.dataset.cid;
+    if (!cid){ showMsg($('pmsg'), 'この担当者はまだ保存されていません。先に「保存する」を押してください。', 'err'); return; }
+    const name = row.querySelector('.c_name').value.trim();
+    const email = row.querySelector('.c_mail').value.trim();
+    const tel = row.querySelector('.c_tel').value.trim();
+    if (!name){ showMsg($('pmsg'), '担当者の氏名を入れてください。', 'err'); return; }
+
+    let auid = row.dataset.auid || null;
+    // まだログイン垢が無ければ、担当者の情報から app_users を作る（再入力なし）
+    if (!auid){
+      const ins = await sb.from('app_users').insert({
+        organization_id: me.organization_id, name, email: email || null, tel: tel || null,
+        is_external: true, partner_id: editing.id, employee_type: 'subcontractor', role: 'member', is_active: true
+      }).select('id').single();
+      if (ins.error){
+        showMsg($('pmsg'), ins.error.code === '42501'
+          ? '招待する権限がありません。経営者権限のアカウントでlog inし直してください。'
+          : 'ログイン用アカウントを作成できませんでした。' + ins.error.message, 'err');
+        return;
+      }
+      auid = ins.data.id;
+      row.dataset.auid = auid;
+      await sb.from('partner_contacts').update({ app_user_id: auid }).eq('id', cid);
+      const arr = contacts[editing.id] || []; const cc = arr.find(x => x.id === cid); if (cc) cc.app_user_id = auid;
+    }
+
+    // 既に招待中ならそのリンクを再表示、無ければ新規発行
+    let token = puMap[auid] && puMap[auid].invite_token;
+    if (!token){
+      token = crypto.randomUUID();
+      const expires = new Date(Date.now() + 7 * DAY).toISOString();
+      const up = await sb.from('app_users').update({ invite_token: token, invite_expires_at: expires }).eq('id', auid).select('id');
+      if (up.error || !(up.data && up.data.length)){
+        showMsg($('pmsg'), '招待リンクを発行できませんでした。経営者権限が必要です。', 'err');
+        return;
+      }
+      puMap[auid] = { ...(puMap[auid] || { id: auid }), invite_token: token };
+    }
+    const url = `${location.origin}${location.pathname.replace(/partners\.html$/, 'signup.html')}?token=${token}`;
+    $('ctinviteUrl').value = url;
+    $('ctinvite').hidden = false;
+    paintInvites();
+    showMsg($('pmsg'), '招待リンクを発行しました。コピーして本人へ送ってください。', 'ok');
+  }
+
+  $('ctinviteCopy').addEventListener('click', async () => {
+    const v = $('ctinviteUrl').value;
+    if (!v) return;
+    try { await navigator.clipboard.writeText(v); showMsg($('pmsg'), 'コピーしました。', 'ok'); }
+    catch (_){ $('ctinviteUrl').select(); document.execCommand('copy'); showMsg($('pmsg'), 'コピーしました。', 'ok'); }
   });
 
   /* ================= 編集 ================= */
-  function openPanel(p){
+  // 協力会社でない取引先は建設業許可の入力が要らないので隠す
+  function syncLicSec(){
+    const show = $('f_sb').checked;
+    document.querySelectorAll('.licf').forEach(el => { el.style.display = show ? '' : 'none'; });
+  }
+  $('f_sb').addEventListener('change', syncLicSec);
+
+  async function openPanel(p){
     editing = p || null;
     showMsg($('pmsg'), '');
     $('ptitle').textContent = p ? '取引先の編集' : '取引先の登録';
@@ -402,25 +504,28 @@
     $('f_sip').checked = !!g('si_pension', false);
     $('f_sie').checked = !!g('si_employment', false);
     $('f_sid').value   = g('si_checked_on','') || '';
-    $('f_bank').value  = g('bank_name','');
-    $('f_branch').value= g('bank_branch','');
-    $('f_batype').value= g('bank_acc_type','') || '';
-    $('f_bano').value  = g('bank_acc_no','');
-    $('f_bahol').value = g('bank_holder','');
-    $('f_close').value = g('closing_day','') || '';
-    $('f_moff').value  = String(g('payment_month_offset', 1) ?? 1);
-    $('f_pday').value  = g('payment_day','') || '';
     $('f_note').value  = g('note','');
 
     const cs = p ? (contacts[p.id] || []) : [];
     $('cts').innerHTML = cs.length ? cs.map(ctRow).join('') : ctRow(null);
     bindCtRm();
 
+    // 招待の状態（経営者のみ）：この取引先に紐づくログイン垢を読んで担当者行に反映
+    $('ctinvite').hidden = true;
+    puMap = {};
+    if (me.role === 'admin' && p){
+      const { data } = await sb.from('app_users')
+        .select('id,invite_token,auth_user_id').eq('partner_id', p.id);
+      (data || []).forEach(u => puMap[u.id] = u);
+    }
+    paintInvites();
+
     document.querySelectorAll('#panel input, #panel select, #panel textarea')
       .forEach(el => el.disabled = !canEdit);
     $('pdock').style.display = canEdit ? '' : 'none';
     $('ctadd').disabled = !canEdit;
     $('del').hidden = !(p && me.role === 'admin');
+    syncLicSec();
 
     $('panel').classList.add('open');
     const w = $('panel').querySelector('.wrap');
@@ -479,14 +584,6 @@
       si_pension      : $('f_sip').checked,
       si_employment   : $('f_sie').checked,
       si_checked_on   : $('f_sid').value || null,
-      bank_name       : $('f_bank').value.trim() || null,
-      bank_branch     : $('f_branch').value.trim() || null,
-      bank_acc_type   : $('f_batype').value || null,
-      bank_acc_no     : $('f_bano').value.trim() || null,
-      bank_holder     : $('f_bahol').value.trim() || null,
-      closing_day     : $('f_close').value === '' ? null : Number($('f_close').value),
-      payment_month_offset: Number($('f_moff').value),
-      payment_day     : $('f_pday').value === '' ? null : Number($('f_pday').value),
       note            : $('f_note').value.trim() || null
     };
 
@@ -498,22 +595,33 @@
       error = r.error; id = r.data ? r.data.id : null;
     }
 
-    // 担当者を入れ替える
+    // 担当者：ID保持で更新・追加・削除（招待リンク＝app_user_id を消さないため入れ替えにしない）
     if (!error && id){
-      await sb.from('partner_contacts').delete().eq('partner_id', id);
-      const rows = [...$('cts').querySelectorAll('.ctrow')].map((r,i) => ({
-        organization_id: me.organization_id,
-        partner_id     : id,
-        name           : r.querySelector('.c_name').value.trim(),
-        title          : r.querySelector('.c_title').value.trim() || null,
-        tel            : r.querySelector('.c_tel').value.trim() || null,
-        email          : r.querySelector('.c_mail').value.trim() || null,
-        is_primary     : r.querySelector('.c_pri').checked,
-        sort_order     : (i+1)*10
+      const uiRows = [...$('cts').querySelectorAll('.ctrow')].map((r,i) => ({
+        cid       : r.dataset.cid || null,
+        name      : r.querySelector('.c_name').value.trim(),
+        title     : r.querySelector('.c_title').value.trim() || null,
+        tel       : r.querySelector('.c_tel').value.trim() || null,
+        email     : r.querySelector('.c_mail').value.trim() || null,
+        is_primary: r.querySelector('.c_pri').checked,
+        sort_order: (i+1)*10
       })).filter(x => x.name);
-      if (rows.length){
-        const r2 = await sb.from('partner_contacts').insert(rows);
-        if (r2.error) error = r2.error;
+      const existing = contacts[id] || [];
+      const keep = new Set(uiRows.filter(x => x.cid).map(x => x.cid));
+      const del = existing.filter(e => !keep.has(e.id)).map(e => e.id);
+      if (del.length){
+        const rd = await sb.from('partner_contacts').delete().in('id', del);
+        if (rd.error) error = rd.error;
+      }
+      for (const x of uiRows){
+        const fields = { name:x.name, title:x.title, tel:x.tel, email:x.email, is_primary:x.is_primary, sort_order:x.sort_order };
+        if (x.cid){
+          const ru = await sb.from('partner_contacts').update(fields).eq('id', x.cid);
+          if (ru.error) error = ru.error;
+        } else {
+          const ri = await sb.from('partner_contacts').insert({ organization_id: me.organization_id, partner_id: id, ...fields });
+          if (ri.error) error = ri.error;
+        }
       }
     }
 
@@ -533,17 +641,18 @@
   /* ================= 削除 ================= */
   $('del').addEventListener('click', async () => {
     if (!editing) return;
-    if (!confirm(`「${editing.name}」を削除します。取り消せません。`)) return;
-    const { error } = await sb.from('partners').delete().eq('id', editing.id);
-    if (error){
-      showMsg($('pmsg'), error.code === '23503'
-        ? 'この取引先は工事や発注で使われているため削除できません。' : '削除できませんでした。' + error.message, 'err');
-      return;
-    }
+    if (!confirm(`「${editing.name}」を削除します。`)) return;
+    const id = editing.id, nm = editing.name;
+    const { error } = await sb.from('partners').update({ is_active:false }).eq('id', id);
+    if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
     snapshot = formState();
     $('panel').classList.remove('open'); editing = null;
     await load();
-    showMsg($('msg'), '削除しました。', 'ok');
+    showUndo($('msg'), `「${nm}」を削除しました。`, async () => {
+      const { error:e2 } = await sb.from('partners').update({ is_active:true }).eq('id', id);
+      if (e2) throw e2;
+      await load();
+    });
   });
 
   await load();

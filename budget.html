@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<!-- BUILD: budget (実行予算) v20260909A -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#13385D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現場管理">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<!-- /PWA -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>実行予算 ｜ 宗像総合管理システム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  /* このページは横に長い表を扱うため、共通の960pxより広く使う */
+  .wrap{ max-width:1440px; }
+
+  /* ページ自体はスクロールさせず、表の中だけをスクロールさせる（二重スクロール防止） */
+  html, body{ height:100%; }
+  body{ overflow:hidden; display:flex; flex-direction:column; }
+  .bar{ flex:0 0 auto; }
+  .wrap{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-bottom:6px; }
+  .ctl, #msg, .sumgrid, .count{ flex:0 0 auto; }
+  #btable{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+
+  /* 表の内部スクロールの高さを稼ぐため上部を詰める（材料調達計画と統一） */
+  .wrap{ padding-top:6px; }
+  .ctl{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:4px; }
+  .ctl select{ width:auto; min-width:160px; max-width:360px; min-height:30px; flex:0 1 auto; }
+  .ctl .sp{ flex:1 1 0; }
+  /* ページ識別・役割チップ・起点強調 */
+  .bar h1 .pgico{ font-size:14px; margin-right:4px; opacity:.92; }
+  .ctl .fl-lb{ font-size:10px; font-weight:800; color:var(--ink-2); letter-spacing:.06em;
+    padding:3px 8px; background:#EEF1EA; border:1px solid var(--rule-2); border-radius:999px; white-space:nowrap; }
+  #proj{ font-weight:700; border-color:var(--ink-2); box-shadow:inset 0 0 0 1px rgba(37,90,145,.15); }
+
+  /* ===== サマリ＝予算の警報盤（差額の severity で強調） ===== */
+  .sumgrid{ display:grid; gap:6px; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); margin-bottom:6px; }
+  .sumcard{
+    position:relative; background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+    box-shadow:var(--shadow-1); padding:5px 11px 5px 15px;
+  }
+  .sumcard::before{ content:""; position:absolute; left:0; top:5px; bottom:5px; width:4px; border-radius:2px; background:var(--rule-2); }
+  .sumcard.under::before{ background:var(--ok); }
+  .sumcard.over::before{ background:var(--alert); }
+  .sumcard.hero{ border-color:var(--ink-2); }
+  /* 余り（健全）：緑ヒーロー */
+  .sumcard.hero.under{ background:linear-gradient(180deg,#EDF6EF,var(--card)); border-color:#BFE0C7; }
+  /* 超過＝アラート：赤で強く塗り・白文字。開いた後 数秒 赤点滅で気づかせる */
+  .sumcard.over{ border-color:#E0A99E; }
+  .sumcard.hero.over{ background:linear-gradient(180deg,#C7412F,var(--alert)); border-color:#7E2417; box-shadow:0 3px 16px rgba(190,60,44,.45); }
+  .sumcard.hero.over .t, .sumcard.hero.over .v, .sumcard.hero.over .v2, .sumcard.hero.over .dn, .sumcard.hero.over .up{ color:#fff; }
+  .sumcard.hero.over::before{ background:#fff; }
+  .sumcard .t{ font-size:10.5px; color:var(--sub); margin-bottom:1px; font-weight:700; }
+  .sumcard .v{ font-family:var(--mono); font-weight:800; font-size:17px; color:var(--ink); line-height:1.1; }
+  .sumcard.over .v{ color:var(--alert); }
+  .sumcard .v2{ font-family:var(--mono); font-size:10.5px; color:var(--sub); margin-top:1px; }
+  .sumcard .up{ color:var(--ok); font-weight:700; } .sumcard .dn{ color:var(--alert); font-weight:800; }
+  .sumcard.over::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:rgba(197,56,38,.6); opacity:0; }
+  .sumcard.hero.over::after{ background:rgba(255,224,214,.65); }  /* 赤カードの上は白めのフラッシュで点滅を見せる */
+  @media (prefers-reduced-motion:no-preference){
+    .sumgrid .sumcard{ animation:cardin .35s ease both; }
+    .sumgrid .sumcard:nth-child(2){ animation-delay:.05s; }
+    .sumgrid .sumcard:nth-child(3){ animation-delay:.10s; }
+    @keyframes cardin{ from{ opacity:0; transform:translateY(-5px); } to{ opacity:1; transform:none; } }
+    /* 超過カード：開いた後 約3.6秒 赤く点滅（4回）してから収まる */
+    .sumcard.over::after{ animation:blinkfade .45s ease-in-out .3s 8 alternate both; }
+    @keyframes blinkfade{ from{ opacity:0; } to{ opacity:.72; } }
+  }
+
+  .btable{ background:var(--card); border:1px solid var(--rule); border-radius:var(--radius);
+           box-shadow:var(--shadow-1); overflow:auto; flex:1 1 auto; min-height:0; }
+  /* 下部固定の「項目を追加する」バーに最終行が隠れないよう、スクロール末尾に余白を確保 */
+  body.dockon .btable{ padding-bottom:calc(76px + env(safe-area-inset-bottom)); }
+  .bhead, .brow{
+    display:grid; align-items:start; gap:6px; min-width:1118px;
+    grid-template-columns:34px 52px 2.4fr 0.9fr 80px 70px 96px 96px 96px 96px 84px 96px 64px;
+  }
+  .brow .no{ font-family:var(--mono); font-size:11px; color:var(--sub); text-align:right; }
+  .bgroup{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:7px 10px; background:#E9ECE4; border-top:1px solid var(--rule);
+    font-size:11.5px; font-weight:700; color:var(--ink-2);
+  }
+  .bgroup:first-child{ border-top:none; }
+  .bgroup .gcount{ font-weight:400; color:var(--sub); font-family:var(--mono); font-size:11px; }
+  .bhead{
+    position:sticky; top:0; z-index:5;
+    background:#F1F3EF; font-size:10.5px; font-weight:700; color:var(--sub);
+    white-space:nowrap; align-items:center; padding:5px 10px;
+    border-bottom:1px solid var(--rule); border-radius:var(--radius) var(--radius) 0 0;
+  }
+  .brow{
+    padding:9px 10px; border-top:1px solid var(--rule-2); cursor:pointer; background:var(--card);
+    font-size:15px; text-align:left; width:100%; font-family:var(--body); color:inherit;
+  }
+  .brow:hover{ background:#F5F7F3; }
+  .brow .num{ font-family:var(--mono); text-align:right; white-space:nowrap; }
+  .bhead .num{ text-align:right; }
+  .brow .nm{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-weight:700; }
+  .brow .sub{ white-space:normal; overflow-wrap:break-word; line-height:1.4; font-size:11px; color:var(--sub); }
+  .cat{ font-size:10.5px; font-weight:700; padding:2px 6px; border-radius:var(--radius-sm); text-align:center; }
+  .cat.material{ background:#E3EBF3; color:var(--ink-2); }
+  .cat.labor{ background:#FBF1EF; color:#8C2A1D; }
+  .xtag{ font-size:10px; font-weight:700; padding:1px 5px; border-radius:var(--radius-sm); background:#FBF0D4; color:#6B4E00; margin-left:6px; white-space:nowrap; }
+  .startalert{ font-size:12px; font-weight:700; color:#8C2A1D; background:#FBF1EF;
+    border:1px solid #E7C3BC; border-radius:var(--radius-sm); padding:5px 10px;
+    white-space:normal; line-height:1.4; max-width:560px; margin-left:auto; }
+  .startalert[hidden]{ display:none; }
+  .diff.over{ color:var(--alert); font-weight:700; }
+  .diff.under{ color:var(--ok); }
+  .qtag{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:var(--radius-sm); white-space:nowrap; }
+  .qtag.pending{ background:#EDEFEA; color:var(--sub); }
+  .qtag.pass{ background:#E6F2EB; color:var(--ok); }
+  .qtag.fail{ background:#FBF1EF; color:var(--alert); }
+  .dtag{ font-size:11px; font-family:var(--mono); white-space:nowrap; color:var(--ink); font-weight:700; }
+  .dtag.none{ color:var(--alert); }
+  .dtag.planned{ color:var(--ok); }
+  .dtag.actual{ color:var(--ink); }
+  .dwarn{ color:var(--alert); font-weight:700; margin-right:2px; }
+  .brow.conflict{ background:#FBF1EF; }
+  .brow.conflict:hover{ background:#F8E4DF; }
+  .bgroup .gwarn{ color:var(--alert); font-weight:700; margin-left:8px; }
+  .stag{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:var(--radius-sm); white-space:nowrap; color:var(--sub); background:#EDEFEA; }
+  .stag.notstarted{ color:#8C2A1D; background:#FBF1EF; }
+  .stag.progress{ color:#6B4E00; background:#FBF0D4; }
+  .stag.done{ color:#1C5E3D; background:#EAF2ED; }
+
+  @media (max-width:820px){
+    /* 狭い画面ではカード表示になるため、通常のページスクロールに戻す */
+    body{ height:auto; overflow:visible; display:block; }
+    .wrap{ flex:none; height:auto; overflow:visible; display:block; }
+    #btable{ display:block; }
+    .btable{ flex:none; max-height:none; overflow:visible; }
+
+    .bhead{ display:none; }
+    .brow{ grid-template-columns:1fr; min-width:0; padding:10px 12px; gap:2px; }
+    .brow .num, .brow .sub{ text-align:left; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="mark" aria-hidden="true"></span>
+  <h1><span class="pgico" aria-hidden="true">📊</span>実行予算</h1>
+  <div class="who" id="who"></div>
+</header>
+
+<style>
+  .ztab{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--card); border-bottom:1px solid var(--rule); padding:3px 10px; }
+  .ztab a{ font-family:var(--body); font-weight:800; font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:4px 14px; border:2px solid var(--ink-2); border-radius:8px; background:var(--card); white-space:nowrap; line-height:1; }
+  .ztab a:hover{ border-color:var(--ink); color:var(--ink); }
+  .ztab a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .ztab .zarr{ color:var(--sub); font-weight:800; font-size:13px; user-select:none; }
+  .ztab[hidden], .ztab a[hidden]{ display:none; }
+</style>
+<nav class="ztab" id="ztab" hidden>
+  <a data-k="estimate" href="genka.html">見積</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="budget" href="budget.html">予算</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="order" href="orders.html">発注</a>
+  <span class="zarr" aria-hidden="true">→</span>
+  <a data-k="delivery" href="order-alerts.html">納期</a>
+</nav>
+<div class="wrap">
+  <div class="ctl">
+    <span class="fl-lb">絞り込み</span>
+    <select id="proj"><option value="">工事を選んでください</option></select>
+    <select id="fphase"><option value="">すべての工程</option></select>
+    <select id="fcat">
+      <option value="">材工すべて</option>
+      <option value="material">材料費のみ</option>
+      <option value="labor">外注・労務費のみ</option>
+    </select>
+    <span class="sp"></span>
+    <span id="startalert" class="startalert" hidden>⚠ 着工済み：着工前原価には追加できません（追加は副資材・突発として記録）</span>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div class="sumgrid" id="sumgrid" hidden></div>
+
+  <p class="count" id="count"></p>
+  <div id="btable"></div>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="inner"><button class="btn wide" id="add">項目を追加する</button></div>
+</div>
+
+<!-- ========== 項目の詳細 ========== -->
+<div class="panel" id="panel">
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <h1 id="ptitle">材工項目</h1>
+    <button class="btn ghost sm barbtn" id="close">閉じる</button>
+  </header>
+
+  <div class="wrap">
+    <div id="pmsg" class="msg"></div>
+
+    <div class="sheet">
+      <div class="head">項目</div>
+      <div class="row">
+        <label for="f_cat">区分<span class="req">*</span></label>
+        <div class="fld"><select id="f_cat">
+          <option value="material">材料費</option>
+          <option value="labor">外注・労務費</option>
+        </select></div>
+      </div>
+      <div class="row">
+        <label for="f_name">内容<span class="req">*</span></label>
+        <div class="fld"><input id="f_name" type="text" placeholder="6KVCVT100SQ ケーブル など"></div>
+      </div>
+      <div class="row">
+        <label for="f_phase">関わる工程</label>
+        <div class="fld"><select id="f_phase"></select></div>
+      </div>
+      <div class="row">
+        <label for="f_estp">見積先</label>
+        <div class="fld"><select id="f_estp"></select></div>
+      </div>
+      <div class="row">
+        <label for="f_stage">原価区分</label>
+        <div class="fld"><select id="f_stage">
+          <option value="estimate">当初見積（着工前・原価台帳に載る）</option>
+          <option value="extra">追加（副資材・突発。実行予算のみ）</option>
+        </select><span id="f_stagehint" style="font-size:11.5px;color:var(--alert);margin-left:8px;flex:1 1 100%"></span></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">金額</div>
+      <div class="row">
+        <label for="f_qty">数量</label>
+        <div class="fld"><input id="f_qty" type="number" step="any" placeholder="0"><input id="f_unit" type="text" placeholder="単位" style="max-width:100px;margin-left:8px"></div>
+      </div>
+      <div class="row">
+        <label for="f_price">単価</label>
+        <div class="fld"><input id="f_price" type="number" step="any" placeholder="0"></div>
+      </div>
+      <div class="row">
+        <label>金額（単価×数量）</label>
+        <div class="fld"><span id="f_amt" style="font-family:var(--mono);font-weight:700">¥0</span></div>
+      </div>
+      <div class="row">
+        <label for="f_budget">会社予算</label>
+        <div class="fld"><input id="f_budget" type="number" step="any" placeholder="0"></div>
+      </div>
+      <div class="row">
+        <label for="f_contract">請負金額（決定額）</label>
+        <div class="fld"><input id="f_contract" type="number" step="any" placeholder="0"></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">発注・納期</div>
+      <div class="row">
+        <label for="f_odate">発注日</label>
+        <div class="fld"><input id="f_odate" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="f_due">発注期限</label>
+        <div class="fld"><input id="f_due" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="f_sdate">現地納品予定日</label>
+        <div class="fld"><input id="f_sdate" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="f_lead">リードタイム（日）</label>
+        <div class="fld"><input id="f_lead" type="number" min="0" step="1" placeholder="発注〜納品までの目安日数">
+          <span id="f_deadline" style="font-size:12px;color:var(--sub);margin-left:8px"></span></div>
+      </div>
+      <div class="row">
+        <label for="f_proc">調達区分</label>
+        <div class="fld"><select id="f_proc">
+            <option value="">（未設定）</option>
+            <option value="stock">在庫品（納期が読める）</option>
+            <option value="made_to_order">受注生産（発注後に製作）</option>
+          </select>
+          <label style="margin-left:14px;font-size:13.5px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap">
+            <input type="checkbox" id="f_import" style="width:auto;min-height:0;transform:scale(1.2)">海外輸入</label>
+          <span style="font-size:11.5px;color:var(--sub);flex:1 1 100%;margin-top:2px">受注生産・海外輸入は納期が読みにくいため、材料到着スケジュールで早めに警告します。</span></div>
+      </div>
+      <div class="row">
+        <label for="f_status">進み具合</label>
+        <div class="fld"><select id="f_status">
+          <option value="estimate">見積中</option>
+          <option value="ordered">発注済み</option>
+          <option value="delivered">納品済み</option>
+          <option value="inspected">検査完了</option>
+          <option value="cancelled">中止</option>
+        </select></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="sheet">
+      <div class="head">納品検査</div>
+      <div class="row">
+        <label for="f_ddate">納品日</label>
+        <div class="fld"><input id="f_ddate" type="date"></div>
+      </div>
+      <div class="row">
+        <label for="f_dqty">入数</label>
+        <div class="fld"><input id="f_dqty" type="number" step="any" placeholder="0"></div>
+      </div>
+      <div class="row">
+        <label for="f_qstat">品質判定</label>
+        <div class="fld"><select id="f_qstat">
+          <option value="pending">未検査</option>
+          <option value="pass">良</option>
+          <option value="fail">否</option>
+        </select></div>
+      </div>
+      <div class="row">
+        <label for="f_qnote">品質の備考</label>
+        <div class="fld"><textarea id="f_qnote" placeholder="数量不足、外観キズ など"></textarea></div>
+      </div>
+      <div class="row">
+        <label for="f_note">備考</label>
+        <div class="fld"><textarea id="f_note"></textarea></div>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <button class="btn danger" id="del" hidden>この項目を削除する</button>
+  </div>
+
+  <div class="dock" id="pdock">
+    <div class="inner">
+      <button class="btn ghost" id="cancel" style="flex:0 0 auto">やめる</button>
+      <button class="btn wide" id="save">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){ try{
+  const a = await requireAuth(); if(!a) return;
+  const bar = document.getElementById("ztab"); if(!bar) return;
+  const allow = tierOf(a.me)<=2 ? ["delivery","order","budget","estimate"] : ["delivery"];
+  const p = new URL(location.href).searchParams.get("p") || "";
+  let shown=0;
+  bar.querySelectorAll("a[data-k]").forEach(function(el){
+    if(allow.indexOf(el.dataset.k)<0){ el.hidden=true; return; }
+    shown++;
+    if(p) el.href = el.getAttribute("href") + "?p=" + encodeURIComponent(p);
+    if(el.dataset.k==="budget") el.classList.add("on");
+  });
+  bar.hidden = shown<=1;
+}catch(e){} })();
+</script>
+
+<script>
+(async function(){
+  const $ = id => document.getElementById(id);
+
+  const CATN  = { material:'材料費', labor:'外注・労務費' };
+  const STATN = { estimate:'見積中', ordered:'発注済み', delivered:'納品済み', inspected:'検査完了', cancelled:'中止' };
+  // 工程表のステータス配色（未着手＝赤／着手中＝黄／完了＝緑）に合わせる
+  const STATCLS = { estimate:'notstarted', ordered:'progress', delivered:'done', inspected:'done', cancelled:'' };
+  const QN    = { pending:'未検査', pass:'良', fail:'否' };
+
+  const auth = await requireAuth();
+  if (!auth) return;
+  const me = auth.me;
+  const canEdit = (me.role === 'admin' || me.role === 'manager');
+
+  paintBar(me, await loadOrgName(me.organization_id));
+
+  let projects = [], phases = [], partners = [], items = [], editing = null, projId = null;
+
+  async function loadRefs(){
+    const [pr, pt] = await Promise.all([
+      sb.from('projects').select('id,project_no,name,start_date').eq('is_active', true).order('project_no', { ascending:false }),
+      sb.from('partners').select('id,name').eq('is_active', true).order('name')
+    ]);
+    projects = pr.data || [];
+    partners = pt.data || [];
+    const opt = projects.map(x => `<option value="${x.id}">${esc(x.project_no)}　${esc(x.name)}</option>`).join('');
+    $('proj').innerHTML = '<option value="">工事を選んでください</option>' + opt;
+    $('f_estp').innerHTML = '<option value="">（未設定）</option>' +
+      partners.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    setEmptyNote($('f_estp'), partners.length === 0,
+      '取引先が登録されていません。先に取引先ページから登録してください。', 'partners.html', '取引先ページへ');
+  }
+
+  async function loadPhases(){
+    if (!projId){ phases = []; return; }
+    const { data } = await sb.from('project_phases')
+      .select('id,name,start_date').eq('project_id', projId).eq('is_active', true).order('seq');
+    phases = data || [];
+    const opt = phases.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    $('fphase').innerHTML = '<option value="">すべての工程</option>' + opt;
+    $('f_phase').innerHTML = '<option value="">（工事全体）</option>' + opt;
+    setEmptyNote($('f_phase'), phases.length === 0,
+      'この工事の工程がまだありません。先に工程表から工程を作成してください。', `schedule.html?p=${projId}`, '工程表へ');
+  }
+
+  async function loadItems(){
+    if (!projId){ items = []; render(); return; }
+    const { data, error } = await sb.from('phase_budget_items')
+      .select('*').eq('project_id', projId).order('seq');
+    if (error){
+      showMsg($('msg'),
+        /relation .* does not exist|schema cache/i.test(error.message || '')
+          ? 'データベースに実行予算の表がまだありません。Supabase の SQL Editor で phase3_budget.sql を実行してください。'
+          : '読み込めませんでした。' + error.message, 'err');
+      items = [];
+    } else {
+      items = data || [];
+    }
+    render();
+  }
+
+  /* ================= 表示 ================= */
+  function fmt(v){ return v || v === 0 ? fmtMoney(v) : '—'; }
+  function addDays(ymd, n){
+    // ローカルの日付要素だけで計算する（toISOStringはUTC変換で日付がずれるため使わない）
+    const d = new Date(ymd + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function todayYMD(){
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  }
+  // 着工後かどうか＝工程表のガント着工日（工事の開始日）を過ぎているか
+  function isStarted(p){ return !!(p && p.start_date && p.start_date <= todayYMD()); }
+  // 一覧の狭い列用：2026-08-28 → 26/8/28
+  function fmtDateShort(ymd){
+    if (!ymd) return '';
+    const [y, m, d] = ymd.split('-');
+    return `${y.slice(2)}/${Number(m)}/${Number(d)}`;
+  }
+
+  function render(){
+    const dockOn = !!(canEdit && projId);
+    $('dock').hidden = !dockOn;
+    document.body.classList.toggle('dockon', dockOn);   // 固定バー表示中はスクロール末尾に余白
+    $('startalert').hidden = !isStarted(projects.find(p => p.id === projId));
+    if (!projId){
+      $('sumgrid').hidden = true;
+      $('count').textContent = '';
+      $('btable').innerHTML = `<div class="hold" style="height:200px"><div class="empty"><b>工事を選んでください</b>上の欄から工事を選ぶと実行予算が出ます。</div></div>`;
+      return;
+    }
+
+    const fp = $('fphase').value, fc = $('fcat').value;
+    const rows = items.filter(x => (!fp || x.phase_id === fp) && (!fc || x.category === fc));
+
+    // 集計
+    const sum = (arr, key) => arr.reduce((s, x) => s + (Number(x[key]) || 0), 0);
+    const groups = ['material', 'labor'];
+    $('sumgrid').hidden = false;
+    $('sumgrid').innerHTML = groups.map(g => {
+      const arr = rows.filter(x => x.category === g);
+      const budget = sum(arr, 'budget_amount');
+      const contract = sum(arr, 'contract_amount');
+      const diff = budget - contract;
+      const sev = diff < 0 ? 'over' : 'under';
+      return `<div class="sumcard ${sev}">
+        <div class="t">${CATN[g]}　決定額</div>
+        <div class="v">${fmtMoney(contract)}</div>
+        <div class="v2">予算 ${fmtMoney(budget)}　${diff >= 0
+          ? `<span class="up">▲余り ${fmtMoney(diff)}</span>`
+          : `<span class="dn">▼超過 ${fmtMoney(-diff)}</span>`}</div>
+      </div>`;
+    }).join('') + (() => {
+      const budget = sum(rows, 'budget_amount'), contract = sum(rows, 'contract_amount');
+      const diff = budget - contract;
+      const sev = diff < 0 ? 'over' : 'under';
+      return `<div class="sumcard hero ${sev}">
+        <div class="t">工事全体　決定額</div>
+        <div class="v">${fmtMoney(contract)}</div>
+        <div class="v2">予算 ${fmtMoney(budget)}　${diff >= 0
+          ? `<span class="up">▲余り ${fmtMoney(diff)}</span>`
+          : `<span class="dn">▼超過 ${fmtMoney(-diff)}</span>`}</div>
+      </div>`;
+    })();
+
+    $('count').textContent = `${rows.length} 件 ／ 全 ${items.length} 件`;
+
+    if (!rows.length){
+      $('btable').innerHTML = `<div class="empty"><b>まだ項目がありません</b>${canEdit ? '下の「項目を追加する」から始めてください。' : ''}</div>`;
+      return;
+    }
+
+    const pmap = Object.fromEntries(phases.map(p => [p.id, p.name]));
+    const pobj = Object.fromEntries(phases.map(p => [p.id, p]));
+    const ptmap = Object.fromEntries(partners.map(p => [p.id, p.name]));
+
+    // 工程ごとにグループ化し、各グループ内は納品予定日の早い順に並べる
+    // → どの項目がどの工程で使われ、いつ現場に届くのかを見える化し、
+    //   工程の着工日に間に合うかどうかを判断できるようにする
+    const byPhase = new Map();
+    rows.forEach(x => {
+      const key = x.phase_id || '__none__';
+      if (!byPhase.has(key)) byPhase.set(key, []);
+      byPhase.get(key).push(x);
+    });
+    const orderedKeys = [
+      ...phases.map(p => p.id).filter(id => byPhase.has(id)),
+      ...(byPhase.has('__none__') ? ['__none__'] : [])
+    ];
+    // 納品予定日が未入力でも、実際に届いた日（届いた日）が分かっていればそちらを表示に使う
+    const deliveryDateOf = x => x.scheduled_delivery_date || x.delivered_on || null;
+    const sortByDelivery = arr => [...arr].sort((a, b) => {
+      const da = deliveryDateOf(a), db = deliveryDateOf(b);
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return da < db ? -1 : da > db ? 1 : 0;
+    });
+    const today = new Date().toISOString().slice(0, 10);
+    const isDone = x => x.status === 'delivered' || x.status === 'inspected' || x.status === 'cancelled';
+    // 着工日に間に合うか：納品予定日が着工日より後 → 遅延。納品予定日が未定で着工日が目前 → 未定リスク
+    function checkConflict(x, phase){
+      if (!phase || !phase.start_date || isDone(x)) return null;
+      const dd = deliveryDateOf(x);
+      if (dd && dd > phase.start_date) return { kind:'late', text:`工程開始（${fmtDate(phase.start_date)}）に間に合いません` };
+      if (!dd && phase.start_date <= addDays(today, 14)) return { kind:'unknown', text:`工程開始（${fmtDate(phase.start_date)}）が近いのに納品予定日が未定です` };
+      return null;
+    }
+
+    let h = `<div class="btable"><div class="bhead">
+      <span>NO</span><span>区分</span><span>項目</span><span>工程／見積先</span><span class="num">数量</span><span class="num">単価</span>
+      <span class="num">金額</span><span class="num">予算</span><span class="num">決定額</span><span class="num">差額</span><span>納品予定日</span><span>状態</span><span>品質</span>
+    </div>`;
+    let no = 0;
+    orderedKeys.forEach(key => {
+      const arr = sortByDelivery(byPhase.get(key));
+      const phase = key === '__none__' ? null : pobj[key];
+      const phaseName = phase ? phase.name : '（工事全体）';
+      const warnCount = arr.filter(x => checkConflict(x, phase)).length;
+      h += `<div class="bgroup"><span>${esc(phaseName)}${phase && phase.start_date ? `　着工 ${fmtDate(phase.start_date)}` : ''}</span>` +
+        `<span class="gcount">${arr.length} 件 ・ ${fmtMoney(sum(arr, 'amount'))}${warnCount ? `<span class="gwarn">⚠ ${warnCount}件要確認</span>` : ''}</span></div>`;
+      arr.forEach(x => {
+        no++;
+        const diff = (x.budget_amount ?? null) !== null && (x.contract_amount ?? null) !== null
+          ? Number(x.budget_amount) - Number(x.contract_amount) : null;
+        const sub = [ptmap[x.estimate_partner_id], x.note].filter(Boolean).join(' ・ ');
+        const dd = deliveryDateOf(x);
+        const isActual = !x.scheduled_delivery_date && !!x.delivered_on;
+        const dcls = !dd ? 'none' : (isActual ? 'actual' : 'planned');
+        const conflict = checkConflict(x, phase);
+        h += `<button class="brow${conflict ? ' conflict' : ''}" data-id="${x.id}">
+          <span class="no">${no}</span>
+          <span class="cat ${x.category}">${x.category === 'material' ? '材' : '工'}</span>
+          <span class="nm" title="${esc(x.item_name)}">${esc(x.item_name)}${x.cost_stage === 'extra' ? '<span class="xtag">追加</span>' : ''}</span>
+          <span class="sub" title="${esc(sub)}">${esc(sub || '—')}</span>
+          <span class="num">${x.quantity ?? ''}${x.unit ? esc(x.unit) : ''}</span>
+          <span class="num">${fmt(x.unit_price)}</span>
+          <span class="num">${fmt(x.amount)}</span>
+          <span class="num">${fmt(x.budget_amount)}</span>
+          <span class="num">${fmt(x.contract_amount)}</span>
+          <span class="num${diff === null ? '' : (diff < 0 ? ' diff over' : ' diff under')}">${diff === null ? '—' : fmtMoney(diff)}</span>
+          <span class="dtag ${dcls}" title="${conflict ? esc(conflict.text) : (dd ? fmtDate(dd) : '')}">${conflict ? '<span class="dwarn">⚠</span>' : ''}${dd ? fmtDateShort(dd) : '未定'}</span>
+          <span class="stag ${STATCLS[x.status] || ''}">${STATN[x.status]}</span>
+          <span class="qtag ${x.quality_status}">${QN[x.quality_status]}</span>
+        </button>`;
+      });
+    });
+    h += `</div>`;
+    $('btable').innerHTML = h;
+    $('btable').querySelectorAll('.brow').forEach(b =>
+      b.addEventListener('click', () => openPanel(items.find(x => x.id === b.dataset.id))));
+  }
+
+  $('fphase').addEventListener('change', render);
+  $('fcat').addEventListener('change', render);
+
+  $('proj').addEventListener('change', async () => {
+    projId = $('proj').value || null;
+    // 選んだ工事をURLに残す（別ページから戻ってきても選択が残るように）
+    const u = new URL(location.href);
+    if (projId) u.searchParams.set('p', projId); else u.searchParams.delete('p');
+    u.searchParams.delete('item'); u.searchParams.delete('focus');
+    history.replaceState(null, '', u);
+    await loadPhases();
+    await loadItems();
+  });
+
+  /* ================= 詳細 ================= */
+  function recalcAmt(){
+    const qty = Number($('f_qty').value) || 0;
+    const price = Number($('f_price').value) || 0;
+    $('f_amt').textContent = fmtMoney(Math.round(qty * price));
+  }
+  $('f_qty').addEventListener('input', recalcAmt);
+  $('f_price').addEventListener('input', recalcAmt);
+
+  // 発注期限＝納品予定日−発注リードタイム。工程表のガントの警告と同じ考え方を、
+  // この画面でも参考値として出す（実際のアラート判定は工程表側で行う）
+  function recalcDeadline(){
+    const sdate = $('f_sdate').value, lead = $('f_lead').value;
+    if (!sdate || lead === ''){ $('f_deadline').textContent = ''; return; }
+    $('f_deadline').textContent = `発注期限の目安：${fmtDate(addDays(sdate, -Number(lead)))}`;
+  }
+  $('f_sdate').addEventListener('input', recalcDeadline);
+  $('f_lead').addEventListener('input', recalcDeadline);
+
+  function openPanel(x){
+    editing = x || null;
+    showMsg($('pmsg'), '');
+    $('ptitle').textContent = x ? '材工項目' : '材工項目を追加';
+
+    $('f_cat').value    = x ? x.category : 'material';
+    $('f_name').value   = x ? (x.item_name || '') : '';
+    $('f_phase').value  = x ? (x.phase_id || '') : '';
+    $('f_estp').value   = x ? (x.estimate_partner_id || '') : '';
+    // 着工後は「当初見積（着工前）」を新規に足せない（着工前原価台帳への滑り込み防止）。
+    // 既存の見積項目はそのまま扱えるが、新規・追加項目は「追加（副資材・突発）」のみ。
+    const curP = projects.find(p => p.id === projId);
+    const started = isStarted(curP);
+    const isExEst = x && (x.cost_stage || 'estimate') === 'estimate';
+    const estOpt = $('f_stage').querySelector('option[value="estimate"]');
+    estOpt.disabled = started && !isExEst;
+    $('f_stage').value = estOpt.disabled ? 'extra' : (x ? (x.cost_stage || 'estimate') : 'estimate');
+    $('f_stagehint').textContent = estOpt.disabled
+      ? 'この工事は着工済みです。着工前原価には追加できません（追加＝副資材・突発として登録されます）。' : '';
+    $('f_qty').value    = x && x.quantity !== null ? x.quantity : '';
+    $('f_unit').value   = x ? (x.unit || '') : '';
+    $('f_price').value  = x && x.unit_price !== null ? x.unit_price : '';
+    $('f_budget').value = x && x.budget_amount !== null ? x.budget_amount : '';
+    $('f_contract').value = x && x.contract_amount !== null ? x.contract_amount : '';
+    $('f_odate').value  = x ? (x.order_date || '') : '';
+    $('f_due').value    = x ? (x.due_date || '') : '';
+    $('f_sdate').value  = x ? (x.scheduled_delivery_date || '') : '';
+    $('f_lead').value   = x && x.lead_time_days !== null && x.lead_time_days !== undefined ? x.lead_time_days : '';
+    $('f_proc').value   = x ? (x.procurement_type || '') : '';
+    $('f_import').checked = !!(x && x.is_import);
+    $('f_status').value = x ? x.status : 'estimate';
+    $('f_ddate').value  = x ? (x.delivered_on || '') : '';
+    $('f_dqty').value   = x && x.delivered_qty !== null ? x.delivered_qty : '';
+    $('f_qstat').value  = x ? x.quality_status : 'pending';
+    $('f_qnote').value  = x ? (x.quality_note || '') : '';
+    $('f_note').value   = x ? (x.note || '') : '';
+    recalcAmt();
+    recalcDeadline();
+
+    document.querySelectorAll('#panel input, #panel select, #panel textarea')
+      .forEach(el => el.disabled = !canEdit);
+    $('pdock').style.display = canEdit ? '' : 'none';
+    $('del').hidden = !(x && canEdit);
+
+    $('panel').classList.add('open');
+    window.scrollTo(0,0);
+  }
+  // 確認ページ（アラート・原価台帳など）から品目を直接開いて来たときは、
+  // 閉じる・保存したら来た確認ページへ戻す（一覧に取り残さない）
+  let backOnClose = false;
+  function closePanel(){
+    if (backOnClose && history.length > 1){ history.back(); return; }
+    $('panel').classList.remove('open'); editing = null;
+  }
+  $('add').addEventListener('click', () => openPanel(null));
+  $('close').addEventListener('click', closePanel);
+  $('cancel').addEventListener('click', closePanel);
+
+  $('save').addEventListener('click', async () => {
+    showMsg($('pmsg'), '');
+    const nm = $('f_name').value.trim();
+    if (!nm){ showMsg($('pmsg'), '内容を入れてください。', 'err'); $('f_name').focus(); return; }
+
+    // 着工後は着工前原価（当初見積）へ新規追加できない（滑り込み防止）
+    const startedS = isStarted(projects.find(p => p.id === projId));
+    const wasEst = editing && (editing.cost_stage || 'estimate') === 'estimate';
+    if (startedS && $('f_stage').value === 'estimate' && !wasEst){
+      showMsg($('pmsg'), 'この工事は着工済みです。着工前原価（当初見積）に新しく追加できません。「追加（副資材・突発）」で登録してください。', 'err');
+      return;
+    }
+
+    const body = {
+      organization_id : me.organization_id,
+      project_id       : projId,
+      phase_id         : $('f_phase').value || null,
+      category         : $('f_cat').value,
+      item_name        : nm,
+      estimate_partner_id: $('f_estp').value || null,
+      cost_stage       : $('f_stage').value,
+      quantity         : $('f_qty').value === '' ? null : Number($('f_qty').value),
+      unit             : $('f_unit').value.trim() || null,
+      unit_price       : $('f_price').value === '' ? null : Number($('f_price').value),
+      budget_amount    : $('f_budget').value === '' ? null : Number($('f_budget').value),
+      contract_amount  : $('f_contract').value === '' ? null : Number($('f_contract').value),
+      order_date       : $('f_odate').value || null,
+      due_date         : $('f_due').value || null,
+      scheduled_delivery_date: $('f_sdate').value || null,
+      lead_time_days   : $('f_lead').value === '' ? null : Number($('f_lead').value),
+      procurement_type : $('f_proc').value || null,
+      is_import        : $('f_import').checked,
+      status           : $('f_status').value,
+      delivered_on     : $('f_ddate').value || null,
+      delivered_qty    : $('f_dqty').value === '' ? null : Number($('f_dqty').value),
+      quality_status   : $('f_qstat').value,
+      quality_note     : $('f_qnote').value.trim() || null,
+      note             : $('f_note').value.trim() || null
+    };
+    if (!editing){
+      body.seq = (items.length ? Math.max(...items.map(x => x.seq || 0)) : 0) + 10;
+      body.created_by = me.id;
+    }
+
+    $('save').disabled = true; $('save').textContent = '保存しています…';
+    let error;
+    if (editing) ({ error } = await sb.from('phase_budget_items').update(body).eq('id', editing.id));
+    else         ({ error } = await sb.from('phase_budget_items').insert(body));
+    $('save').disabled = false; $('save').textContent = '保存する';
+
+    if (error){
+      showMsg($('pmsg'), error.code === '42501'
+        ? 'この操作を行う権限がありません。' : '保存できませんでした。' + error.message, 'err');
+      return;
+    }
+    closePanel();
+    await loadItems();
+    showMsg($('msg'), '保存しました。', 'ok');
+  });
+
+  $('del').addEventListener('click', async () => {
+    if (!editing) return;
+    if (!confirm(`「${editing.item_name}」を削除します。`)) return;
+    const removed = { ...editing };
+    delete removed.amount;   // 金額は自動計算の列なので入れ直せない
+    const id = editing.id;
+    // この品目を参照している発注のリンクを先に外す（外部キー制約でハード削除が
+    // ブロックされる＝「削除できない」対策）。外れた発注は未計上バナーで拾える。
+    try { await sb.from('phase_orders').update({ budget_item_id: null }).eq('budget_item_id', id); } catch (_){}
+    const { error } = await sb.from('phase_budget_items').delete().eq('id', id);
+    if (error){ showMsg($('pmsg'), '削除できませんでした。' + error.message, 'err'); return; }
+    closePanel();
+    await loadItems();
+    // 間違えて消したときのために「元に戻す」を出す
+    showUndo($('msg'), `「${removed.item_name}」を削除しました。`, async () => {
+      const { error: e2 } = await sb.from('phase_budget_items').insert(removed);
+      if (e2) throw e2;
+      await loadItems();
+    });
+  });
+
+  /* ================= 起動 ================= */
+  await loadRefs();
+  const qs = new URL(location.href).searchParams;
+  const q = qs.get('p');
+  if (q && projects.some(x => x.id === q)){
+    $('proj').value = q;
+    projId = q;
+    await loadPhases();
+    await loadItems();
+    // 確認ページ（材料発注アラート等）から特定の品目を指定して来たら、
+    // その品目の入力画面を直接開く（確認→入力を迷わせない）
+    const itemId = qs.get('item');
+    if (itemId){
+      const it = items.find(x => x.id === itemId);
+      if (it){
+        openPanel(it);
+        // 確認ページから来たので、閉じる・保存で元の確認ページへ戻す
+        backOnClose = true;
+        $('close').textContent = '◀ 戻る';
+        // focus=delivery（納期の確認から来た）なら、いきなり納品・発注の入力欄まで送る
+        if (qs.get('focus') === 'delivery'){
+          requestAnimationFrame(() => {
+            const f = $('f_sdate');
+            if (f){ f.scrollIntoView({ block:'center' }); try { f.focus(); } catch(e){} }
+          });
+        }
+      }
+    }
+  } else {
+    render();
+  }
+})();
+</script>
+</body>
+</html>
